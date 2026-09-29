@@ -1,0 +1,2082 @@
+[
+  {
+    "transaction_id": "jordan-0001",
+    "account_id": "jordan-checking",
+    "date": "2026-01-01",
+    "name": "RIVERSIDE APARTMENTS RENT",
+    "amount": 950.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0063",
+    "account_id": "jordan-checking",
+    "date": "2026-01-01",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -1154.19,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0064",
+    "account_id": "jordan-checking",
+    "date": "2026-01-01",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 288.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0065",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-01-01",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -288.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0104",
+    "account_id": "jordan-card",
+    "date": "2026-01-01",
+    "name": "CORNER CAFE",
+    "amount": 13.12,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0105",
+    "account_id": "jordan-card",
+    "date": "2026-01-03",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.63,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0106",
+    "account_id": "jordan-card",
+    "date": "2026-01-03",
+    "name": "CAMERA SHOP",
+    "amount": 46.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0002",
+    "account_id": "jordan-checking",
+    "date": "2026-01-04",
+    "name": "PHOTO EDITING SOFTWARE",
+    "amount": 19.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0037",
+    "account_id": "jordan-checking",
+    "date": "2026-01-06",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -340.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0102",
+    "account_id": "jordan-card",
+    "date": "2026-01-06",
+    "name": "VALUE MART",
+    "amount": 43.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0103",
+    "account_id": "jordan-card",
+    "date": "2026-01-07",
+    "name": "SHELL",
+    "amount": 34.23,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0003",
+    "account_id": "jordan-checking",
+    "date": "2026-01-08",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0107",
+    "account_id": "jordan-card",
+    "date": "2026-01-11",
+    "name": "VALUE-MART #104",
+    "amount": 40.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0209"
+  },
+  {
+    "transaction_id": "jordan-0004",
+    "account_id": "jordan-checking",
+    "date": "2026-01-12",
+    "name": "AUTO INSURANCE",
+    "amount": 145.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0038",
+    "account_id": "jordan-checking",
+    "date": "2026-01-13",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -400.36,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0066",
+    "account_id": "jordan-checking",
+    "date": "2026-01-13",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -638.89,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0067",
+    "account_id": "jordan-checking",
+    "date": "2026-01-13",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 159.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0068",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-01-13",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -159.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0108",
+    "account_id": "jordan-card",
+    "date": "2026-01-14",
+    "name": "SHELL OIL #021",
+    "amount": 33.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0109",
+    "account_id": "jordan-card",
+    "date": "2026-01-14",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.25,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0110",
+    "account_id": "jordan-card",
+    "date": "2026-01-15",
+    "name": "VALUEMART GROCERY",
+    "amount": 49.98,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0111",
+    "account_id": "jordan-card",
+    "date": "2026-01-15",
+    "name": "SHELL SERVICE STATION",
+    "amount": 45.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0113",
+    "account_id": "jordan-card",
+    "date": "2026-01-15",
+    "name": "BEANSTREET CAFE",
+    "amount": 5.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0211"
+  },
+  {
+    "transaction_id": "jordan-0069",
+    "account_id": "jordan-checking",
+    "date": "2026-01-16",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -711.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0070",
+    "account_id": "jordan-checking",
+    "date": "2026-01-16",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 178.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0071",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-01-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -178.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0112",
+    "account_id": "jordan-card",
+    "date": "2026-01-17",
+    "name": "TST* CORNER CAFE",
+    "amount": 12.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0210"
+  },
+  {
+    "transaction_id": "jordan-0005",
+    "account_id": "jordan-checking",
+    "date": "2026-01-18",
+    "name": "CAMERA EQUIPMENT INSTALLMENT",
+    "amount": 85.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0039",
+    "account_id": "jordan-checking",
+    "date": "2026-01-20",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -417.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0006",
+    "account_id": "jordan-checking",
+    "date": "2026-01-22",
+    "name": "CLOUD STORAGE",
+    "amount": 9.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0115",
+    "account_id": "jordan-card",
+    "date": "2026-01-22",
+    "name": "SHELL",
+    "amount": 43.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0116",
+    "account_id": "jordan-card",
+    "date": "2026-01-23",
+    "name": "BEAN STREET COFFEE",
+    "amount": 5.52,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0040",
+    "account_id": "jordan-checking",
+    "date": "2026-01-27",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -305.46,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0114",
+    "account_id": "jordan-card",
+    "date": "2026-01-27",
+    "name": "VALUE MART",
+    "amount": 35.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0119",
+    "account_id": "jordan-card",
+    "date": "2026-01-29",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 16.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0118",
+    "account_id": "jordan-card",
+    "date": "2026-01-30",
+    "name": "SHELL OIL #021",
+    "amount": 34.47,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0120",
+    "account_id": "jordan-card",
+    "date": "2026-01-30",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 4.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0007",
+    "account_id": "jordan-checking",
+    "date": "2026-02-01",
+    "name": "RIVERSIDE APARTMENTS RENT",
+    "amount": 950.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0117",
+    "account_id": "jordan-card",
+    "date": "2026-02-02",
+    "name": "VALUE-MART #104",
+    "amount": 38.05,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0041",
+    "account_id": "jordan-checking",
+    "date": "2026-02-03",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -405.53,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0008",
+    "account_id": "jordan-checking",
+    "date": "2026-02-04",
+    "name": "PHOTO EDITING SOFTWARE",
+    "amount": 19.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0122",
+    "account_id": "jordan-card",
+    "date": "2026-02-06",
+    "name": "SHELL SERVICE STATION",
+    "amount": 37.12,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0121",
+    "account_id": "jordan-card",
+    "date": "2026-02-07",
+    "name": "VALUEMART GROCERY",
+    "amount": 50.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0009",
+    "account_id": "jordan-checking",
+    "date": "2026-02-08",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0042",
+    "account_id": "jordan-checking",
+    "date": "2026-02-10",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -346.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0123",
+    "account_id": "jordan-card",
+    "date": "2026-02-10",
+    "name": "BEANSTREET CAFE",
+    "amount": 5.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0010",
+    "account_id": "jordan-checking",
+    "date": "2026-02-12",
+    "name": "AUTO INSURANCE",
+    "amount": 145.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0126",
+    "account_id": "jordan-card",
+    "date": "2026-02-12",
+    "name": "CORNER CAFE",
+    "amount": 21.15,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0125",
+    "account_id": "jordan-card",
+    "date": "2026-02-14",
+    "name": "SHELL",
+    "amount": 27.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0199",
+    "account_id": "jordan-checking",
+    "date": "2026-02-15",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 472.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0200",
+    "account_id": "jordan-card",
+    "date": "2026-02-15",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -472.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0127",
+    "account_id": "jordan-card",
+    "date": "2026-02-16",
+    "name": "BEAN STREET COFFEE",
+    "amount": 5.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0043",
+    "account_id": "jordan-checking",
+    "date": "2026-02-17",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -297.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0011",
+    "account_id": "jordan-checking",
+    "date": "2026-02-18",
+    "name": "CAMERA EQUIPMENT INSTALLMENT",
+    "amount": 85.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0072",
+    "account_id": "jordan-checking",
+    "date": "2026-02-18",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -987.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0073",
+    "account_id": "jordan-checking",
+    "date": "2026-02-18",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 246.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0074",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-02-18",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -246.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0124",
+    "account_id": "jordan-card",
+    "date": "2026-02-18",
+    "name": "VALUE MART",
+    "amount": 51.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0197",
+    "account_id": "jordan-card",
+    "date": "2026-02-19",
+    "name": "REFUND BEAN STREET COFFEE",
+    "amount": -5.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0012",
+    "account_id": "jordan-checking",
+    "date": "2026-02-22",
+    "name": "CLOUD STORAGE",
+    "amount": 9.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0128",
+    "account_id": "jordan-card",
+    "date": "2026-02-22",
+    "name": "VALUE-MART #104",
+    "amount": 42.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0130",
+    "account_id": "jordan-card",
+    "date": "2026-02-23",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 5.07,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0044",
+    "account_id": "jordan-checking",
+    "date": "2026-02-24",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -337.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0075",
+    "account_id": "jordan-checking",
+    "date": "2026-02-24",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -1039.89,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0076",
+    "account_id": "jordan-checking",
+    "date": "2026-02-24",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 259.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0077",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-02-24",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -259.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0129",
+    "account_id": "jordan-card",
+    "date": "2026-02-24",
+    "name": "SHELL OIL #021",
+    "amount": 28.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0013",
+    "account_id": "jordan-checking",
+    "date": "2026-03-01",
+    "name": "RIVERSIDE APARTMENTS RENT",
+    "amount": 950.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0135",
+    "account_id": "jordan-card",
+    "date": "2026-03-02",
+    "name": "CAMERA SHOP ONLINE",
+    "amount": 69.13,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0045",
+    "account_id": "jordan-checking",
+    "date": "2026-03-03",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -392.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0131",
+    "account_id": "jordan-card",
+    "date": "2026-03-03",
+    "name": "VALUEMART GROCERY",
+    "amount": 39.86,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0132",
+    "account_id": "jordan-card",
+    "date": "2026-03-03",
+    "name": "SHELL SERVICE STATION",
+    "amount": 40.45,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0014",
+    "account_id": "jordan-checking",
+    "date": "2026-03-04",
+    "name": "PHOTO EDITING SOFTWARE",
+    "amount": 19.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0133",
+    "account_id": "jordan-card",
+    "date": "2026-03-04",
+    "name": "TST* CORNER CAFE",
+    "amount": 18.21,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0134",
+    "account_id": "jordan-card",
+    "date": "2026-03-04",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.36,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0136",
+    "account_id": "jordan-card",
+    "date": "2026-03-07",
+    "name": "VALUE MART",
+    "amount": 45.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0212"
+  },
+  {
+    "transaction_id": "jordan-0015",
+    "account_id": "jordan-checking",
+    "date": "2026-03-08",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0138",
+    "account_id": "jordan-card",
+    "date": "2026-03-09",
+    "name": "BEAN STREET COFFEE",
+    "amount": 4.94,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0046",
+    "account_id": "jordan-checking",
+    "date": "2026-03-10",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -296.9,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0137",
+    "account_id": "jordan-card",
+    "date": "2026-03-10",
+    "name": "SHELL",
+    "amount": 32.41,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0016",
+    "account_id": "jordan-checking",
+    "date": "2026-03-12",
+    "name": "AUTO INSURANCE",
+    "amount": 145.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0139",
+    "account_id": "jordan-card",
+    "date": "2026-03-12",
+    "name": "VALUE-MART #104",
+    "amount": 51.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0141",
+    "account_id": "jordan-card",
+    "date": "2026-03-15",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 21.53,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0201",
+    "account_id": "jordan-checking",
+    "date": "2026-03-15",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 307.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0202",
+    "account_id": "jordan-card",
+    "date": "2026-03-15",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -307.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0078",
+    "account_id": "jordan-checking",
+    "date": "2026-03-16",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -575.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0079",
+    "account_id": "jordan-checking",
+    "date": "2026-03-16",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 143.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0080",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-03-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -143.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0047",
+    "account_id": "jordan-checking",
+    "date": "2026-03-17",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -317.17,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0142",
+    "account_id": "jordan-card",
+    "date": "2026-03-17",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 5.67,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0017",
+    "account_id": "jordan-checking",
+    "date": "2026-03-18",
+    "name": "CAMERA EQUIPMENT INSTALLMENT",
+    "amount": 85.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0140",
+    "account_id": "jordan-card",
+    "date": "2026-03-18",
+    "name": "SHELL OIL #021",
+    "amount": 34.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0213"
+  },
+  {
+    "transaction_id": "jordan-0018",
+    "account_id": "jordan-checking",
+    "date": "2026-03-22",
+    "name": "CLOUD STORAGE",
+    "amount": 9.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0143",
+    "account_id": "jordan-card",
+    "date": "2026-03-22",
+    "name": "VALUEMART GROCERY",
+    "amount": 49.15,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0144",
+    "account_id": "jordan-card",
+    "date": "2026-03-22",
+    "name": "SHELL SERVICE STATION",
+    "amount": 28.52,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0145",
+    "account_id": "jordan-card",
+    "date": "2026-03-23",
+    "name": "BEANSTREET CAFE",
+    "amount": 5.9,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0048",
+    "account_id": "jordan-checking",
+    "date": "2026-03-24",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -428.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0146",
+    "account_id": "jordan-card",
+    "date": "2026-03-28",
+    "name": "VALUE MART",
+    "amount": 47.32,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0148",
+    "account_id": "jordan-card",
+    "date": "2026-03-29",
+    "name": "CORNER CAFE",
+    "amount": 15.23,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0147",
+    "account_id": "jordan-card",
+    "date": "2026-03-30",
+    "name": "SHELL",
+    "amount": 40.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0049",
+    "account_id": "jordan-checking",
+    "date": "2026-03-31",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -266.12,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0149",
+    "account_id": "jordan-card",
+    "date": "2026-03-31",
+    "name": "BEAN STREET COFFEE",
+    "amount": 4.78,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0019",
+    "account_id": "jordan-checking",
+    "date": "2026-04-01",
+    "name": "RIVERSIDE APARTMENTS RENT",
+    "amount": 950.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0081",
+    "account_id": "jordan-checking",
+    "date": "2026-04-01",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -711.09,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0082",
+    "account_id": "jordan-checking",
+    "date": "2026-04-01",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 177.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0083",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-04-01",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -177.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0020",
+    "account_id": "jordan-checking",
+    "date": "2026-04-04",
+    "name": "PHOTO EDITING SOFTWARE",
+    "amount": 19.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0150",
+    "account_id": "jordan-card",
+    "date": "2026-04-04",
+    "name": "VALUE-MART #104",
+    "amount": 52.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0152",
+    "account_id": "jordan-card",
+    "date": "2026-04-04",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 5.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0050",
+    "account_id": "jordan-checking",
+    "date": "2026-04-07",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -280.17,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0021",
+    "account_id": "jordan-checking",
+    "date": "2026-04-08",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0151",
+    "account_id": "jordan-card",
+    "date": "2026-04-08",
+    "name": "SHELL OIL #021",
+    "amount": 43.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0153",
+    "account_id": "jordan-card",
+    "date": "2026-04-10",
+    "name": "VALUEMART GROCERY",
+    "amount": 50.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0198",
+    "account_id": "jordan-card",
+    "date": "2026-04-11",
+    "name": "REFUND SHELL OIL #021",
+    "amount": -43.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0022",
+    "account_id": "jordan-checking",
+    "date": "2026-04-12",
+    "name": "AUTO INSURANCE",
+    "amount": 145.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0155",
+    "account_id": "jordan-card",
+    "date": "2026-04-12",
+    "name": "TST* CORNER CAFE",
+    "amount": 14.04,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0214"
+  },
+  {
+    "transaction_id": "jordan-0156",
+    "account_id": "jordan-card",
+    "date": "2026-04-12",
+    "name": "BEANSTREET CAFE",
+    "amount": 5.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0154",
+    "account_id": "jordan-card",
+    "date": "2026-04-13",
+    "name": "SHELL SERVICE STATION",
+    "amount": 37.21,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0051",
+    "account_id": "jordan-checking",
+    "date": "2026-04-14",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -326.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0203",
+    "account_id": "jordan-checking",
+    "date": "2026-04-15",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 559.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0204",
+    "account_id": "jordan-card",
+    "date": "2026-04-15",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -559.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0084",
+    "account_id": "jordan-checking",
+    "date": "2026-04-16",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -935.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0085",
+    "account_id": "jordan-checking",
+    "date": "2026-04-16",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 233.78,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0086",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-04-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -233.78,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0157",
+    "account_id": "jordan-card",
+    "date": "2026-04-17",
+    "name": "VALUE MART",
+    "amount": 44.75,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0023",
+    "account_id": "jordan-checking",
+    "date": "2026-04-18",
+    "name": "CAMERA EQUIPMENT INSTALLMENT",
+    "amount": 85.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0158",
+    "account_id": "jordan-card",
+    "date": "2026-04-18",
+    "name": "SHELL",
+    "amount": 40.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0159",
+    "account_id": "jordan-card",
+    "date": "2026-04-18",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.84,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0052",
+    "account_id": "jordan-checking",
+    "date": "2026-04-21",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -280.56,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0024",
+    "account_id": "jordan-checking",
+    "date": "2026-04-22",
+    "name": "CLOUD STORAGE",
+    "amount": 9.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0163",
+    "account_id": "jordan-card",
+    "date": "2026-04-23",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0161",
+    "account_id": "jordan-card",
+    "date": "2026-04-25",
+    "name": "SHELL OIL #021",
+    "amount": 36.12,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0164",
+    "account_id": "jordan-card",
+    "date": "2026-04-26",
+    "name": "THE CAMERA STORE",
+    "amount": 54.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0160",
+    "account_id": "jordan-card",
+    "date": "2026-04-27",
+    "name": "VALUE-MART #104",
+    "amount": 49.02,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0162",
+    "account_id": "jordan-card",
+    "date": "2026-04-27",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 21.38,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0053",
+    "account_id": "jordan-checking",
+    "date": "2026-04-28",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -292.79,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0025",
+    "account_id": "jordan-checking",
+    "date": "2026-05-01",
+    "name": "RIVERSIDE APARTMENTS RENT",
+    "amount": 950.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0166",
+    "account_id": "jordan-card",
+    "date": "2026-05-03",
+    "name": "SHELL SERVICE STATION",
+    "amount": 37.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0167",
+    "account_id": "jordan-card",
+    "date": "2026-05-03",
+    "name": "BEANSTREET CAFE",
+    "amount": 4.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0026",
+    "account_id": "jordan-checking",
+    "date": "2026-05-04",
+    "name": "PHOTO EDITING SOFTWARE",
+    "amount": 19.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0054",
+    "account_id": "jordan-checking",
+    "date": "2026-05-05",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -332.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0087",
+    "account_id": "jordan-checking",
+    "date": "2026-05-06",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -1072.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0088",
+    "account_id": "jordan-checking",
+    "date": "2026-05-06",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 268.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0089",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-05-06",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -268.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0165",
+    "account_id": "jordan-card",
+    "date": "2026-05-06",
+    "name": "VALUEMART GROCERY",
+    "amount": 39.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0168",
+    "account_id": "jordan-card",
+    "date": "2026-05-07",
+    "name": "VALUE MART",
+    "amount": 36.86,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0027",
+    "account_id": "jordan-checking",
+    "date": "2026-05-08",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0169",
+    "account_id": "jordan-card",
+    "date": "2026-05-08",
+    "name": "SHELL",
+    "amount": 33.09,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0170",
+    "account_id": "jordan-card",
+    "date": "2026-05-08",
+    "name": "CORNER CAFE",
+    "amount": 13.67,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0171",
+    "account_id": "jordan-card",
+    "date": "2026-05-11",
+    "name": "BEAN STREET COFFEE",
+    "amount": 4.11,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0028",
+    "account_id": "jordan-checking",
+    "date": "2026-05-12",
+    "name": "AUTO INSURANCE",
+    "amount": 145.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0055",
+    "account_id": "jordan-checking",
+    "date": "2026-05-12",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -316.18,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0205",
+    "account_id": "jordan-checking",
+    "date": "2026-05-15",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 418.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0206",
+    "account_id": "jordan-card",
+    "date": "2026-05-15",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -418.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0173",
+    "account_id": "jordan-card",
+    "date": "2026-05-17",
+    "name": "SHELL OIL #021",
+    "amount": 44.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0215"
+  },
+  {
+    "transaction_id": "jordan-0029",
+    "account_id": "jordan-checking",
+    "date": "2026-05-18",
+    "name": "CAMERA EQUIPMENT INSTALLMENT",
+    "amount": 85.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0172",
+    "account_id": "jordan-card",
+    "date": "2026-05-18",
+    "name": "VALUE-MART #104",
+    "amount": 45.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0174",
+    "account_id": "jordan-card",
+    "date": "2026-05-18",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0056",
+    "account_id": "jordan-checking",
+    "date": "2026-05-19",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -343.18,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0177",
+    "account_id": "jordan-card",
+    "date": "2026-05-21",
+    "name": "TST* CORNER CAFE",
+    "amount": 18.66,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0030",
+    "account_id": "jordan-checking",
+    "date": "2026-05-22",
+    "name": "CLOUD STORAGE",
+    "amount": 9.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0176",
+    "account_id": "jordan-card",
+    "date": "2026-05-23",
+    "name": "SHELL SERVICE STATION",
+    "amount": 30.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0178",
+    "account_id": "jordan-card",
+    "date": "2026-05-23",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.36,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0090",
+    "account_id": "jordan-checking",
+    "date": "2026-05-24",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -1135.63,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0091",
+    "account_id": "jordan-checking",
+    "date": "2026-05-24",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 283.91,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0092",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-05-24",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -283.91,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0057",
+    "account_id": "jordan-checking",
+    "date": "2026-05-26",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -262.45,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0175",
+    "account_id": "jordan-card",
+    "date": "2026-05-26",
+    "name": "VALUEMART GROCERY",
+    "amount": 44.07,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0181",
+    "account_id": "jordan-card",
+    "date": "2026-05-29",
+    "name": "BEAN STREET COFFEE",
+    "amount": 5.22,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0031",
+    "account_id": "jordan-checking",
+    "date": "2026-06-01",
+    "name": "RIVERSIDE APARTMENTS RENT",
+    "amount": 950.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0093",
+    "account_id": "jordan-checking",
+    "date": "2026-06-01",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -715.22,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0094",
+    "account_id": "jordan-checking",
+    "date": "2026-06-01",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 178.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0095",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-06-01",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -178.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0179",
+    "account_id": "jordan-card",
+    "date": "2026-06-01",
+    "name": "VALUE MART",
+    "amount": 54.02,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0058",
+    "account_id": "jordan-checking",
+    "date": "2026-06-02",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -416.58,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0180",
+    "account_id": "jordan-card",
+    "date": "2026-06-02",
+    "name": "SHELL",
+    "amount": 28.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0032",
+    "account_id": "jordan-checking",
+    "date": "2026-06-04",
+    "name": "PHOTO EDITING SOFTWARE",
+    "amount": 19.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0182",
+    "account_id": "jordan-card",
+    "date": "2026-06-06",
+    "name": "VALUE-MART #104",
+    "amount": 49.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0184",
+    "account_id": "jordan-card",
+    "date": "2026-06-06",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 21.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0033",
+    "account_id": "jordan-checking",
+    "date": "2026-06-08",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0059",
+    "account_id": "jordan-checking",
+    "date": "2026-06-09",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -327.9,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0183",
+    "account_id": "jordan-card",
+    "date": "2026-06-10",
+    "name": "SHELL OIL #021",
+    "amount": 35.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0216"
+  },
+  {
+    "transaction_id": "jordan-0185",
+    "account_id": "jordan-card",
+    "date": "2026-06-10",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.58,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0034",
+    "account_id": "jordan-checking",
+    "date": "2026-06-12",
+    "name": "AUTO INSURANCE",
+    "amount": 145.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0186",
+    "account_id": "jordan-card",
+    "date": "2026-06-12",
+    "name": "VALUEMART GROCERY",
+    "amount": 42.22,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0187",
+    "account_id": "jordan-card",
+    "date": "2026-06-13",
+    "name": "SHELL SERVICE STATION",
+    "amount": 25.28,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0188",
+    "account_id": "jordan-card",
+    "date": "2026-06-15",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.38,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0207",
+    "account_id": "jordan-checking",
+    "date": "2026-06-15",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 365.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0208",
+    "account_id": "jordan-card",
+    "date": "2026-06-15",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -365.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0060",
+    "account_id": "jordan-checking",
+    "date": "2026-06-16",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -403.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0035",
+    "account_id": "jordan-checking",
+    "date": "2026-06-18",
+    "name": "CAMERA EQUIPMENT INSTALLMENT",
+    "amount": 85.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0096",
+    "account_id": "jordan-checking",
+    "date": "2026-06-18",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -851.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0097",
+    "account_id": "jordan-checking",
+    "date": "2026-06-18",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 212.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0098",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-06-18",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -212.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0189",
+    "account_id": "jordan-card",
+    "date": "2026-06-18",
+    "name": "VALUE MART",
+    "amount": 54.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0191",
+    "account_id": "jordan-card",
+    "date": "2026-06-19",
+    "name": "CORNER CAFE",
+    "amount": 17.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0217"
+  },
+  {
+    "transaction_id": "jordan-0036",
+    "account_id": "jordan-checking",
+    "date": "2026-06-22",
+    "name": "CLOUD STORAGE",
+    "amount": 9.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0190",
+    "account_id": "jordan-card",
+    "date": "2026-06-22",
+    "name": "SHELL",
+    "amount": 30.84,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0061",
+    "account_id": "jordan-checking",
+    "date": "2026-06-23",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -439.21,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0192",
+    "account_id": "jordan-card",
+    "date": "2026-06-24",
+    "name": "BEAN STREET COFFEE",
+    "amount": 4.47,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0193",
+    "account_id": "jordan-card",
+    "date": "2026-06-24",
+    "name": "CAMERA SHOP",
+    "amount": 30.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0196",
+    "account_id": "jordan-card",
+    "date": "2026-06-25",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0194",
+    "account_id": "jordan-card",
+    "date": "2026-06-27",
+    "name": "VALUE-MART #104",
+    "amount": 44.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "jordan-0218"
+  },
+  {
+    "transaction_id": "jordan-0195",
+    "account_id": "jordan-card",
+    "date": "2026-06-28",
+    "name": "SHELL OIL #021",
+    "amount": 31.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0062",
+    "account_id": "jordan-checking",
+    "date": "2026-06-30",
+    "name": "DELIVERY PLATFORM PAYOUT",
+    "amount": -253.91,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0099",
+    "account_id": "jordan-checking",
+    "date": "2026-06-30",
+    "name": "STRIPE TRANSFER JORDAN PHOTO",
+    "amount": -421.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0100",
+    "account_id": "jordan-checking",
+    "date": "2026-06-30",
+    "name": "ONLINE TRANSFER TO TAX SAVINGS",
+    "amount": 105.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "jordan-0101",
+    "account_id": "jordan-tax-savings",
+    "date": "2026-06-30",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -105.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  }
+]

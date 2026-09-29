@@ -1,0 +1,32 @@
+[
+  {
+    "account_id": "maya-checking",
+    "name": "Checking",
+    "official_name": null,
+    "mask": null,
+    "type": "depository",
+    "subtype": "checking",
+    "balances": {
+      "current": 1993.45,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  },
+  {
+    "account_id": "maya-card",
+    "name": "Credit Card",
+    "official_name": null,
+    "mask": null,
+    "type": "credit",
+    "subtype": "credit card",
+    "balances": {
+      "current": 138.01,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  }
+]

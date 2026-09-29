@@ -1,0 +1,47 @@
+[
+  {
+    "account_id": "elena-checking",
+    "name": "Checking",
+    "official_name": null,
+    "mask": null,
+    "type": "depository",
+    "subtype": "checking",
+    "balances": {
+      "current": 10469.96,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  },
+  {
+    "account_id": "elena-savings",
+    "name": "Savings",
+    "official_name": null,
+    "mask": null,
+    "type": "depository",
+    "subtype": "savings",
+    "balances": {
+      "current": 7800.0,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  },
+  {
+    "account_id": "elena-card",
+    "name": "Credit Card",
+    "official_name": null,
+    "mask": null,
+    "type": "credit",
+    "subtype": "credit card",
+    "balances": {
+      "current": 613.57,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  }
+]

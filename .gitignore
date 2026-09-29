@@ -1,0 +1,41 @@
+# Personal planning (not part of the submission)
+milestones/
+
+# Secrets: API keys for Plaid and the cloud AI
+Secrets.xcconfig
+.env
+.env.*
+
+# Apple signing and App Store Connect files (App Store track)
+*.p8
+*.p12
+*.mobileprovision
+*.ipa
+*.dSYM.zip
+
+# Xcode
+xcuserdata/
+DerivedData/
+build/
+
+# macOS
+.DS_Store
+
+# Local editor/agent settings
+.claude/
+*.log
+
+# Python (fake data generator / scorecard scripts)
+__pycache__/
+.venv/
+
+# Plaid quickstart (separate repository, cloned locally)
+quickstart/
+skills-lock.json
+
+# Local agent setup (keep out of the repo)
+CLAUDE.md
+.worktreeinclude
+
+# SwiftPM build output (Packages/SedgeCore)
+.build/

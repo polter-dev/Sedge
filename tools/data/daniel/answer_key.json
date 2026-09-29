@@ -1,0 +1,1319 @@
+{
+  "as_of": "2026-06-30",
+  "accounts": [
+    {
+      "account_id": "daniel-checking",
+      "starting_balance": 3000.0,
+      "ending_balance": 12234.05
+    },
+    {
+      "account_id": "daniel-savings",
+      "starting_balance": 8000.0,
+      "ending_balance": 11000.0
+    },
+    {
+      "account_id": "daniel-card-a",
+      "starting_balance": 0.0,
+      "ending_balance": 463.2
+    },
+    {
+      "account_id": "daniel-card-b",
+      "starting_balance": 0.0,
+      "ending_balance": 388.5
+    }
+  ],
+  "totals": {
+    "income": 31200.0,
+    "spending": 19817.65
+  },
+  "transactions": [
+    {
+      "transaction_id": "daniel-0001",
+      "true_merchant": "Home Mortgage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0057",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0060",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0044",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0045"
+    },
+    {
+      "transaction_id": "daniel-0045",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0044"
+    },
+    {
+      "transaction_id": "daniel-0002",
+      "true_merchant": "Netflix",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0058",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0056",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0059",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0061",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0003",
+      "true_merchant": "Auto Loan",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0064",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0062",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0004",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0063",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0068",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0005",
+      "true_merchant": "City Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0066",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0067",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0065",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0006",
+      "true_merchant": "Comcast",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0070",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0072",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0071",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0069",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0076",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0077",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0038",
+      "true_merchant": "Northpoint Services",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0075",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0007",
+      "true_merchant": "Home Mortgage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0074",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0046",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0047"
+    },
+    {
+      "transaction_id": "daniel-0047",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0046"
+    },
+    {
+      "transaction_id": "daniel-0008",
+      "true_merchant": "Netflix",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0073",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0009",
+      "true_merchant": "Auto Loan",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0078",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0080",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0079",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0163",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": "daniel-0080"
+    },
+    {
+      "transaction_id": "daniel-0010",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0085",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0084",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0083",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0011",
+      "true_merchant": "City Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0082",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0081",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0012",
+      "true_merchant": "Comcast",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0087",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0086",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0088",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0165",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0166"
+    },
+    {
+      "transaction_id": "daniel-0166",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0165"
+    },
+    {
+      "transaction_id": "daniel-0167",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0168"
+    },
+    {
+      "transaction_id": "daniel-0168",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0167"
+    },
+    {
+      "transaction_id": "daniel-0090",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0091",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0092",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0039",
+      "true_merchant": "Northpoint Services",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0013",
+      "true_merchant": "Home Mortgage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0048",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0049"
+    },
+    {
+      "transaction_id": "daniel-0049",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0048"
+    },
+    {
+      "transaction_id": "daniel-0014",
+      "true_merchant": "Netflix",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0093",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0089",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0097",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0015",
+      "true_merchant": "Auto Loan",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0094",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0095",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0096",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0016",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0100",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0019",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "yearly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0099",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0101",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0017",
+      "true_merchant": "City Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0098",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0018",
+      "true_merchant": "Comcast",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0104",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0102",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0103",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0169",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0170"
+    },
+    {
+      "transaction_id": "daniel-0170",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0169"
+    },
+    {
+      "transaction_id": "daniel-0171",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0172"
+    },
+    {
+      "transaction_id": "daniel-0172",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0171"
+    },
+    {
+      "transaction_id": "daniel-0105",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0107",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0110",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0108",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0109",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0106",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0040",
+      "true_merchant": "Northpoint Services",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0020",
+      "true_merchant": "Home Mortgage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0050",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0051"
+    },
+    {
+      "transaction_id": "daniel-0051",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0050"
+    },
+    {
+      "transaction_id": "daniel-0021",
+      "true_merchant": "Netflix",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0111",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0112",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0022",
+      "true_merchant": "Auto Loan",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0113",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0115",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0023",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0116",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0117",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0114",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0024",
+      "true_merchant": "City Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0119",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0164",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": "daniel-0116"
+    },
+    {
+      "transaction_id": "daniel-0118",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0120",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0025",
+      "true_merchant": "Comcast",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0121",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0122",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0173",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0174"
+    },
+    {
+      "transaction_id": "daniel-0174",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0173"
+    },
+    {
+      "transaction_id": "daniel-0175",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0176"
+    },
+    {
+      "transaction_id": "daniel-0176",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0175"
+    },
+    {
+      "transaction_id": "daniel-0124",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0123",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0126",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0125",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0041",
+      "true_merchant": "Northpoint Services",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0026",
+      "true_merchant": "Home Mortgage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0052",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0053"
+    },
+    {
+      "transaction_id": "daniel-0053",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0052"
+    },
+    {
+      "transaction_id": "daniel-0127",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0128",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0027",
+      "true_merchant": "Netflix",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0129",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0028",
+      "true_merchant": "Auto Loan",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0133",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0130",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0131",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0132",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0029",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0134",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0137",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0030",
+      "true_merchant": "City Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0136",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0135",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0031",
+      "true_merchant": "Comcast",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0138",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0140",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0141",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0177",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0178"
+    },
+    {
+      "transaction_id": "daniel-0178",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0177"
+    },
+    {
+      "transaction_id": "daniel-0179",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0180"
+    },
+    {
+      "transaction_id": "daniel-0180",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0179"
+    },
+    {
+      "transaction_id": "daniel-0142",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0139",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0042",
+      "true_merchant": "Northpoint Services",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0146",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0032",
+      "true_merchant": "Home Mortgage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0145",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0054",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0055"
+    },
+    {
+      "transaction_id": "daniel-0055",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0054"
+    },
+    {
+      "transaction_id": "daniel-0033",
+      "true_merchant": "Netflix",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0143",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0144",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0034",
+      "true_merchant": "Auto Loan",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0148",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0149",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0147",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0150",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0035",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0153",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0036",
+      "true_merchant": "City Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0152",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0151",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0037",
+      "true_merchant": "Comcast",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0158",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0156",
+      "true_merchant": "Amazon",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0154",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0155",
+      "true_merchant": "Home Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0157",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0159",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0181",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0182"
+    },
+    {
+      "transaction_id": "daniel-0182",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0181"
+    },
+    {
+      "transaction_id": "daniel-0183",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0184"
+    },
+    {
+      "transaction_id": "daniel-0184",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "daniel-0183"
+    },
+    {
+      "transaction_id": "daniel-0160",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0161",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0162",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "daniel-0043",
+      "true_merchant": "Northpoint Services",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    }
+  ]
+}

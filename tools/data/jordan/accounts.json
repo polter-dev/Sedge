@@ -1,0 +1,47 @@
+[
+  {
+    "account_id": "jordan-checking",
+    "name": "Checking",
+    "official_name": null,
+    "mask": null,
+    "type": "depository",
+    "subtype": "checking",
+    "balances": {
+      "current": 8469.53,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  },
+  {
+    "account_id": "jordan-tax-savings",
+    "name": "Tax Savings",
+    "official_name": null,
+    "mask": null,
+    "type": "depository",
+    "subtype": "savings",
+    "balances": {
+      "current": 4237.72,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  },
+  {
+    "account_id": "jordan-card",
+    "name": "Credit Card",
+    "official_name": null,
+    "mask": null,
+    "type": "credit",
+    "subtype": "credit card",
+    "balances": {
+      "current": 481.95,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  }
+]

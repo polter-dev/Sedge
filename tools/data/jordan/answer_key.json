@@ -1,0 +1,1482 @@
+{
+  "as_of": "2026-06-30",
+  "accounts": [
+    {
+      "account_id": "jordan-checking",
+      "starting_balance": 1200.0,
+      "ending_balance": 8469.53
+    },
+    {
+      "account_id": "jordan-tax-savings",
+      "starting_balance": 1500.0,
+      "ending_balance": 4237.72
+    },
+    {
+      "account_id": "jordan-card",
+      "starting_balance": 0.0,
+      "ending_balance": 481.95
+    }
+  ],
+  "totals": {
+    "income": 19780.89,
+    "spending": 10255.59
+  },
+  "transactions": [
+    {
+      "transaction_id": "jordan-0001",
+      "true_merchant": "Riverside Apartments",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0063",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0064",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0065"
+    },
+    {
+      "transaction_id": "jordan-0065",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0064"
+    },
+    {
+      "transaction_id": "jordan-0104",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0105",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0106",
+      "true_merchant": "Camera Shop",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0002",
+      "true_merchant": "Photo Editing Software",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0037",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0102",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0103",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0003",
+      "true_merchant": "T-Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0107",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0004",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0038",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0066",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0067",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0068"
+    },
+    {
+      "transaction_id": "jordan-0068",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0067"
+    },
+    {
+      "transaction_id": "jordan-0108",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0109",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0110",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0111",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0113",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0069",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0070",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0071"
+    },
+    {
+      "transaction_id": "jordan-0071",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0070"
+    },
+    {
+      "transaction_id": "jordan-0112",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0005",
+      "true_merchant": "Camera Equipment",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0039",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0006",
+      "true_merchant": "Cloud Storage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0115",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0116",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0040",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0114",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0119",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0118",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0120",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0007",
+      "true_merchant": "Riverside Apartments",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0117",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0041",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0008",
+      "true_merchant": "Photo Editing Software",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0122",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0121",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0009",
+      "true_merchant": "T-Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0042",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0123",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0010",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0126",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0125",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0199",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0200"
+    },
+    {
+      "transaction_id": "jordan-0200",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0199"
+    },
+    {
+      "transaction_id": "jordan-0127",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0043",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0011",
+      "true_merchant": "Camera Equipment",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0072",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0073",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0074"
+    },
+    {
+      "transaction_id": "jordan-0074",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0073"
+    },
+    {
+      "transaction_id": "jordan-0124",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0197",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0127"
+    },
+    {
+      "transaction_id": "jordan-0012",
+      "true_merchant": "Cloud Storage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0128",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0130",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0044",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0075",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0076",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0077"
+    },
+    {
+      "transaction_id": "jordan-0077",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0076"
+    },
+    {
+      "transaction_id": "jordan-0129",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0013",
+      "true_merchant": "Riverside Apartments",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0135",
+      "true_merchant": "Camera Shop",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0045",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0131",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0132",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0014",
+      "true_merchant": "Photo Editing Software",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0133",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0134",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0136",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0015",
+      "true_merchant": "T-Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0138",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0046",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0137",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0016",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0139",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0141",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0201",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0202"
+    },
+    {
+      "transaction_id": "jordan-0202",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0201"
+    },
+    {
+      "transaction_id": "jordan-0078",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0079",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0080"
+    },
+    {
+      "transaction_id": "jordan-0080",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0079"
+    },
+    {
+      "transaction_id": "jordan-0047",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0142",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0017",
+      "true_merchant": "Camera Equipment",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0140",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0018",
+      "true_merchant": "Cloud Storage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0143",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0144",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0145",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0048",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0146",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0148",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0147",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0049",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0149",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0019",
+      "true_merchant": "Riverside Apartments",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0081",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0082",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0083"
+    },
+    {
+      "transaction_id": "jordan-0083",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0082"
+    },
+    {
+      "transaction_id": "jordan-0020",
+      "true_merchant": "Photo Editing Software",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0150",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0152",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0050",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0021",
+      "true_merchant": "T-Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0151",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0153",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0198",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0151"
+    },
+    {
+      "transaction_id": "jordan-0022",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0155",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0156",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0154",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0051",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0203",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0204"
+    },
+    {
+      "transaction_id": "jordan-0204",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0203"
+    },
+    {
+      "transaction_id": "jordan-0084",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0085",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0086"
+    },
+    {
+      "transaction_id": "jordan-0086",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0085"
+    },
+    {
+      "transaction_id": "jordan-0157",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0023",
+      "true_merchant": "Camera Equipment",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0158",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0159",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0052",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0024",
+      "true_merchant": "Cloud Storage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0163",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0161",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0164",
+      "true_merchant": "Camera Shop",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0160",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0162",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0053",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0025",
+      "true_merchant": "Riverside Apartments",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0166",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0167",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0026",
+      "true_merchant": "Photo Editing Software",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0054",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0087",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0088",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0089"
+    },
+    {
+      "transaction_id": "jordan-0089",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0088"
+    },
+    {
+      "transaction_id": "jordan-0165",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0168",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0027",
+      "true_merchant": "T-Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0169",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0170",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0171",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0028",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0055",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0205",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0206"
+    },
+    {
+      "transaction_id": "jordan-0206",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0205"
+    },
+    {
+      "transaction_id": "jordan-0173",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0029",
+      "true_merchant": "Camera Equipment",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0172",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0174",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0056",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0177",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0030",
+      "true_merchant": "Cloud Storage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0176",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0178",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0090",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0091",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0092"
+    },
+    {
+      "transaction_id": "jordan-0092",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0091"
+    },
+    {
+      "transaction_id": "jordan-0057",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0175",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0181",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0031",
+      "true_merchant": "Riverside Apartments",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0093",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0094",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0095"
+    },
+    {
+      "transaction_id": "jordan-0095",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0094"
+    },
+    {
+      "transaction_id": "jordan-0179",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0058",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0180",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0032",
+      "true_merchant": "Photo Editing Software",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0182",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0184",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0033",
+      "true_merchant": "T-Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0059",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0183",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0185",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0034",
+      "true_merchant": "Auto Insurance",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0186",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0187",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0188",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0207",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0208"
+    },
+    {
+      "transaction_id": "jordan-0208",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "jordan-0207"
+    },
+    {
+      "transaction_id": "jordan-0060",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0035",
+      "true_merchant": "Camera Equipment",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0096",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0097",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0098"
+    },
+    {
+      "transaction_id": "jordan-0098",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0097"
+    },
+    {
+      "transaction_id": "jordan-0189",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0191",
+      "true_merchant": "Corner Cafe",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0036",
+      "true_merchant": "Cloud Storage",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0190",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0061",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0192",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0193",
+      "true_merchant": "Camera Shop",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0196",
+      "true_merchant": "Bean Street Coffee",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0194",
+      "true_merchant": "Value Mart",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0195",
+      "true_merchant": "Shell",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0062",
+      "true_merchant": "Delivery Platform",
+      "kind": "income",
+      "recurring": "weekly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0099",
+      "true_merchant": "Jordan Photo",
+      "kind": "income",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "jordan-0100",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0101"
+    },
+    {
+      "transaction_id": "jordan-0101",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "none",
+      "linked_transaction_id": "jordan-0100"
+    }
+  ]
+}

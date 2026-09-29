@@ -1,0 +1,1302 @@
+[
+  {
+    "transaction_id": "maya-0001",
+    "account_id": "maya-checking",
+    "date": "2026-01-01",
+    "name": "OAKWOOD APARTMENTS RENT",
+    "amount": 650.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0053",
+    "account_id": "maya-card",
+    "date": "2026-01-01",
+    "name": "CAMPUS BOOKSTORE",
+    "amount": 18.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0037",
+    "account_id": "maya-checking",
+    "date": "2026-01-02",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0052",
+    "account_id": "maya-card",
+    "date": "2026-01-02",
+    "name": "CORNER CAFE",
+    "amount": 7.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0002",
+    "account_id": "maya-checking",
+    "date": "2026-01-03",
+    "name": "NETFLIX.COM",
+    "amount": 15.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0003",
+    "account_id": "maya-checking",
+    "date": "2026-01-05",
+    "name": "CITY TRANSIT PASS",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0050",
+    "account_id": "maya-card",
+    "date": "2026-01-06",
+    "name": "VALUE MART",
+    "amount": 19.11,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0051",
+    "account_id": "maya-card",
+    "date": "2026-01-06",
+    "name": "BEAN STREET COFFEE",
+    "amount": 2.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0131"
+  },
+  {
+    "transaction_id": "maya-0004",
+    "account_id": "maya-checking",
+    "date": "2026-01-10",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 35.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0055",
+    "account_id": "maya-card",
+    "date": "2026-01-11",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 2.06,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0054",
+    "account_id": "maya-card",
+    "date": "2026-01-12",
+    "name": "VALUE-MART #104",
+    "amount": 18.87,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0005",
+    "account_id": "maya-checking",
+    "date": "2026-01-15",
+    "name": "CITY UTILITIES PMT",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0056",
+    "account_id": "maya-card",
+    "date": "2026-01-15",
+    "name": "VALUEMART GROCERY",
+    "amount": 20.19,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0038",
+    "account_id": "maya-checking",
+    "date": "2026-01-16",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0057",
+    "account_id": "maya-card",
+    "date": "2026-01-19",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.2,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0058",
+    "account_id": "maya-card",
+    "date": "2026-01-19",
+    "name": "TST* CORNER CAFE",
+    "amount": 7.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0006",
+    "account_id": "maya-checking",
+    "date": "2026-01-20",
+    "name": "COMCAST XFINITY",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0060",
+    "account_id": "maya-card",
+    "date": "2026-01-25",
+    "name": "BEAN STREET COFFEE",
+    "amount": 2.44,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0059",
+    "account_id": "maya-card",
+    "date": "2026-01-27",
+    "name": "VALUE MART",
+    "amount": 25.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0039",
+    "account_id": "maya-checking",
+    "date": "2026-01-30",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0007",
+    "account_id": "maya-checking",
+    "date": "2026-02-01",
+    "name": "OAKWOOD APARTMENTS RENT",
+    "amount": 650.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0061",
+    "account_id": "maya-card",
+    "date": "2026-02-02",
+    "name": "VALUE-MART #104",
+    "amount": 20.78,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0008",
+    "account_id": "maya-checking",
+    "date": "2026-02-03",
+    "name": "NETFLIX.COM",
+    "amount": 15.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0062",
+    "account_id": "maya-card",
+    "date": "2026-02-04",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 2.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0063",
+    "account_id": "maya-card",
+    "date": "2026-02-04",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 7.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0009",
+    "account_id": "maya-checking",
+    "date": "2026-02-05",
+    "name": "CITY TRANSIT PASS",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0065",
+    "account_id": "maya-card",
+    "date": "2026-02-06",
+    "name": "BEANSTREET CAFE",
+    "amount": 2.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0064",
+    "account_id": "maya-card",
+    "date": "2026-02-08",
+    "name": "VALUEMART GROCERY",
+    "amount": 21.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0119",
+    "account_id": "maya-card",
+    "date": "2026-02-09",
+    "name": "REFUND BEANSTREET CAFE",
+    "amount": -2.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0010",
+    "account_id": "maya-checking",
+    "date": "2026-02-10",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 35.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0067",
+    "account_id": "maya-card",
+    "date": "2026-02-12",
+    "name": "BEAN STREET COFFEE",
+    "amount": 2.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0040",
+    "account_id": "maya-checking",
+    "date": "2026-02-13",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0068",
+    "account_id": "maya-card",
+    "date": "2026-02-14",
+    "name": "CORNER CAFE",
+    "amount": 11.24,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0011",
+    "account_id": "maya-checking",
+    "date": "2026-02-15",
+    "name": "CITY UTILITIES PMT",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0066",
+    "account_id": "maya-card",
+    "date": "2026-02-18",
+    "name": "VALUE MART",
+    "amount": 21.37,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0070",
+    "account_id": "maya-card",
+    "date": "2026-02-19",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.46,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0012",
+    "account_id": "maya-checking",
+    "date": "2026-02-20",
+    "name": "COMCAST XFINITY",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0121",
+    "account_id": "maya-checking",
+    "date": "2026-02-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 127.89,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0122",
+    "account_id": "maya-card",
+    "date": "2026-02-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -127.89,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0069",
+    "account_id": "maya-card",
+    "date": "2026-02-23",
+    "name": "VALUE-MART #104",
+    "amount": 20.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0132"
+  },
+  {
+    "transaction_id": "maya-0041",
+    "account_id": "maya-checking",
+    "date": "2026-02-27",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0073",
+    "account_id": "maya-card",
+    "date": "2026-02-28",
+    "name": "TST* CORNER CAFE",
+    "amount": 11.15,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0133"
+  },
+  {
+    "transaction_id": "maya-0013",
+    "account_id": "maya-checking",
+    "date": "2026-03-01",
+    "name": "OAKWOOD APARTMENTS RENT",
+    "amount": 650.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0072",
+    "account_id": "maya-card",
+    "date": "2026-03-01",
+    "name": "BEANSTREET CAFE",
+    "amount": 2.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0071",
+    "account_id": "maya-card",
+    "date": "2026-03-02",
+    "name": "VALUEMART GROCERY",
+    "amount": 19.25,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0074",
+    "account_id": "maya-card",
+    "date": "2026-03-02",
+    "name": "CAMPUS BOOKS",
+    "amount": 20.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0014",
+    "account_id": "maya-checking",
+    "date": "2026-03-03",
+    "name": "NETFLIX.COM",
+    "amount": 15.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0015",
+    "account_id": "maya-checking",
+    "date": "2026-03-05",
+    "name": "CITY TRANSIT PASS",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0075",
+    "account_id": "maya-card",
+    "date": "2026-03-07",
+    "name": "VALUE MART",
+    "amount": 23.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0016",
+    "account_id": "maya-checking",
+    "date": "2026-03-10",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 35.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0076",
+    "account_id": "maya-card",
+    "date": "2026-03-10",
+    "name": "BEAN STREET COFFEE",
+    "amount": 2.14,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0042",
+    "account_id": "maya-checking",
+    "date": "2026-03-13",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0078",
+    "account_id": "maya-card",
+    "date": "2026-03-14",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0134"
+  },
+  {
+    "transaction_id": "maya-0017",
+    "account_id": "maya-checking",
+    "date": "2026-03-15",
+    "name": "CITY UTILITIES PMT",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0077",
+    "account_id": "maya-card",
+    "date": "2026-03-17",
+    "name": "VALUE-MART #104",
+    "amount": 20.28,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0079",
+    "account_id": "maya-card",
+    "date": "2026-03-18",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 8.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0080",
+    "account_id": "maya-card",
+    "date": "2026-03-19",
+    "name": "VALUEMART GROCERY",
+    "amount": 21.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0135"
+  },
+  {
+    "transaction_id": "maya-0018",
+    "account_id": "maya-checking",
+    "date": "2026-03-20",
+    "name": "COMCAST XFINITY",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0123",
+    "account_id": "maya-checking",
+    "date": "2026-03-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 122.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0124",
+    "account_id": "maya-card",
+    "date": "2026-03-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -122.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0081",
+    "account_id": "maya-card",
+    "date": "2026-03-22",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.27,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0043",
+    "account_id": "maya-checking",
+    "date": "2026-03-27",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0082",
+    "account_id": "maya-card",
+    "date": "2026-03-28",
+    "name": "VALUE MART",
+    "amount": 19.63,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0083",
+    "account_id": "maya-card",
+    "date": "2026-03-28",
+    "name": "BEAN STREET COFFEE",
+    "amount": 2.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0084",
+    "account_id": "maya-card",
+    "date": "2026-03-28",
+    "name": "CORNER CAFE",
+    "amount": 10.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0019",
+    "account_id": "maya-checking",
+    "date": "2026-04-01",
+    "name": "OAKWOOD APARTMENTS RENT",
+    "amount": 650.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0020",
+    "account_id": "maya-checking",
+    "date": "2026-04-03",
+    "name": "NETFLIX.COM",
+    "amount": 17.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0021",
+    "account_id": "maya-checking",
+    "date": "2026-04-05",
+    "name": "CITY TRANSIT PASS",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0086",
+    "account_id": "maya-card",
+    "date": "2026-04-06",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.27,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0085",
+    "account_id": "maya-card",
+    "date": "2026-04-07",
+    "name": "VALUE-MART #104",
+    "amount": 24.48,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0022",
+    "account_id": "maya-checking",
+    "date": "2026-04-10",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 35.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0044",
+    "account_id": "maya-checking",
+    "date": "2026-04-10",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0088",
+    "account_id": "maya-card",
+    "date": "2026-04-10",
+    "name": "BEANSTREET CAFE",
+    "amount": 2.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0089",
+    "account_id": "maya-card",
+    "date": "2026-04-11",
+    "name": "TST* CORNER CAFE",
+    "amount": 11.95,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0087",
+    "account_id": "maya-card",
+    "date": "2026-04-13",
+    "name": "VALUEMART GROCERY",
+    "amount": 25.29,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0120",
+    "account_id": "maya-card",
+    "date": "2026-04-13",
+    "name": "REFUND BEANSTREET CAFE",
+    "amount": -2.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0023",
+    "account_id": "maya-checking",
+    "date": "2026-04-15",
+    "name": "CITY UTILITIES PMT",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0091",
+    "account_id": "maya-card",
+    "date": "2026-04-17",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.37,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0024",
+    "account_id": "maya-checking",
+    "date": "2026-04-20",
+    "name": "COMCAST XFINITY",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0125",
+    "account_id": "maya-checking",
+    "date": "2026-04-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 158.21,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0126",
+    "account_id": "maya-card",
+    "date": "2026-04-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -158.21,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0090",
+    "account_id": "maya-card",
+    "date": "2026-04-21",
+    "name": "VALUE MART",
+    "amount": 24.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0093",
+    "account_id": "maya-card",
+    "date": "2026-04-23",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 2.46,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0094",
+    "account_id": "maya-card",
+    "date": "2026-04-23",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 11.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0045",
+    "account_id": "maya-checking",
+    "date": "2026-04-24",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0095",
+    "account_id": "maya-card",
+    "date": "2026-04-26",
+    "name": "UNIVERSITY BOOK STORE",
+    "amount": 14.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0092",
+    "account_id": "maya-card",
+    "date": "2026-04-29",
+    "name": "VALUE-MART #104",
+    "amount": 25.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0025",
+    "account_id": "maya-checking",
+    "date": "2026-05-01",
+    "name": "OAKWOOD APARTMENTS RENT",
+    "amount": 650.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0096",
+    "account_id": "maya-card",
+    "date": "2026-05-01",
+    "name": "VALUEMART GROCERY",
+    "amount": 27.13,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0026",
+    "account_id": "maya-checking",
+    "date": "2026-05-03",
+    "name": "NETFLIX.COM",
+    "amount": 17.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0097",
+    "account_id": "maya-card",
+    "date": "2026-05-04",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.75,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0027",
+    "account_id": "maya-checking",
+    "date": "2026-05-05",
+    "name": "CITY TRANSIT PASS",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0046",
+    "account_id": "maya-checking",
+    "date": "2026-05-08",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0098",
+    "account_id": "maya-card",
+    "date": "2026-05-09",
+    "name": "VALUE MART",
+    "amount": 20.13,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0028",
+    "account_id": "maya-checking",
+    "date": "2026-05-10",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 35.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0099",
+    "account_id": "maya-card",
+    "date": "2026-05-10",
+    "name": "BEAN STREET COFFEE",
+    "amount": 2.79,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0100",
+    "account_id": "maya-card",
+    "date": "2026-05-12",
+    "name": "CORNER CAFE",
+    "amount": 9.29,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0029",
+    "account_id": "maya-checking",
+    "date": "2026-05-15",
+    "name": "CITY UTILITIES PMT",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0101",
+    "account_id": "maya-card",
+    "date": "2026-05-16",
+    "name": "VALUE-MART #104",
+    "amount": 19.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0102",
+    "account_id": "maya-card",
+    "date": "2026-05-19",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.12,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0136"
+  },
+  {
+    "transaction_id": "maya-0030",
+    "account_id": "maya-checking",
+    "date": "2026-05-20",
+    "name": "COMCAST XFINITY",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0127",
+    "account_id": "maya-checking",
+    "date": "2026-05-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 147.09,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0128",
+    "account_id": "maya-card",
+    "date": "2026-05-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -147.09,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0047",
+    "account_id": "maya-checking",
+    "date": "2026-05-22",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0103",
+    "account_id": "maya-card",
+    "date": "2026-05-23",
+    "name": "VALUEMART GROCERY",
+    "amount": 25.47,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0104",
+    "account_id": "maya-card",
+    "date": "2026-05-24",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0105",
+    "account_id": "maya-card",
+    "date": "2026-05-24",
+    "name": "TST* CORNER CAFE",
+    "amount": 8.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0107",
+    "account_id": "maya-card",
+    "date": "2026-05-28",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0138"
+  },
+  {
+    "transaction_id": "maya-0106",
+    "account_id": "maya-card",
+    "date": "2026-05-29",
+    "name": "VALUE MART",
+    "amount": 23.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0137"
+  },
+  {
+    "transaction_id": "maya-0031",
+    "account_id": "maya-checking",
+    "date": "2026-06-01",
+    "name": "OAKWOOD APARTMENTS RENT",
+    "amount": 650.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0032",
+    "account_id": "maya-checking",
+    "date": "2026-06-03",
+    "name": "NETFLIX.COM",
+    "amount": 17.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0033",
+    "account_id": "maya-checking",
+    "date": "2026-06-05",
+    "name": "CITY TRANSIT PASS",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0048",
+    "account_id": "maya-checking",
+    "date": "2026-06-05",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0109",
+    "account_id": "maya-card",
+    "date": "2026-06-09",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 2.32,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0110",
+    "account_id": "maya-card",
+    "date": "2026-06-09",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 9.11,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "maya-0139"
+  },
+  {
+    "transaction_id": "maya-0034",
+    "account_id": "maya-checking",
+    "date": "2026-06-10",
+    "name": "TMOBILE*AUTOPAY",
+    "amount": 35.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0108",
+    "account_id": "maya-card",
+    "date": "2026-06-10",
+    "name": "VALUE-MART #104",
+    "amount": 19.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0111",
+    "account_id": "maya-card",
+    "date": "2026-06-11",
+    "name": "VALUEMART GROCERY",
+    "amount": 21.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0035",
+    "account_id": "maya-checking",
+    "date": "2026-06-15",
+    "name": "CITY UTILITIES PMT",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0112",
+    "account_id": "maya-card",
+    "date": "2026-06-15",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0115",
+    "account_id": "maya-card",
+    "date": "2026-06-18",
+    "name": "CORNER CAFE",
+    "amount": 10.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0116",
+    "account_id": "maya-card",
+    "date": "2026-06-18",
+    "name": "CAMPUS BOOKSTORE",
+    "amount": 18.82,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0049",
+    "account_id": "maya-checking",
+    "date": "2026-06-19",
+    "name": "BEAN STREET COFFEE PAYROLL",
+    "amount": -520.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0036",
+    "account_id": "maya-checking",
+    "date": "2026-06-20",
+    "name": "COMCAST XFINITY",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0129",
+    "account_id": "maya-checking",
+    "date": "2026-06-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 150.3,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0130",
+    "account_id": "maya-card",
+    "date": "2026-06-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -150.3,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0113",
+    "account_id": "maya-card",
+    "date": "2026-06-22",
+    "name": "VALUE MART",
+    "amount": 20.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0114",
+    "account_id": "maya-card",
+    "date": "2026-06-22",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0117",
+    "account_id": "maya-card",
+    "date": "2026-06-29",
+    "name": "VALUE-MART #104",
+    "amount": 25.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "maya-0118",
+    "account_id": "maya-card",
+    "date": "2026-06-30",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 2.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  }
+]

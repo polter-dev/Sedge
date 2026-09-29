@@ -1,0 +1,1542 @@
+[
+  {
+    "transaction_id": "elena-0001",
+    "account_id": "elena-checking",
+    "date": "2026-01-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1450.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0065",
+    "account_id": "elena-card",
+    "date": "2026-01-01",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.63,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0062",
+    "account_id": "elena-card",
+    "date": "2026-01-03",
+    "name": "VALUE MART",
+    "amount": 98.19,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0066",
+    "account_id": "elena-card",
+    "date": "2026-01-03",
+    "name": "HOME GOODS",
+    "amount": 14.09,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0063",
+    "account_id": "elena-card",
+    "date": "2026-01-04",
+    "name": "SHELL",
+    "amount": 41.27,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0002",
+    "account_id": "elena-checking",
+    "date": "2026-01-05",
+    "name": "COLLEGE TUITION PAYMENT PLAN",
+    "amount": 800.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0064",
+    "account_id": "elena-card",
+    "date": "2026-01-05",
+    "name": "CORNER CAFE",
+    "amount": 20.73,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "elena-0155"
+  },
+  {
+    "transaction_id": "elena-0003",
+    "account_id": "elena-checking",
+    "date": "2026-01-09",
+    "name": "FAMILY PHONE PLAN",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0037",
+    "account_id": "elena-checking",
+    "date": "2026-01-09",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0004",
+    "account_id": "elena-checking",
+    "date": "2026-01-12",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 275.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0068",
+    "account_id": "elena-card",
+    "date": "2026-01-12",
+    "name": "SHELL OIL #021",
+    "amount": 41.5,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0067",
+    "account_id": "elena-card",
+    "date": "2026-01-14",
+    "name": "VALUE-MART #104",
+    "amount": 89.15,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0069",
+    "account_id": "elena-card",
+    "date": "2026-01-15",
+    "name": "VALUEMART GROCERY",
+    "amount": 98.02,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0071",
+    "account_id": "elena-card",
+    "date": "2026-01-15",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.38,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0050",
+    "account_id": "elena-checking",
+    "date": "2026-01-16",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0051",
+    "account_id": "elena-savings",
+    "date": "2026-01-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0005",
+    "account_id": "elena-checking",
+    "date": "2026-01-17",
+    "name": "CITY ELECTRIC",
+    "amount": 135.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0070",
+    "account_id": "elena-card",
+    "date": "2026-01-19",
+    "name": "SHELL SERVICE STATION",
+    "amount": 34.24,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0006",
+    "account_id": "elena-checking",
+    "date": "2026-01-21",
+    "name": "COMCAST XFINITY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0038",
+    "account_id": "elena-checking",
+    "date": "2026-01-23",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0072",
+    "account_id": "elena-card",
+    "date": "2026-01-24",
+    "name": "VALUE MART",
+    "amount": 96.79,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0073",
+    "account_id": "elena-card",
+    "date": "2026-01-25",
+    "name": "SHELL",
+    "amount": 37.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0074",
+    "account_id": "elena-card",
+    "date": "2026-01-28",
+    "name": "TST* CORNER CAFE",
+    "amount": 21.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "elena-0156"
+  },
+  {
+    "transaction_id": "elena-0078",
+    "account_id": "elena-card",
+    "date": "2026-01-29",
+    "name": "HOMEGOODS #081",
+    "amount": 29.52,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0075",
+    "account_id": "elena-card",
+    "date": "2026-01-31",
+    "name": "VALUE-MART #104",
+    "amount": 94.22,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0076",
+    "account_id": "elena-card",
+    "date": "2026-01-31",
+    "name": "SHELL OIL #021",
+    "amount": 33.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0007",
+    "account_id": "elena-checking",
+    "date": "2026-02-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1450.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0077",
+    "account_id": "elena-card",
+    "date": "2026-02-03",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0008",
+    "account_id": "elena-checking",
+    "date": "2026-02-05",
+    "name": "COLLEGE TUITION PAYMENT PLAN",
+    "amount": 800.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0039",
+    "account_id": "elena-checking",
+    "date": "2026-02-06",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0009",
+    "account_id": "elena-checking",
+    "date": "2026-02-09",
+    "name": "FAMILY PHONE PLAN",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0079",
+    "account_id": "elena-card",
+    "date": "2026-02-09",
+    "name": "VALUEMART GROCERY",
+    "amount": 102.98,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0080",
+    "account_id": "elena-card",
+    "date": "2026-02-10",
+    "name": "SHELL SERVICE STATION",
+    "amount": 28.17,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0010",
+    "account_id": "elena-checking",
+    "date": "2026-02-12",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 275.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0082",
+    "account_id": "elena-card",
+    "date": "2026-02-15",
+    "name": "SHELL",
+    "amount": 26.86,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0084",
+    "account_id": "elena-card",
+    "date": "2026-02-15",
+    "name": "BEAN STREET COFFEE",
+    "amount": 4.89,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0052",
+    "account_id": "elena-checking",
+    "date": "2026-02-16",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0053",
+    "account_id": "elena-savings",
+    "date": "2026-02-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0081",
+    "account_id": "elena-card",
+    "date": "2026-02-16",
+    "name": "VALUE MART",
+    "amount": 75.48,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0011",
+    "account_id": "elena-checking",
+    "date": "2026-02-17",
+    "name": "CITY ELECTRIC",
+    "amount": 135.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0083",
+    "account_id": "elena-card",
+    "date": "2026-02-18",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 38.26,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0143",
+    "account_id": "elena-card",
+    "date": "2026-02-18",
+    "name": "REFUND BEAN STREET COFFEE",
+    "amount": -4.89,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0040",
+    "account_id": "elena-checking",
+    "date": "2026-02-20",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0012",
+    "account_id": "elena-checking",
+    "date": "2026-02-21",
+    "name": "COMCAST XFINITY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0086",
+    "account_id": "elena-card",
+    "date": "2026-02-22",
+    "name": "SHELL OIL #021",
+    "amount": 43.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0085",
+    "account_id": "elena-card",
+    "date": "2026-02-24",
+    "name": "VALUE-MART #104",
+    "amount": 104.13,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0145",
+    "account_id": "elena-checking",
+    "date": "2026-02-25",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 757.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0146",
+    "account_id": "elena-card",
+    "date": "2026-02-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -757.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0090",
+    "account_id": "elena-card",
+    "date": "2026-02-27",
+    "name": "HOME GOODS STORE",
+    "amount": 20.22,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0087",
+    "account_id": "elena-card",
+    "date": "2026-02-28",
+    "name": "VALUEMART GROCERY",
+    "amount": 92.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0088",
+    "account_id": "elena-card",
+    "date": "2026-02-28",
+    "name": "SHELL SERVICE STATION",
+    "amount": 33.31,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0013",
+    "account_id": "elena-checking",
+    "date": "2026-03-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1450.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0089",
+    "account_id": "elena-card",
+    "date": "2026-03-01",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 4.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0014",
+    "account_id": "elena-checking",
+    "date": "2026-03-05",
+    "name": "COLLEGE TUITION PAYMENT PLAN",
+    "amount": 800.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0041",
+    "account_id": "elena-checking",
+    "date": "2026-03-06",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0091",
+    "account_id": "elena-card",
+    "date": "2026-03-06",
+    "name": "VALUE MART",
+    "amount": 88.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0093",
+    "account_id": "elena-card",
+    "date": "2026-03-06",
+    "name": "CORNER CAFE",
+    "amount": 37.28,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0015",
+    "account_id": "elena-checking",
+    "date": "2026-03-09",
+    "name": "FAMILY PHONE PLAN",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0092",
+    "account_id": "elena-card",
+    "date": "2026-03-09",
+    "name": "SHELL",
+    "amount": 35.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0016",
+    "account_id": "elena-checking",
+    "date": "2026-03-12",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 275.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0094",
+    "account_id": "elena-card",
+    "date": "2026-03-14",
+    "name": "VALUE-MART #104",
+    "amount": 102.04,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0054",
+    "account_id": "elena-checking",
+    "date": "2026-03-16",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0055",
+    "account_id": "elena-savings",
+    "date": "2026-03-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0017",
+    "account_id": "elena-checking",
+    "date": "2026-03-17",
+    "name": "CITY ELECTRIC",
+    "amount": 135.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0095",
+    "account_id": "elena-card",
+    "date": "2026-03-18",
+    "name": "SHELL OIL #021",
+    "amount": 33.3,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0096",
+    "account_id": "elena-card",
+    "date": "2026-03-18",
+    "name": "BEANSTREET CAFE",
+    "amount": 4.02,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0042",
+    "account_id": "elena-checking",
+    "date": "2026-03-20",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0018",
+    "account_id": "elena-checking",
+    "date": "2026-03-21",
+    "name": "COMCAST XFINITY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0098",
+    "account_id": "elena-card",
+    "date": "2026-03-24",
+    "name": "SHELL SERVICE STATION",
+    "amount": 30.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0097",
+    "account_id": "elena-card",
+    "date": "2026-03-25",
+    "name": "VALUEMART GROCERY",
+    "amount": 75.09,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0147",
+    "account_id": "elena-checking",
+    "date": "2026-03-25",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 569.84,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0148",
+    "account_id": "elena-card",
+    "date": "2026-03-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -569.84,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0101",
+    "account_id": "elena-card",
+    "date": "2026-03-27",
+    "name": "TST* CORNER CAFE",
+    "amount": 28.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "elena-0157"
+  },
+  {
+    "transaction_id": "elena-0102",
+    "account_id": "elena-card",
+    "date": "2026-03-29",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0099",
+    "account_id": "elena-card",
+    "date": "2026-03-30",
+    "name": "VALUE MART",
+    "amount": 95.3,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0103",
+    "account_id": "elena-card",
+    "date": "2026-03-30",
+    "name": "HOME GOODS",
+    "amount": 25.73,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0100",
+    "account_id": "elena-card",
+    "date": "2026-03-31",
+    "name": "SHELL",
+    "amount": 34.79,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0019",
+    "account_id": "elena-checking",
+    "date": "2026-04-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1450.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0043",
+    "account_id": "elena-checking",
+    "date": "2026-04-03",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0105",
+    "account_id": "elena-card",
+    "date": "2026-04-04",
+    "name": "SHELL OIL #021",
+    "amount": 42.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0020",
+    "account_id": "elena-checking",
+    "date": "2026-04-05",
+    "name": "COLLEGE TUITION PAYMENT PLAN",
+    "amount": 800.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0104",
+    "account_id": "elena-card",
+    "date": "2026-04-05",
+    "name": "VALUE-MART #104",
+    "amount": 90.94,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0144",
+    "account_id": "elena-card",
+    "date": "2026-04-07",
+    "name": "REFUND SHELL OIL #021",
+    "amount": -42.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0021",
+    "account_id": "elena-checking",
+    "date": "2026-04-09",
+    "name": "FAMILY PHONE PLAN",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0022",
+    "account_id": "elena-checking",
+    "date": "2026-04-12",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 275.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0107",
+    "account_id": "elena-card",
+    "date": "2026-04-12",
+    "name": "SHELL SERVICE STATION",
+    "amount": 29.67,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0106",
+    "account_id": "elena-card",
+    "date": "2026-04-14",
+    "name": "VALUEMART GROCERY",
+    "amount": 83.36,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0108",
+    "account_id": "elena-card",
+    "date": "2026-04-15",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.82,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0056",
+    "account_id": "elena-checking",
+    "date": "2026-04-16",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0057",
+    "account_id": "elena-savings",
+    "date": "2026-04-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0023",
+    "account_id": "elena-checking",
+    "date": "2026-04-17",
+    "name": "CITY ELECTRIC",
+    "amount": 135.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0044",
+    "account_id": "elena-checking",
+    "date": "2026-04-17",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0109",
+    "account_id": "elena-card",
+    "date": "2026-04-18",
+    "name": "VALUE MART",
+    "amount": 101.06,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0111",
+    "account_id": "elena-card",
+    "date": "2026-04-19",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 27.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0024",
+    "account_id": "elena-checking",
+    "date": "2026-04-21",
+    "name": "COMCAST XFINITY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0110",
+    "account_id": "elena-card",
+    "date": "2026-04-21",
+    "name": "SHELL",
+    "amount": 43.27,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0115",
+    "account_id": "elena-card",
+    "date": "2026-04-24",
+    "name": "HOMEGOODS #081",
+    "amount": 21.04,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "elena-0158"
+  },
+  {
+    "transaction_id": "elena-0149",
+    "account_id": "elena-checking",
+    "date": "2026-04-25",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 599.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0150",
+    "account_id": "elena-card",
+    "date": "2026-04-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -599.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0114",
+    "account_id": "elena-card",
+    "date": "2026-04-26",
+    "name": "BEANSTREET CAFE",
+    "amount": 4.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0112",
+    "account_id": "elena-card",
+    "date": "2026-04-28",
+    "name": "VALUE-MART #104",
+    "amount": 102.73,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0113",
+    "account_id": "elena-card",
+    "date": "2026-04-28",
+    "name": "SHELL OIL #021",
+    "amount": 44.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0117",
+    "account_id": "elena-card",
+    "date": "2026-04-30",
+    "name": "SHELL SERVICE STATION",
+    "amount": 42.48,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0025",
+    "account_id": "elena-checking",
+    "date": "2026-05-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1450.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0045",
+    "account_id": "elena-checking",
+    "date": "2026-05-01",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0116",
+    "account_id": "elena-card",
+    "date": "2026-05-04",
+    "name": "VALUEMART GROCERY",
+    "amount": 86.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0026",
+    "account_id": "elena-checking",
+    "date": "2026-05-05",
+    "name": "COLLEGE TUITION PAYMENT PLAN",
+    "amount": 800.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0120",
+    "account_id": "elena-card",
+    "date": "2026-05-08",
+    "name": "CORNER CAFE",
+    "amount": 28.2,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0027",
+    "account_id": "elena-checking",
+    "date": "2026-05-09",
+    "name": "FAMILY PHONE PLAN",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0118",
+    "account_id": "elena-card",
+    "date": "2026-05-10",
+    "name": "VALUE MART",
+    "amount": 78.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0119",
+    "account_id": "elena-card",
+    "date": "2026-05-10",
+    "name": "SHELL",
+    "amount": 25.31,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0028",
+    "account_id": "elena-checking",
+    "date": "2026-05-12",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 275.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0121",
+    "account_id": "elena-card",
+    "date": "2026-05-12",
+    "name": "BEAN STREET COFFEE",
+    "amount": 4.94,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "elena-0159"
+  },
+  {
+    "transaction_id": "elena-0122",
+    "account_id": "elena-card",
+    "date": "2026-05-14",
+    "name": "VALUE-MART #104",
+    "amount": 91.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0046",
+    "account_id": "elena-checking",
+    "date": "2026-05-15",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0058",
+    "account_id": "elena-checking",
+    "date": "2026-05-16",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0059",
+    "account_id": "elena-savings",
+    "date": "2026-05-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0123",
+    "account_id": "elena-card",
+    "date": "2026-05-16",
+    "name": "SHELL OIL #021",
+    "amount": 31.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0029",
+    "account_id": "elena-checking",
+    "date": "2026-05-17",
+    "name": "CITY ELECTRIC",
+    "amount": 135.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0030",
+    "account_id": "elena-checking",
+    "date": "2026-05-21",
+    "name": "COMCAST XFINITY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0125",
+    "account_id": "elena-card",
+    "date": "2026-05-21",
+    "name": "SHELL SERVICE STATION",
+    "amount": 42.04,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0127",
+    "account_id": "elena-card",
+    "date": "2026-05-25",
+    "name": "HOME GOODS STORE",
+    "amount": 18.84,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0151",
+    "account_id": "elena-checking",
+    "date": "2026-05-25",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 595.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0152",
+    "account_id": "elena-card",
+    "date": "2026-05-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -595.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0124",
+    "account_id": "elena-card",
+    "date": "2026-05-26",
+    "name": "VALUEMART GROCERY",
+    "amount": 88.91,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0126",
+    "account_id": "elena-card",
+    "date": "2026-05-27",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 4.35,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0047",
+    "account_id": "elena-checking",
+    "date": "2026-05-29",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0128",
+    "account_id": "elena-card",
+    "date": "2026-05-30",
+    "name": "VALUE MART",
+    "amount": 96.94,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0031",
+    "account_id": "elena-checking",
+    "date": "2026-06-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1450.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0130",
+    "account_id": "elena-card",
+    "date": "2026-06-01",
+    "name": "TST* CORNER CAFE",
+    "amount": 20.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0129",
+    "account_id": "elena-card",
+    "date": "2026-06-03",
+    "name": "SHELL",
+    "amount": 34.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0131",
+    "account_id": "elena-card",
+    "date": "2026-06-04",
+    "name": "VALUE-MART #104",
+    "amount": 83.22,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0032",
+    "account_id": "elena-checking",
+    "date": "2026-06-05",
+    "name": "COLLEGE TUITION PAYMENT PLAN",
+    "amount": 800.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0133",
+    "account_id": "elena-card",
+    "date": "2026-06-05",
+    "name": "BEANSTREET CAFE",
+    "amount": 4.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0033",
+    "account_id": "elena-checking",
+    "date": "2026-06-09",
+    "name": "FAMILY PHONE PLAN",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0132",
+    "account_id": "elena-card",
+    "date": "2026-06-09",
+    "name": "SHELL OIL #021",
+    "amount": 43.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0034",
+    "account_id": "elena-checking",
+    "date": "2026-06-12",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 275.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0048",
+    "account_id": "elena-checking",
+    "date": "2026-06-12",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0134",
+    "account_id": "elena-card",
+    "date": "2026-06-14",
+    "name": "VALUEMART GROCERY",
+    "amount": 109.24,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0060",
+    "account_id": "elena-checking",
+    "date": "2026-06-16",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0061",
+    "account_id": "elena-savings",
+    "date": "2026-06-16",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0035",
+    "account_id": "elena-checking",
+    "date": "2026-06-17",
+    "name": "CITY ELECTRIC",
+    "amount": 135.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0135",
+    "account_id": "elena-card",
+    "date": "2026-06-17",
+    "name": "SHELL SERVICE STATION",
+    "amount": 37.67,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0138",
+    "account_id": "elena-card",
+    "date": "2026-06-18",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 20.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0137",
+    "account_id": "elena-card",
+    "date": "2026-06-19",
+    "name": "SHELL",
+    "amount": 38.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0140",
+    "account_id": "elena-card",
+    "date": "2026-06-20",
+    "name": "HOME GOODS",
+    "amount": 18.75,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "elena-0160"
+  },
+  {
+    "transaction_id": "elena-0036",
+    "account_id": "elena-checking",
+    "date": "2026-06-21",
+    "name": "COMCAST XFINITY",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0136",
+    "account_id": "elena-card",
+    "date": "2026-06-24",
+    "name": "VALUE MART",
+    "amount": 78.52,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0139",
+    "account_id": "elena-card",
+    "date": "2026-06-24",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.11,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0153",
+    "account_id": "elena-checking",
+    "date": "2026-06-25",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 597.84,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0154",
+    "account_id": "elena-card",
+    "date": "2026-06-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -597.84,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0049",
+    "account_id": "elena-checking",
+    "date": "2026-06-26",
+    "name": "LAKESIDE SCHOOL DIST PAYROLL",
+    "amount": -2300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0141",
+    "account_id": "elena-card",
+    "date": "2026-06-26",
+    "name": "VALUE-MART #104",
+    "amount": 83.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "elena-0142",
+    "account_id": "elena-card",
+    "date": "2026-06-28",
+    "name": "SHELL OIL #021",
+    "amount": 36.32,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  }
+]

@@ -1,0 +1,1842 @@
+[
+  {
+    "transaction_id": "daniel-0001",
+    "account_id": "daniel-checking",
+    "date": "2026-01-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1850.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0057",
+    "account_id": "daniel-card-a",
+    "date": "2026-01-01",
+    "name": "HOME GOODS",
+    "amount": 35.79,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0060",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-01",
+    "name": "SHELL",
+    "amount": 43.47,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0044",
+    "account_id": "daniel-checking",
+    "date": "2026-01-02",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0045",
+    "account_id": "daniel-savings",
+    "date": "2026-01-02",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0002",
+    "account_id": "daniel-checking",
+    "date": "2026-01-03",
+    "name": "NETFLIX.COM",
+    "amount": 15.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0058",
+    "account_id": "daniel-card-a",
+    "date": "2026-01-03",
+    "name": "AMAZON",
+    "amount": 34.06,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0056",
+    "account_id": "daniel-card-a",
+    "date": "2026-01-04",
+    "name": "VALUE MART",
+    "amount": 70.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0059",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-04",
+    "name": "CORNER CAFE",
+    "amount": 50.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0061",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-06",
+    "name": "BEAN STREET COFFEE",
+    "amount": 3.3,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0003",
+    "account_id": "daniel-checking",
+    "date": "2026-01-07",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 325.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0064",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-09",
+    "name": "SHELL OIL #021",
+    "amount": 33.83,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0062",
+    "account_id": "daniel-card-a",
+    "date": "2026-01-11",
+    "name": "VALUE-MART #104",
+    "amount": 86.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0004",
+    "account_id": "daniel-checking",
+    "date": "2026-01-12",
+    "name": "AUTO INSURANCE",
+    "amount": 125.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0063",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-14",
+    "name": "TST* CORNER CAFE",
+    "amount": 50.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "daniel-0185"
+  },
+  {
+    "transaction_id": "daniel-0068",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-15",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 4.33,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0005",
+    "account_id": "daniel-checking",
+    "date": "2026-01-16",
+    "name": "CITY ELECTRIC",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0066",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-18",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 30.5,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0067",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-18",
+    "name": "SHELL SERVICE STATION",
+    "amount": 35.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "daniel-0186"
+  },
+  {
+    "transaction_id": "daniel-0065",
+    "account_id": "daniel-card-a",
+    "date": "2026-01-19",
+    "name": "VALUEMART GROCERY",
+    "amount": 78.46,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0006",
+    "account_id": "daniel-checking",
+    "date": "2026-01-20",
+    "name": "COMCAST XFINITY",
+    "amount": 70.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0070",
+    "account_id": "daniel-card-a",
+    "date": "2026-01-22",
+    "name": "HOMEGOODS #081",
+    "amount": 19.37,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0072",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-22",
+    "name": "SHELL",
+    "amount": 48.53,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "daniel-0187"
+  },
+  {
+    "transaction_id": "daniel-0071",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-26",
+    "name": "CORNER CAFE",
+    "amount": 50.08,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0069",
+    "account_id": "daniel-card-a",
+    "date": "2026-01-28",
+    "name": "VALUE MART",
+    "amount": 90.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0076",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-29",
+    "name": "SHELL OIL #021",
+    "amount": 33.29,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "daniel-0189"
+  },
+  {
+    "transaction_id": "daniel-0077",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-29",
+    "name": "BEANSTREET CAFE",
+    "amount": 5.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0038",
+    "account_id": "daniel-checking",
+    "date": "2026-01-30",
+    "name": "NORTHPOINT SERVICES PAYROLL",
+    "amount": -5200.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0075",
+    "account_id": "daniel-card-b",
+    "date": "2026-01-30",
+    "name": "TST* CORNER CAFE",
+    "amount": 50.94,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "daniel-0188"
+  },
+  {
+    "transaction_id": "daniel-0007",
+    "account_id": "daniel-checking",
+    "date": "2026-02-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1850.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0074",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-01",
+    "name": "AMZN Mktp US",
+    "amount": 36.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0046",
+    "account_id": "daniel-checking",
+    "date": "2026-02-02",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0047",
+    "account_id": "daniel-savings",
+    "date": "2026-02-02",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0008",
+    "account_id": "daniel-checking",
+    "date": "2026-02-03",
+    "name": "NETFLIX.COM",
+    "amount": 15.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0073",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-04",
+    "name": "VALUE-MART #104",
+    "amount": 72.09,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0009",
+    "account_id": "daniel-checking",
+    "date": "2026-02-07",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 325.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0078",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-07",
+    "name": "VALUEMART GROCERY",
+    "amount": 92.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0080",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-08",
+    "name": "SHELL SERVICE STATION",
+    "amount": 43.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0079",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-11",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 38.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0163",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-11",
+    "name": "REFUND SHELL SERVICE STATION",
+    "amount": -43.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0010",
+    "account_id": "daniel-checking",
+    "date": "2026-02-12",
+    "name": "AUTO INSURANCE",
+    "amount": 125.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0085",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-12",
+    "name": "BEAN STREET COFFEE",
+    "amount": 4.74,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0084",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-14",
+    "name": "SHELL",
+    "amount": 34.35,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0083",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-15",
+    "name": "CORNER CAFE",
+    "amount": 29.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0011",
+    "account_id": "daniel-checking",
+    "date": "2026-02-16",
+    "name": "CITY ELECTRIC",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0082",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-16",
+    "name": "HOME GOODS STORE",
+    "amount": 35.87,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0081",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-17",
+    "name": "VALUE MART",
+    "amount": 94.86,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0012",
+    "account_id": "daniel-checking",
+    "date": "2026-02-20",
+    "name": "COMCAST XFINITY",
+    "amount": 70.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0087",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-21",
+    "name": "TST* CORNER CAFE",
+    "amount": 26.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0086",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-23",
+    "name": "VALUE-MART #104",
+    "amount": 66.83,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0088",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-23",
+    "name": "SHELL OIL #021",
+    "amount": 39.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0165",
+    "account_id": "daniel-checking",
+    "date": "2026-02-25",
+    "name": "PAYMENT CARD A",
+    "amount": 415.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0166",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -415.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0167",
+    "account_id": "daniel-checking",
+    "date": "2026-02-25",
+    "name": "PAYMENT CARD B",
+    "amount": 441.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0168",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -441.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0090",
+    "account_id": "daniel-card-a",
+    "date": "2026-02-26",
+    "name": "AMAZON.COM*ORDER",
+    "amount": 58.24,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0091",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-26",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 50.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0092",
+    "account_id": "daniel-card-b",
+    "date": "2026-02-26",
+    "name": "SHELL SERVICE STATION",
+    "amount": 41.9,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0039",
+    "account_id": "daniel-checking",
+    "date": "2026-02-27",
+    "name": "NORTHPOINT SERVICES PAYROLL",
+    "amount": -5200.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0013",
+    "account_id": "daniel-checking",
+    "date": "2026-03-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1850.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0048",
+    "account_id": "daniel-checking",
+    "date": "2026-03-02",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0049",
+    "account_id": "daniel-savings",
+    "date": "2026-03-02",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0014",
+    "account_id": "daniel-checking",
+    "date": "2026-03-03",
+    "name": "NETFLIX.COM",
+    "amount": 15.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0093",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-03",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 5.59,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0089",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-04",
+    "name": "VALUEMART GROCERY",
+    "amount": 80.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0097",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-05",
+    "name": "SHELL",
+    "amount": 38.38,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0015",
+    "account_id": "daniel-checking",
+    "date": "2026-03-07",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 325.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0094",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-08",
+    "name": "VALUE MART",
+    "amount": 68.6,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0095",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-09",
+    "name": "HOME GOODS",
+    "amount": 24.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0096",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-09",
+    "name": "CORNER CAFE",
+    "amount": 26.19,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0016",
+    "account_id": "daniel-checking",
+    "date": "2026-03-12",
+    "name": "AUTO INSURANCE",
+    "amount": 125.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0100",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-13",
+    "name": "SHELL OIL #021",
+    "amount": 43.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0019",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-14",
+    "name": "AMAZON PRIME MEMBERSHIP",
+    "amount": 139.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0099",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-14",
+    "name": "TST* CORNER CAFE",
+    "amount": 53.04,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0101",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-14",
+    "name": "BEANSTREET CAFE",
+    "amount": 3.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0017",
+    "account_id": "daniel-checking",
+    "date": "2026-03-16",
+    "name": "CITY ELECTRIC",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0098",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-16",
+    "name": "VALUE-MART #104",
+    "amount": 81.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0018",
+    "account_id": "daniel-checking",
+    "date": "2026-03-20",
+    "name": "COMCAST XFINITY",
+    "amount": 70.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0104",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-21",
+    "name": "SHELL SERVICE STATION",
+    "amount": 48.58,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0102",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-22",
+    "name": "VALUEMART GROCERY",
+    "amount": 68.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0103",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-24",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 34.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0169",
+    "account_id": "daniel-checking",
+    "date": "2026-03-25",
+    "name": "PAYMENT CARD A",
+    "amount": 457.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0170",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -457.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0171",
+    "account_id": "daniel-checking",
+    "date": "2026-03-25",
+    "name": "PAYMENT CARD B",
+    "amount": 266.07,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0172",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -266.07,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0105",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-26",
+    "name": "VALUE MART",
+    "amount": 65.28,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0107",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-26",
+    "name": "AMAZON",
+    "amount": 18.3,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0110",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-26",
+    "name": "BEAN STREET COFFEE",
+    "amount": 5.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0108",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-27",
+    "name": "CORNER CAFE",
+    "amount": 40.18,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0109",
+    "account_id": "daniel-card-b",
+    "date": "2026-03-27",
+    "name": "SHELL",
+    "amount": 48.67,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0106",
+    "account_id": "daniel-card-a",
+    "date": "2026-03-30",
+    "name": "HOMEGOODS #081",
+    "amount": 44.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0040",
+    "account_id": "daniel-checking",
+    "date": "2026-03-31",
+    "name": "NORTHPOINT SERVICES PAYROLL",
+    "amount": -5200.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0020",
+    "account_id": "daniel-checking",
+    "date": "2026-04-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1850.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0050",
+    "account_id": "daniel-checking",
+    "date": "2026-04-02",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0051",
+    "account_id": "daniel-savings",
+    "date": "2026-04-02",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0021",
+    "account_id": "daniel-checking",
+    "date": "2026-04-03",
+    "name": "NETFLIX.COM",
+    "amount": 17.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0111",
+    "account_id": "daniel-card-a",
+    "date": "2026-04-04",
+    "name": "VALUE-MART #104",
+    "amount": 73.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0112",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-05",
+    "name": "TST* CORNER CAFE",
+    "amount": 50.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0022",
+    "account_id": "daniel-checking",
+    "date": "2026-04-07",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 325.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0113",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-07",
+    "name": "SHELL OIL #021",
+    "amount": 36.05,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0115",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-09",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 45.04,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0023",
+    "account_id": "daniel-checking",
+    "date": "2026-04-12",
+    "name": "AUTO INSURANCE",
+    "amount": 125.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0116",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-13",
+    "name": "SHELL SERVICE STATION",
+    "amount": 35.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0117",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-14",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.31,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "daniel-0190"
+  },
+  {
+    "transaction_id": "daniel-0114",
+    "account_id": "daniel-card-a",
+    "date": "2026-04-15",
+    "name": "VALUEMART GROCERY",
+    "amount": 84.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0024",
+    "account_id": "daniel-checking",
+    "date": "2026-04-16",
+    "name": "CITY ELECTRIC",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0119",
+    "account_id": "daniel-card-a",
+    "date": "2026-04-16",
+    "name": "HOME GOODS STORE",
+    "amount": 38.05,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0164",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-16",
+    "name": "REFUND SHELL SERVICE STATION",
+    "amount": -35.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0118",
+    "account_id": "daniel-card-a",
+    "date": "2026-04-17",
+    "name": "VALUE MART",
+    "amount": 72.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0120",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-17",
+    "name": "CORNER CAFE",
+    "amount": 33.17,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0025",
+    "account_id": "daniel-checking",
+    "date": "2026-04-20",
+    "name": "COMCAST XFINITY",
+    "amount": 70.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0121",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-20",
+    "name": "SHELL",
+    "amount": 34.21,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "daniel-0191"
+  },
+  {
+    "transaction_id": "daniel-0122",
+    "account_id": "daniel-card-a",
+    "date": "2026-04-25",
+    "name": "VALUE-MART #104",
+    "amount": 71.11,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0173",
+    "account_id": "daniel-checking",
+    "date": "2026-04-25",
+    "name": "PAYMENT CARD A",
+    "amount": 592.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0174",
+    "account_id": "daniel-card-a",
+    "date": "2026-04-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -592.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0175",
+    "account_id": "daniel-checking",
+    "date": "2026-04-25",
+    "name": "PAYMENT CARD B",
+    "amount": 347.38,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0176",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -347.38,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0124",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-27",
+    "name": "TST* CORNER CAFE",
+    "amount": 39.66,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0123",
+    "account_id": "daniel-card-a",
+    "date": "2026-04-28",
+    "name": "AMZN Mktp US",
+    "amount": 53.38,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0126",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-28",
+    "name": "BEANSTREET CAFE",
+    "amount": 4.27,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0125",
+    "account_id": "daniel-card-b",
+    "date": "2026-04-29",
+    "name": "SHELL OIL #021",
+    "amount": 31.02,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0041",
+    "account_id": "daniel-checking",
+    "date": "2026-04-30",
+    "name": "NORTHPOINT SERVICES PAYROLL",
+    "amount": -5200.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0026",
+    "account_id": "daniel-checking",
+    "date": "2026-05-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1850.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0052",
+    "account_id": "daniel-checking",
+    "date": "2026-05-02",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0053",
+    "account_id": "daniel-savings",
+    "date": "2026-05-02",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0127",
+    "account_id": "daniel-card-a",
+    "date": "2026-05-02",
+    "name": "VALUEMART GROCERY",
+    "amount": 66.32,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0128",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-02",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 48.13,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0027",
+    "account_id": "daniel-checking",
+    "date": "2026-05-03",
+    "name": "NETFLIX.COM",
+    "amount": 17.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0129",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-05",
+    "name": "SHELL SERVICE STATION",
+    "amount": 49.6,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0028",
+    "account_id": "daniel-checking",
+    "date": "2026-05-07",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 325.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0133",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-07",
+    "name": "SHELL",
+    "amount": 48.9,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0130",
+    "account_id": "daniel-card-a",
+    "date": "2026-05-08",
+    "name": "VALUE MART",
+    "amount": 87.24,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0131",
+    "account_id": "daniel-card-a",
+    "date": "2026-05-11",
+    "name": "HOME GOODS",
+    "amount": 37.05,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0132",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-11",
+    "name": "CORNER CAFE",
+    "amount": 25.29,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0029",
+    "account_id": "daniel-checking",
+    "date": "2026-05-12",
+    "name": "AUTO INSURANCE",
+    "amount": 125.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0134",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-12",
+    "name": "BEAN STREET COFFEE",
+    "amount": 5.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0137",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-15",
+    "name": "SHELL OIL #021",
+    "amount": 38.6,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0030",
+    "account_id": "daniel-checking",
+    "date": "2026-05-16",
+    "name": "CITY ELECTRIC",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0136",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-16",
+    "name": "TST* CORNER CAFE",
+    "amount": 42.48,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0135",
+    "account_id": "daniel-card-a",
+    "date": "2026-05-18",
+    "name": "VALUE-MART #104",
+    "amount": 66.08,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0031",
+    "account_id": "daniel-checking",
+    "date": "2026-05-20",
+    "name": "COMCAST XFINITY",
+    "amount": 70.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0138",
+    "account_id": "daniel-card-a",
+    "date": "2026-05-21",
+    "name": "VALUEMART GROCERY",
+    "amount": 74.25,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0140",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-21",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 51.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0141",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-22",
+    "name": "SHELL SERVICE STATION",
+    "amount": 43.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0177",
+    "account_id": "daniel-checking",
+    "date": "2026-05-25",
+    "name": "PAYMENT CARD A",
+    "amount": 393.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0178",
+    "account_id": "daniel-card-a",
+    "date": "2026-05-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -393.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0179",
+    "account_id": "daniel-checking",
+    "date": "2026-05-25",
+    "name": "PAYMENT CARD B",
+    "amount": 276.74,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0180",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -276.74,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0142",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-26",
+    "name": "SQ *BEAN ST COFFEE",
+    "amount": 3.31,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0139",
+    "account_id": "daniel-card-a",
+    "date": "2026-05-27",
+    "name": "AMAZON.COM*ORDER",
+    "amount": 58.75,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0042",
+    "account_id": "daniel-checking",
+    "date": "2026-05-29",
+    "name": "NORTHPOINT SERVICES PAYROLL",
+    "amount": -5200.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0146",
+    "account_id": "daniel-card-b",
+    "date": "2026-05-29",
+    "name": "SHELL",
+    "amount": 47.29,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0032",
+    "account_id": "daniel-checking",
+    "date": "2026-06-01",
+    "name": "HOME MORTGAGE",
+    "amount": 1850.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0145",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-01",
+    "name": "CORNER CAFE",
+    "amount": 47.48,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0054",
+    "account_id": "daniel-checking",
+    "date": "2026-06-02",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0055",
+    "account_id": "daniel-savings",
+    "date": "2026-06-02",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -500.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0033",
+    "account_id": "daniel-checking",
+    "date": "2026-06-03",
+    "name": "NETFLIX.COM",
+    "amount": 17.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0143",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-03",
+    "name": "VALUE MART",
+    "amount": 81.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0144",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-03",
+    "name": "HOMEGOODS #081",
+    "amount": 28.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0034",
+    "account_id": "daniel-checking",
+    "date": "2026-06-07",
+    "name": "AUTO LOAN PAYMENT",
+    "amount": 325.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0148",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-07",
+    "name": "TST* CORNER CAFE",
+    "amount": 25.74,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0149",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-09",
+    "name": "SHELL OIL #021",
+    "amount": 48.49,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0147",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-10",
+    "name": "VALUE-MART #104",
+    "amount": 89.32,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0150",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-10",
+    "name": "BEANSTREET CAFE",
+    "amount": 5.79,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0035",
+    "account_id": "daniel-checking",
+    "date": "2026-06-12",
+    "name": "AUTO INSURANCE",
+    "amount": 125.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0153",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-13",
+    "name": "SHELL SERVICE STATION",
+    "amount": 33.18,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0036",
+    "account_id": "daniel-checking",
+    "date": "2026-06-16",
+    "name": "CITY ELECTRIC",
+    "amount": 110.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0152",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-16",
+    "name": "CORNER CAFE RESTAURANT",
+    "amount": 49.32,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0151",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-17",
+    "name": "VALUEMART GROCERY",
+    "amount": 85.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0037",
+    "account_id": "daniel-checking",
+    "date": "2026-06-20",
+    "name": "COMCAST XFINITY",
+    "amount": 70.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0158",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-20",
+    "name": "SHELL",
+    "amount": 36.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0156",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-21",
+    "name": "AMAZON",
+    "amount": 25.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0154",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-23",
+    "name": "VALUE MART",
+    "amount": 68.24,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0155",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-24",
+    "name": "HOME GOODS STORE",
+    "amount": 19.05,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0157",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-24",
+    "name": "CORNER CAFE",
+    "amount": 52.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0159",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-24",
+    "name": "BEAN STREET COFFEE",
+    "amount": 5.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0181",
+    "account_id": "daniel-checking",
+    "date": "2026-06-25",
+    "name": "PAYMENT CARD A",
+    "amount": 389.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0182",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -389.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0183",
+    "account_id": "daniel-checking",
+    "date": "2026-06-25",
+    "name": "PAYMENT CARD B",
+    "amount": 404.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0184",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-25",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -404.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0160",
+    "account_id": "daniel-card-a",
+    "date": "2026-06-26",
+    "name": "VALUE-MART #104",
+    "amount": 65.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0161",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-26",
+    "name": "TST* CORNER CAFE",
+    "amount": 36.95,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0162",
+    "account_id": "daniel-card-b",
+    "date": "2026-06-27",
+    "name": "SHELL OIL #021",
+    "amount": 47.29,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "daniel-0043",
+    "account_id": "daniel-checking",
+    "date": "2026-06-30",
+    "name": "NORTHPOINT SERVICES PAYROLL",
+    "amount": -5200.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  }
+]
