@@ -4,6 +4,10 @@
 //
 // Writes results.jsonl (one line per answer) and manifest.json into the --out folder.
 // The key comes from the ANTHROPIC_API_KEY environment variable and is never printed.
+//
+//   swift run --package-path Packages/SedgeCore sedge-eval profile --persona maya
+//
+// prints one persona's profile facts instead (see `profile` below).
 import Foundation
 import SedgeCore
 
@@ -21,6 +25,8 @@ let usage = """
       --no-reconciliation     organizer without card-payment and transfer matching
       --out <folder>          where to save (default tools/eval/results/<run-id>);
                               run again with the same folder to finish a stopped run
+
+    Or: sedge-eval profile --persona <name>   print one persona's profile facts as JSON
     """
 
 /// Prints a message and stops with a failure code.
@@ -31,6 +37,26 @@ func fail(_ message: String) -> Never {
 
 // The repository root, four folders up from this source file.
 let repoRoot = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../..").standardized
+
+// `profile` loads and organizes one fake persona and prints its profile facts as JSON
+// (value, confidence, evidence transaction ids and rule), to check against a truth file.
+// It needs no key and makes no calls, so it runs before any of the options below.
+if CommandLine.arguments.dropFirst().first == "profile" {
+    let arguments = Array(CommandLine.arguments.dropFirst())
+    guard arguments.count == 3, arguments[1] == "--persona", Persona.all.contains(arguments[2]) else {
+        fail("Usage: sedge-eval profile --persona <\(Persona.all.joined(separator: "|"))>")
+    }
+    let folder = repoRoot.appending(path: "tools/data/\(arguments[2])")
+    let database = try SedgeDatabase()
+    try Persona.load(accounts: folder.appending(path: "accounts.json"),
+                     transactions: folder.appending(path: "transactions.json"), into: database)
+    try Organizer.organize(database)
+
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+    print(String(decoding: try encoder.encode(Profile.facts(in: database)), as: UTF8.self))
+    exit(0)
+}
 var options = Options(questions: repoRoot.appending(path: "tools/eval/questions.csv"), out: URL(filePath: "/"))
 var out: URL?
 

@@ -32,10 +32,11 @@ public struct Tool: Sendable {
 
     /// Bump whenever a tool's name, inputs, description or output changes, like
     /// `SystemPrompt.version`: every eval run records it next to a hash of the definitions.
-    public static let version = "v1"
+    public static let version = "v2"
 
     /// Every tool, in the order models see them.
-    public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances]
+    public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
+                             getProfile]
 
     public static func named(_ name: String) -> Tool? { all.first { $0.name == name } }
 
