@@ -4,9 +4,9 @@ import Testing
 @testable import SedgeCore
 
 /// A persona loaded and organized in a fresh in-memory database.
-func organizedPersona(_ persona: String, useGraph: Bool = true) throws -> SedgeDatabase {
+func organizedPersona(_ persona: String, useGraph: Bool = true, asOf: String = Persona.asOf) throws -> SedgeDatabase {
     let database = try SedgeDatabase()
-    try loadPersona(persona, into: database)
+    try loadPersona(persona, into: database, asOf: asOf)
     try Organizer.organize(database, useGraph: useGraph)
     return database
 }

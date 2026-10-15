@@ -174,7 +174,7 @@ public actor AppleBackend: ModelBackend {
     }
 }
 
-/// One of the six tools as Apple's model sees it. Its inputs are built from the same
+/// One of the `Tool.all` data tools as Apple's model sees it. Its inputs are built from the same
 /// `ToolInput` list as Claude's schema, so the two can't drift apart.
 struct AppleTool: FoundationModels.Tool {
     let name: String
