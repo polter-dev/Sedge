@@ -7,6 +7,7 @@
 
 import Foundation
 import LinkKit
+import SedgeCore
 import SwiftUI
 
 
@@ -15,18 +16,12 @@ struct LinkTokenResponse: Decodable {
     let link_token: String
 }
 
-struct Transaction: Decodable, Identifiable {
-    let transaction_id: String
-    let account_id: String
-    let name: String
-    let amount: Double
-    let date: String
-
-    var id: String { transaction_id }
-}
-
-struct TransactionsResponse: Decodable {
-    let latest_transactions: [Transaction]
+/// What the local quickstart server's /api/all_transactions route returns.
+/// The module name is spelled out because LinkKit also has an `Account` type
+/// and SwiftUI also has a `Transaction` type.
+struct AllTransactionsResponse: Decodable {
+    let accounts: [SedgeCore.Account]
+    let transactions: [SedgeCore.Transaction]
 }
 
 //function to grab link token and returns it as as tring
@@ -50,10 +45,20 @@ func exchangePublicToken(_ publicToken: String) async throws {
     print("Exchange response:", String(data: data, encoding: .utf8) ?? "")
 }
 
-func fetchTransactions() async throws -> [Transaction] {
-    let url = URL(string: "http://localhost:8000/api/transactions")!
+/// Downloads every transaction and account from the quickstart server and saves them.
+/// Safe to run again: the database updates rows it already has instead of adding copies.
+// shortcut: a transaction Plaid later drops entirely (e.g. a cancelled pending charge)
+// stays in the database; handle Plaid's `removed` list once sync becomes incremental.
+func syncTransactions() async throws {
+    let url = URL(string: "http://localhost:8000/api/all_transactions")!
     let (data, _) = try await URLSession.shared.data(from: url)
-    return try JSONDecoder().decode(TransactionsResponse.self, from: data).latest_transactions
+    let response = try JSONDecoder().decode(AllTransactionsResponse.self, from: data)
+    // Plaid data has no fixed "today", so use its newest transaction date rather than the clock.
+    guard let asOf = response.transactions.map(\.date).max() else {
+        print("Plaid returned no transactions yet")
+        return
+    }
+    try SedgeDatabase.app.save(accounts: response.accounts, transactions: response.transactions, asOf: asOf)
 }
 
 
@@ -64,7 +69,8 @@ struct ConnectBankView: View
     @State private var linkSession: PlaidLinkSession?
     @State private var isPresentingLink = false
     @State private var isReady = false
-    @State private var transactions: [Transaction] = []
+    /// Filled from the database after each sync, newest first.
+    @State private var transactions: [SedgeCore.Transaction] = []
     
     var body: some View
     {
@@ -98,6 +104,19 @@ struct ConnectBankView: View
                     Text(transaction.amount, format: .currency(code: "USD"))
                 }
             }
+            // Pull down to sync again with the same bank login.
+            .refreshable { await sync() }
+        }
+    }
+
+    /// Saves everything from Plaid, then shows what the database now holds.
+    private func sync() async {
+        do {
+            try await syncTransactions()
+            transactions = try SedgeDatabase.app.allTransactions()
+            print("Transactions in database:", transactions.count)
+        } catch {
+            print("Sync error:", error)
         }
     }
     //code from docs
@@ -110,11 +129,7 @@ struct ConnectBankView: View
                     Task {
                         do {
                             try await exchangePublicToken(success.publicToken)
-                            let transactions = try await fetchTransactions()
-                            for transaction in transactions {
-                                print(transaction.date, transaction.name, transaction.amount)
-                            }
-                            self.transactions = transactions.reversed()
+                            await sync()
                         } catch {
                             print("Exchange error:", error)
                         }
