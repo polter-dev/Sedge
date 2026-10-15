@@ -19,6 +19,8 @@ let usage = """
       --no-reconciliation     organizer without card-payment and transfer matching
       --out <folder>          where to save (default tools/eval/results/<run-id>);
                               run again with the same folder to finish a stopped run
+
+    sedge-eval export-er --help   writes a store-name labeling sheet instead
     """
 
 /// Prints a message and stops with a failure code.
@@ -29,6 +31,16 @@ func fail(_ message: String) -> Never {
 
 // The repository root, four folders up from this source file.
 let repoRoot = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../..").standardized
+
+// `sedge-eval export-er ...` writes the store-name labeling sheet instead (see ExportER.swift).
+if CommandLine.arguments.dropFirst().first == "export-er" {
+    do {
+        try exportER(Array(CommandLine.arguments.dropFirst(2)), repoRoot: repoRoot) { FileHandle.standardError.write(Data(($0 + "\n").utf8)) }
+    } catch {
+        fail("\(error)")
+    }
+    exit(0)
+}
 var options = Options(questions: repoRoot.appending(path: "tools/eval/questions.csv"), out: URL(filePath: "/"))
 var out: URL?
 
