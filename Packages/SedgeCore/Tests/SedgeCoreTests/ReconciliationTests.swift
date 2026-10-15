@@ -146,3 +146,26 @@ private func line(_ id: String, _ account: String, _ date: String, _ name: Strin
         "2-card": "card_payment -> 3-in-a", "3-in-a": "card_payment -> 2-card",
     ])
 }
+
+/// One account name inside another: "TO TAX SAVINGS" also contains "savings", and
+/// "BUSINESS CREDIT CARD" also contains "credit card". Each outflow must go to the longer name
+/// it mentions, even when the shorter account's inflow posts closer to it.
+@Test(arguments: [("Savings", "Tax Savings", "depository", "transfer"),
+                  ("Credit Card", "Business Credit Card", "credit", "card_payment")])
+func accountNameInsideAnotherGoesToTheLongerName(short: String, long: String, type: String, kind: String) throws {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [account("chk", "Checking", "depository"), account("short", short, type), account("long", long, type)],
+        transactions: [
+            line("1-out-long", "chk", "2026-03-01", "ONLINE TRANSFER TO \(long.uppercased())", 100),
+            line("2-out-short", "chk", "2026-03-02", "ONLINE TRANSFER TO \(short.uppercased())", 100),
+            line("3-in-short", "short", "2026-03-02", "ONLINE TRANSFER FROM CHECKING", -100),
+            line("4-in-long", "long", "2026-03-04", "ONLINE TRANSFER FROM CHECKING", -100),
+        ],
+        asOf: "2026-03-31")
+    try Organizer.organize(database)
+    #expect(try links(database) == [
+        "1-out-long": "\(kind) -> 4-in-long", "4-in-long": "\(kind) -> 1-out-long",
+        "2-out-short": "\(kind) -> 3-in-short", "3-in-short": "\(kind) -> 2-out-short",
+    ])
+}

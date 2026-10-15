@@ -158,17 +158,27 @@ public enum Organizer {
             let inflows = sides.filter { kind[$0.id] == "income" }
             // Money leaving one account pairs with the same amount arriving in another of this
             // person's accounts (one database is one person) within a few days.
-            // The first pass only pairs an outflow with an account its name mentions
+            // The first pass only pairs an outflow with the account its name mentions
             // ("PAYMENT CARD A" with "Card A", "TRANSFER TO SAVINGS" with "Savings"), so another
             // same-amount move that posts on a closer date can't take that inflow. The second
             // pass pairs what is left by closest date. Oldest first, and each side is used once.
+            let accountNames = Dictionary(sides.map { ($0.account, $0.accountName.lowercased()) }) { first, _ in first }
+            // The longest other account name inside the outflow's name: "TO TAX SAVINGS" also
+            // contains "savings", but it names Tax Savings. Of two names the same length, the
+            // alphabetically last wins, so every run picks the same one.
+            func namedAccount(_ out: Side) -> String? {
+                let raw = out.raw.lowercased()
+                return accountNames.filter { $0.key != out.account && raw.contains($0.value) }
+                    .values.max { ($0.count, $0) < ($1.count, $1) }
+            }
             for namedOnly in [true, false] {
                 for out in sides where out.amount > 0 && partner[out.id] == nil {
+                    let named = namedAccount(out)
                     let candidates = inflows.filter { inflow in
                         partner[inflow.id] == nil && inflow.account != out.account
                             && abs(inflow.amount + out.amount) < 0.005 && abs(inflow.day - out.day) <= transferWindowDays
                             && (looksLikeTransfer(out) || looksLikeTransfer(inflow))
-                            && (!namedOnly || out.raw.lowercased().contains(inflow.accountName.lowercased()))
+                            && (!namedOnly || inflow.accountName.lowercased() == named)
                     }
                     guard let inflow = candidates.min(by: { abs($0.day - out.day) < abs($1.day - out.day) }) else { continue }
                     partner[out.id] = inflow.id
