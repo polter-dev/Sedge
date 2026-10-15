@@ -62,6 +62,58 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(rows.waitForExistence(timeout: 5), "No tool rows under Show work")
         add(XCTAttachment(screenshot: app.screenshot()))    }
 
+    /// An unclear question asks once; after an answer and a restart, the same question
+    /// doesn't ask again. Real cloud model, so it needs a key like the Netflix test.
+    @MainActor
+    func testClarifyingQuestionAsksOnlyOnce() throws {
+        guard let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"], !key.isEmpty else {
+            throw XCTSkip("No ANTHROPIC_API_KEY for the test runner")
+        }
+        let question = ProcessInfo.processInfo.environment["SEDGE_CLARIFY_QUESTION"] ?? "How much do I spend on food in a month?"
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launchEnvironment["ANTHROPIC_API_KEY"] = key
+
+        /// Types the question on the Ask tab and taps Ask.
+        func ask() {
+            app.tabBars.buttons["Ask"].tap()
+            let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+            field.tap()
+            field.typeText(question)
+            app.collectionViews.buttons["Ask"].tap()
+        }
+        /// A named screenshot, kept in the test results even when the test passes.
+        func snapshot(_ name: String) {
+            let shot = XCTAttachment(screenshot: app.screenshot())
+            shot.name = name
+            shot.lifetime = .keepAlways
+            add(shot)
+        }
+
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        app.buttons["Reset saved questions"].tap() // start from nothing remembered
+        ask()
+        let card = app.staticTexts["clarify-question"]
+        XCTAssertTrue(card.waitForExistence(timeout: 180), "The model didn't ask")
+        snapshot("card")
+        // The first quick reply under the question.
+        let options = app.collectionViews.buttons.allElementsBoundByIndex.filter { !["Ask", "Skip", "Reset saved questions"].contains($0.label) }
+        options[0].tap()
+        XCTAssertTrue(app.buttons["Show work"].waitForExistence(timeout: 180), "No answer after the reply")
+        snapshot("answered")
+
+        // Restart: the same file opens again, so the saved answer is still there.
+        app.terminate()
+        app.launch()
+        ask()
+        // A card would pause the model, and the answer would never come.
+        XCTAssertTrue(app.buttons["Show work"].waitForExistence(timeout: 180), "No answer after the restart")
+        XCTAssertFalse(card.exists, "Asked again after the restart")
+        app.buttons["Show work"].tap()
+        snapshot("after-restart")
+    }
+
     @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.
