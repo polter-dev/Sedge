@@ -106,6 +106,27 @@ struct MainView: View {
                         .toolbar { changeDataButton }
                 }
             }
+            Tab("Spending", systemImage: "chart.bar") {
+                NavigationStack {
+                    SpendingView(database: database)
+                        .navigationTitle("Spending")
+                        .toolbar { changeDataButton }
+                }
+            }
+            Tab("What if", systemImage: "chart.line.uptrend.xyaxis") {
+                NavigationStack {
+                    WhatIfView(database: database)
+                        .navigationTitle("What if")
+                        .toolbar { changeDataButton }
+                }
+            }
+            Tab("About you", systemImage: "person.text.rectangle") {
+                NavigationStack {
+                    ProfileView(database: database)
+                        .navigationTitle("What Sedge learned")
+                        .toolbar { changeDataButton }
+                }
+            }
         }
         .task { reload() }
     }
