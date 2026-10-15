@@ -87,6 +87,23 @@ public struct SedgeDatabase: Sendable {
                 t.add(column: "linked_transaction_id", .text)
             }
         }
+        // Facts about the person (`Profile`): what the data says, rebuilt by `Organizer`, and
+        // the person's own corrections, kept apart so a rebuild never erases them.
+        migrator.registerMigration("v4") { db in
+            try db.create(table: "profile_facts") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                t.column("value", .text).notNull() // JSON
+                t.column("confidence", .double).notNull()
+                t.column("evidence", .text).notNull() // JSON array of transaction ids
+                t.column("rule", .text).notNull()
+            }
+            try db.create(table: "profile_corrections") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                t.column("value", .text).notNull() // JSON
+            }
+        }
         return migrator
     }
 

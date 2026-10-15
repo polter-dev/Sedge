@@ -1,24 +1,40 @@
 import Foundation
+import GRDB
 
 /// Answers one question by letting a model call the read-only tools. The model sees only
-/// what the tools return, never the raw transactions, and must end with `final_answer`.
+/// what the tools return, never the raw transactions (unless `dataTools` is false, for the
+/// context-stuffing baseline), and must end with `final_answer`.
 public struct Assistant: Sendable {
     /// Most data-tool calls allowed per question (`final_answer` doesn't count).
     public static let maxToolCalls = 6
 
     public let backend: any ModelBackend
     public let database: SedgeDatabase
+    /// False for the context-stuffing baseline: the model may call only final_answer and
+    /// reads every account and transaction from the system prompt instead. The backend must
+    /// offer the same tools (`ClaudeBackend(dataTools:)`).
+    public let dataTools: Bool
 
-    public init(backend: any ModelBackend, database: SedgeDatabase) {
+    public init(backend: any ModelBackend, database: SedgeDatabase, dataTools: Bool = true) {
         self.backend = backend
         self.database = database
+        self.dataTools = dataTools
+    }
+
+    /// The full system prompt for a question asked on `asOf`.
+    func systemPrompt(asOf: String) throws -> String {
+        guard !dataTools else { return SystemPrompt.text(asOf: asOf) }
+        let accounts = try database.dbQueue.read { try Account.order(Column("name")).fetchAll($0) }
+        // Oldest first, the way a statement reads.
+        return SystemPrompt.text(asOf: asOf)
+            + SystemPrompt.contextData(accounts: accounts, transactions: try database.allTransactions().reversed())
     }
 
     /// Never throws: a network failure, a refusal or a bad reply is written into the
     /// trace's `error`, so one broken question can't stop a run of a hundred.
     public func ask(_ question: String) async -> Trace {
         let start = ContinuousClock.now
-        var trace = Trace(question: question, model: backend.model, effort: backend.effort, promptVersion: SystemPrompt.version)
+        var trace = Trace(question: question, model: backend.model, effort: backend.effort, promptVersion: SystemPrompt.version(dataTools: dataTools))
         do {
             try await run(question, into: &trace)
         } catch {
@@ -30,7 +46,7 @@ public struct Assistant: Sendable {
 
     private func run(_ question: String, into trace: inout Trace) async throws {
         guard let asOf = try database.asOf() else { throw AssistantError("No data has been loaded.") }
-        let system = SystemPrompt.text(asOf: asOf)
+        let system = try systemPrompt(asOf: asOf)
         var messages: [ModelMessage] = [.user(question)]
         var callsLeft = Self.maxToolCalls
 
@@ -72,7 +88,7 @@ public struct Assistant: Sendable {
                     case .failure(let error):
                         content = Tool.json(error)
                     }
-                } else if let tool = Tool.named(call.name) {
+                } else if dataTools, let tool = Tool.named(call.name) {
                     if callsLeft > 0 {
                         callsLeft -= 1
                         content = tool.call(call.input, database: database)
@@ -81,7 +97,7 @@ public struct Assistant: Sendable {
                     }
                 } else {
                     content = Tool.json(ToolError("Unknown tool \"\(call.name)\".",
-                                                  hint: "Tools: " + (Tool.all.map(\.name) + [FinalAnswer.toolName]).joined(separator: ", ")))
+                                                  hint: "Tools: " + ((dataTools ? Tool.all.map(\.name) : []) + [FinalAnswer.toolName]).joined(separator: ", ")))
                 }
                 let error = trace.record(call, result: content)
                 results.append(ToolResult(id: call.id, content: content, isError: error != nil))
@@ -164,7 +180,7 @@ public struct FinalAnswer: Codable, Sendable, Equatable {
 
     /// Claude's definition of the tool. Strict mode makes every field present; "null" in a
     /// field's type lets the model leave it empty on purpose.
-    static var claudeSchema: [String: Any] {
+    public static var claudeSchema: [String: Any] {
         func nullable(_ type: String, _ description: String) -> [String: Any] {
             ["type": [type, "null"], "description": description]
         }

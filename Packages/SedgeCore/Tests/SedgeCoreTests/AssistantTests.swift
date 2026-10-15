@@ -10,11 +10,13 @@ actor ScriptedBackend: ModelBackend {
     nonisolated let effort: String? = nil
     private var replies: [ModelTurn]
     private(set) var received: [[ModelMessage]] = []
+    private(set) var systems: [String] = []
 
     init(_ replies: [ModelTurn]) { self.replies = replies }
 
     func next(system: String, messages: [ModelMessage]) async throws -> ModelTurn {
         received.append(messages)
+        systems.append(system)
         return replies.removeFirst()
     }
 }

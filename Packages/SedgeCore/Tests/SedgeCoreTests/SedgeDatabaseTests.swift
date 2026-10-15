@@ -9,12 +9,12 @@ let dataDirectory = URL(filePath: #filePath)
     .appending(path: "../../../../tools/data")
     .standardized
 
-func loadPersona(_ persona: String, into database: SedgeDatabase) throws {
+func loadPersona(_ persona: String, into database: SedgeDatabase, asOf: String = Persona.asOf) throws {
     let folder = dataDirectory.appending(path: persona)
     try Persona.load(
         accounts: folder.appending(path: "accounts.json"),
         transactions: folder.appending(path: "transactions.json"),
-        into: database)
+        into: database, asOf: asOf)
 }
 
 func counts(_ database: SedgeDatabase) throws -> (accounts: Int, transactions: Int) {
