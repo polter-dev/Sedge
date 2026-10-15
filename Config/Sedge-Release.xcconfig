@@ -1,0 +1,5 @@
+// Release build settings for the Sedge app target (TestFlight / App Store).
+// Release never includes Secrets.xcconfig, and the key is forced empty here so a
+// key exported in the shell can't leak into a shipped app. Release will reach the
+// model through the helper server instead.
+ANTHROPIC_API_KEY =
