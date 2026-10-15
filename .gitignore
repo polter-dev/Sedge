@@ -39,3 +39,6 @@ CLAUDE.md
 
 # SwiftPM build output (Packages/SedgeCore)
 .build/
+
+# Grader's truth database, rebuilt by tools/eval/truth_db.py
+tools/eval/truth.db
