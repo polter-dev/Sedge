@@ -9,7 +9,9 @@ import SedgeCore
 
 let usage = """
     Usage: sedge-eval [options]
-      --config cloud          which model setup answers (only "cloud" for now)
+      --config cloud|context  which model setup answers: cloud uses the organizer and data
+                              tools; context gives the same model every raw transaction in its
+                              prompt, with final_answer as its only tool
       --model <id>            model to ask (default \(ClaudeBackend.defaultModel))
       --questions <csv>       question bank (default tools/eval/questions.csv)
       --split dev|test|all    which questions (default dev, or all when --ids is given)
@@ -57,7 +59,8 @@ while let argument = arguments.next() {
     default: fail("Unknown option \(argument).\n\n\(usage)")
     }
 }
-guard options.config == "cloud" else { fail("Unknown --config \(options.config). Only \"cloud\" exists so far.") }
+guard ["cloud", "context"].contains(options.config) else { fail("Unknown --config \(options.config). Use cloud or context.") }
+if options.config == "context", options.flags != OrganizerFlags() { fail("--config context doesn't use the organizer, so its switches don't apply.") }
 if let split = options.split, !["dev", "test", "all"].contains(split) { fail("--split must be dev, test or all.") }
 guard let key = ClaudeBackend.apiKey() else { fail("Set ANTHROPIC_API_KEY first (it is in .env).") }
 
@@ -68,7 +71,8 @@ let runID = ([options.config] + (options.flags.useGraph ? [] : ["no-graph"])
              + (options.flags.useReconciliation ? [] : ["no-reconciliation"]) + [options.model, stamp]).joined(separator: "-")
 options.out = out ?? repoRoot.appending(path: "tools/eval/results/\(runID)", directoryHint: .isDirectory)
 
-let backend = ClaudeBackend(model: options.model, effort: "medium", apiKey: key)
+// Same model and effort for both configs, so the only difference is how the data arrives.
+let backend = ClaudeBackend(model: options.model, effort: "medium", apiKey: key, dataTools: options.config != "context")
 do {
     try await run(options, backend: backend, repoRoot: repoRoot) { line in
         // Progress goes to stderr, which isn't buffered, so each line shows as it happens.
