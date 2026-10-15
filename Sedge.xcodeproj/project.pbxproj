@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		3B032718306D696800906AA6 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3B032717306D696800906AA6 /* LinkKit */; };
+		3B2EBEE73081431E00EAAF0D /* SedgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3B2EBEE63081431E00EAAF0D /* SedgeCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,7 @@
 		3BBCF158306B4636003E35C6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				3B2EBEE73081431E00EAAF0D /* SedgeCore in Frameworks */,
 				3B032718306D696800906AA6 /* LinkKit in Frameworks */,
 			);
 		};
@@ -124,6 +126,7 @@
 			name = Sedge;
 			packageProductDependencies = (
 				3B032717306D696800906AA6 /* LinkKit */,
+				3B2EBEE63081431E00EAAF0D /* SedgeCore */,
 			);
 			productName = Sedge;
 			productReference = 3BBCF15B306B4636003E35C6 /* Sedge.app */;
@@ -205,6 +208,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3B032713306D60A100906AA6 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
+				3B2EBEE53081431E00EAAF0D /* XCLocalSwiftPackageReference "Packages/SedgeCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3BBCF15C306B4636003E35C6 /* Products */;
@@ -613,6 +617,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		3B2EBEE53081431E00EAAF0D /* XCLocalSwiftPackageReference "Packages/SedgeCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/SedgeCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		3B032713306D60A100906AA6 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -629,6 +640,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3B032713306D60A100906AA6 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
 			productName = LinkKit;
+		};
+		3B2EBEE63081431E00EAAF0D /* SedgeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SedgeCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
