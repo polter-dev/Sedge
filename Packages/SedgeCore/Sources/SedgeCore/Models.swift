@@ -45,7 +45,8 @@ public struct Transaction: Codable, Equatable, Identifiable, Sendable, Fetchable
     public var pending_transaction_id: String?
 
     // Plaid's own cleaned-up name and category. Kept only as the baseline the
-    // organizer is compared against: the organizer must never read these two.
+    // organizer is compared against: the organizer must never read these two
+    // (one exception: transfer matching may use the category as a hint).
     // The fake personas don't have them, so they are nil there.
     public var merchant_name: String?
     /// Stored as JSON text, like `Account.balances`.

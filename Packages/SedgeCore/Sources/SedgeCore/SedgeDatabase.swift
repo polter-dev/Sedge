@@ -78,6 +78,15 @@ public struct SedgeDatabase: Sendable {
             try db.alter(table: "transactions") { t in t.add(column: "merchant_id", .text) }
             try db.create(indexOn: "transactions", columns: ["merchant_id"])
         }
+        // What each transaction is (spending, income, transfer, card_payment or refund)
+        // and, for the two sides of a transfer or card payment, the other side's id.
+        // Written by `Organizer`; like merchant_id they aren't part of `Transaction`.
+        migrator.registerMigration("v3") { db in
+            try db.alter(table: "transactions") { t in
+                t.add(column: "kind", .text)
+                t.add(column: "linked_transaction_id", .text)
+            }
+        }
         return migrator
     }
 
