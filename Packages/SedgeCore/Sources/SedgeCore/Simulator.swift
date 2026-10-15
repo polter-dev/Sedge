@@ -98,12 +98,11 @@ public enum Simulator {
             let cadence: String = row[3], outflow: Bool = row[2], kind: String = row[1], typical: Double = row[4]
             guard cadence == "monthly" || weeks[cadence] != nil else { continue }
             let latest = try date(row[5])
-            // A monthly series is due on the day of the month of its latest charge in a 31-day month,
-            // so a bill on the 31st stays on month end (Feb 28, then Mar 31) even when the latest
-            // charge was the Feb 28 one. That's also why the dates are worked out here rather than
-            // taken from the organizer's next_expected_date, which is the latest charge plus a month.
-            let anchor = (row[7] as String).split(separator: ",").map(String.init).filter(inLongMonth).max() ?? row[5]
-            let anchorDay = Int(anchor.suffix(2))!
+            // A monthly series is due on `dueDay`, so a bill on the 31st stays on month end (Feb 28,
+            // then Mar 31) even when the latest charge was the Feb 28 one. That's why the dates are
+            // worked out here rather than taken from the organizer's next_expected_date, which is
+            // the latest charge plus a month.
+            let anchorDay = dueDay((row[7] as String).split(separator: ",").map(String.init))
             for k in 1... {
                 // Counted from the latest charge each time (not from the previous projected date).
                 var day = weeks[cadence].map { calendar.date(byAdding: .day, value: 7 * $0 * k, to: latest)! }
@@ -120,22 +119,21 @@ public enum Simulator {
             }
         }
 
-        // Card payments: each card is paid from the account of its latest matched payment (#4), on the
-        // day of the month of its latest payment in a 31-day month (so a Feb 28 payment doesn't turn
-        // a 31st into a 28th), and the payment is what the card owed at the last month end, less
+        // Card payments: each card is paid from the account of its latest matched payment (#4), on
+        // `dueDay` of its payment dates (so a Feb 28 payment doesn't turn a 31st into a 28th), and the payment is what the card owed at the last month end, less
         // anything already paid since. That is how the fake banks bill.
         // shortcut: assumes every statement closes on the last day of the month and is paid in full;
         // read Plaid's liabilities (statement date and balance) if real cards need it.
-        var plans: [String: (payer: String, day: Int)] = [:]
+        var plans: [String: (payer: String, day: Int)] = [:], paidOn: [String: [String]] = [:]
         for row in try Row.fetchAll(db, sql: """
             SELECT card.account_id, payer.account_id, card.date
             FROM transactions card JOIN transactions payer ON payer.transaction_id = card.linked_transaction_id
             WHERE card.kind = 'card_payment' AND card.account_id IN (SELECT account_id FROM accounts WHERE type = 'credit')
             ORDER BY card.date
             """) {
-            // Later rows overwrite earlier ones; the day only from a 31-day month, unless it's the first.
-            let paidOn: String = row[2], earlier = plans[row[0]]
-            plans[row[0]] = (row[1], earlier == nil || inLongMonth(paidOn) ? Int(paidOn.suffix(2))! : earlier!.day)
+            // Later rows overwrite earlier ones, so the payer is the latest payment's.
+            paidOn[row[0], default: []].append(row[2])
+            plans[row[0]] = (row[1], dueDay(paidOn[row[0]]!))
         }
         // The last month end on or before today: the day before the first of the month tomorrow is in.
         let monthEnd = calendar.date(byAdding: .day, value: -1, to: calendar.dateInterval(of: .month, for: tomorrow)!.start)!
@@ -229,9 +227,17 @@ public enum Simulator {
         return calendar.date(byAdding: .day, value: min(day, length) - 1, to: first)!
     }
 
-    /// Whether "YYYY-MM-DD" falls in a month with 31 days, where any day of the month can happen.
-    static func inLongMonth(_ text: String) -> Bool {
-        guard let day = try? date(text) else { return false }
-        return calendar.range(of: .day, in: .month, for: day)!.count == 31
+    /// The day of the month a monthly series is due, from its charge dates ("YYYY-MM-DD").
+    /// It is the latest charge's day, so a bill that moves to a new day keeps the new day. The one
+    /// exception is a latest charge on the last day of a short month (Feb 28, Apr 30): a later due
+    /// day may have been cut short there, so the latest charge in a 31-day month wins if its day is later.
+    static func dueDay(_ dates: [String]) -> Int {
+        func day(_ text: String) -> Int { Int(text.suffix(2))! }
+        func monthLength(_ text: String) -> Int {
+            (try? date(text)).map { calendar.range(of: .day, in: .month, for: $0)!.count } ?? 31
+        }
+        let latest = dates.max()!
+        guard monthLength(latest) < 31, day(latest) == monthLength(latest) else { return day(latest) }
+        return max(day(latest), dates.filter { monthLength($0) == 31 }.max().map(day) ?? 0)
     }
 }

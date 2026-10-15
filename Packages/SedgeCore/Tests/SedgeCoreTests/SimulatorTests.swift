@@ -205,3 +205,17 @@ func paydays(_ days: [Simulator.Day], from opening: Double) -> [String] {
     let stopped = try simulate(seriesDatabase(asOf: "2026-03-03", paydays: pay, paycheck: 800, checking: 1000), days: 30)
     #expect(paydays(stopped, from: 1000).isEmpty)
 }
+
+/// Rent that moves from the 1st to the 5th keeps the 5th, even though April has only 30 days.
+@Test func movedDayInShortMonthIsKept() throws {
+    let database = try seriesDatabase(asOf: "2026-04-20", rent: ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-05"])
+    let rent = try simulate(database, days: 30).filter { $0.bills.contains { $0.name.contains("Rent") } }.map(\.date)
+    #expect(rent == ["2026-05-05"])
+}
+
+/// The same for a card payment that moves from the 1st to the 5th.
+@Test func movedCardPaymentDayInShortMonthIsKept() throws {
+    let database = try seriesDatabase(asOf: "2026-04-20", cardPayments: ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-05"])
+    let payments = try simulate(database, days: 30).filter { $0.bills.contains { $0.name == "Credit Card payment" } }.map(\.date)
+    #expect(payments == ["2026-05-05"])
+}
