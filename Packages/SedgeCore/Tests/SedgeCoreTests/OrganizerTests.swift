@@ -135,3 +135,21 @@ func groupingMatchesTheAnswerKey(persona: String) throws {
     #expect(!Organizer.sameStore("shell", "shelby diner"))
     #expect(!Organizer.sameStore("home goods", "home mortgage"))
 }
+
+/// Two names that tie on count and length must still give the same merchant on every run.
+@Test func tieBreakIsDeterministic() {
+    #expect(Organizer.sameStore("starbucks", "starbacks"))
+    var ids = Set<String>()
+    for _ in 0..<200 { ids.insert(Organizer.groupedMerchants(["STARBUCKS", "STARBACKS"])["STARBUCKS"]!.id) }
+    #expect(ids.count == 1)
+}
+
+/// A processor tag that isn't listed by name is still dropped, keeping the store name after it.
+@Test func unlistedProcessorTagKeepsStoreName() {
+    #expect(Organizer.clean("DD *DOORDASH").name.contains("doordash"))
+}
+
+@Test func unlistedProcessorTagDoesNotMergeStores() {
+    let m = Organizer.groupedMerchants(["IC* SAFEWAY", "IC* COSTCO"])
+    #expect(m["IC* SAFEWAY"]?.id != m["IC* COSTCO"]?.id)
+}

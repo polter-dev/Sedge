@@ -14,8 +14,11 @@ public enum Organizer {
     static let aliases = ["amzn": "amazon", "st": "street"]
 
     /// Card-processor tags in front of the store name: Square ("SQ *"), Toast ("TST*"),
-    /// PayPal ("PP*"), point-of-sale ("POS DEBIT"), and similar.
-    static let processorPrefix = #"^(?:(?:sq|tst|pp|paypal|sp|py)\s*\*|pos(?:\s+(?:debit|purchase))?\s+)\s*"#
+    /// DoorDash ("DD *"), PayPal ("PAYPAL *"), point-of-sale ("POS DEBIT"), and similar.
+    /// Any one to three letters before a "*" count as a tag, so unlisted processors work too.
+    /// shortcut: a store whose own name is three letters or fewer ("ATT*BILL") loses its
+    /// name to what follows the "*"; add it as an exception if real data shows one.
+    static let processorPrefix = #"^(?:(?:[a-z]{1,3}|paypal)\s*\*|pos(?:\s+(?:debit|purchase))?\s+)\s*"#
 
     /// Category keywords, checked in this order; the first list with a whole-word match wins.
     /// Order matters: "amazon prime membership" is a subscription before it is shopping.
@@ -162,7 +165,11 @@ public enum Organizer {
             // Name the merchant after its most common cleaned name; ties go to the shorter.
             // `members` has one entry per transaction, so this counts transactions.
             let counts = Dictionary(grouping: members.map { keyOf[$0]! }) { $0 }.mapValues(\.count)
-            let best = counts.max { a, b in a.value != b.value ? a.value < b.value : a.key.count > b.key.count }!.key
+            // A last tie goes to the alphabetically first name, so every run picks the same
+            // one (a Swift Dictionary's order changes from run to run).
+            let best = counts.max { a, b in
+                a.value != b.value ? a.value < b.value : a.key.count != b.key.count ? a.key.count > b.key.count : a.key > b.key
+            }!.key
             for raw in Set(members) { result[raw] = (id: "merchant:" + best, name: best.capitalized) }
         }
         return result
