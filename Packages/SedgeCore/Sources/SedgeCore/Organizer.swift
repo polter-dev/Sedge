@@ -162,14 +162,25 @@ public enum Organizer {
             // ("PAYMENT CARD A" with "Card A", "TRANSFER TO SAVINGS" with "Savings"), so another
             // same-amount move that posts on a closer date can't take that inflow. The second
             // pass pairs what is left by closest date. Oldest first, and each side is used once.
-            let accountNames = Dictionary(sides.map { ($0.account, $0.accountName.lowercased()) }) { first, _ in first }
-            // The longest other account name inside the outflow's name: "TO TAX SAVINGS" also
-            // contains "savings", but it names Tax Savings. Of two names the same length, the
-            // alphabetically last wins, so every run picks the same one.
+            // Names are compared as whole words: " card a " is not inside " card autopay ".
+            // The spaces at both ends let a name match at the start or end of the text.
+            func wordText(_ text: String) -> String {
+                " " + text.lowercased().split { !$0.isLetter && !$0.isNumber }.joined(separator: " ") + " "
+            }
+            // Longest first, so "tax savings" is checked before "savings". Of two names the same
+            // length, the alphabetically last goes first, so every run picks the same one.
+            let accountNames = Set(sides.map { wordText($0.accountName) }).sorted { ($0.count, $0) > ($1.count, $1) }
+            // The longest other account the outflow's name mentions. The first match wins, so
+            // "TO TAX SAVINGS" names Tax Savings, not Savings. The outflow's own name is cut out
+            // when found, so "FROM TAX SAVINGS TO HSA" on Tax Savings names HSA, not Savings.
             func namedAccount(_ out: Side) -> String? {
-                let raw = out.raw.lowercased()
-                return accountNames.filter { $0.key != out.account && raw.contains($0.value) }
-                    .values.max { ($0.count, $0) < ($1.count, $1) }
+                var text = wordText(out.raw)
+                let own = wordText(out.accountName)
+                for name in accountNames where text.contains(name) {
+                    if name != own { return name }
+                    text = text.replacingOccurrences(of: name, with: " ")
+                }
+                return nil
             }
             for namedOnly in [true, false] {
                 for out in sides where out.amount > 0 && partner[out.id] == nil {
@@ -178,7 +189,7 @@ public enum Organizer {
                         partner[inflow.id] == nil && inflow.account != out.account
                             && abs(inflow.amount + out.amount) < 0.005 && abs(inflow.day - out.day) <= transferWindowDays
                             && (looksLikeTransfer(out) || looksLikeTransfer(inflow))
-                            && (!namedOnly || inflow.accountName.lowercased() == named)
+                            && (!namedOnly || wordText(inflow.accountName) == named)
                     }
                     guard let inflow = candidates.min(by: { abs($0.day - out.day) < abs($1.day - out.day) }) else { continue }
                     partner[out.id] = inflow.id

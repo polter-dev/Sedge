@@ -169,3 +169,44 @@ func accountNameInsideAnotherGoesToTheLongerName(short: String, long: String, ty
         "2-out-short": "\(kind) -> 3-in-short", "3-in-short": "\(kind) -> 2-out-short",
     ])
 }
+
+/// A statement line that names its own account: the Tax Savings outflow "FROM TAX SAVINGS TO HSA"
+/// also contains "savings", but it must go to HSA and leave Savings to the Checking transfer.
+@Test func R3_1_ownNameInsideAnother() throws {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [account("chk", "Checking", "depository"), account("sav", "Savings", "depository"),
+                   account("tax", "Tax Savings", "depository"), account("hsa", "HSA", "depository")],
+        transactions: [
+            line("1-out-tax", "tax", "2026-03-01", "ONLINE TRANSFER FROM TAX SAVINGS TO HSA", 100),
+            line("2-out-chk", "chk", "2026-03-02", "ONLINE TRANSFER TO SAVINGS", 100),
+            line("3-in-sav", "sav", "2026-03-02", "ONLINE TRANSFER FROM CHECKING", -100),
+            line("4-in-hsa", "hsa", "2026-03-03", "ONLINE TRANSFER FROM TAX SAVINGS", -100),
+        ],
+        asOf: "2026-03-31")
+    try Organizer.organize(database)
+    #expect(try links(database) == [
+        "1-out-tax": "transfer -> 4-in-hsa", "4-in-hsa": "transfer -> 1-out-tax",
+        "2-out-chk": "transfer -> 3-in-sav", "3-in-sav": "transfer -> 2-out-chk",
+    ])
+}
+
+/// Account names match whole words only: "PAYMENT CARD AUTOPAY" doesn't name "Card A", so it
+/// must not take Card A's inflow from the payment that really names Card A.
+@Test func accountNameMatchesWholeWordsOnly() throws {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [account("chk", "Checking", "depository"), account("a", "Card A", "credit"), account("b", "Card B", "credit")],
+        transactions: [
+            line("1-out-auto", "chk", "2026-03-01", "PAYMENT CARD AUTOPAY", 50),
+            line("2-in-b", "b", "2026-03-01", "PAYMENT RECEIVED THANK YOU", -50),
+            line("3-out-a", "chk", "2026-03-03", "PAYMENT CARD A", 50),
+            line("4-in-a", "a", "2026-03-03", "PAYMENT RECEIVED THANK YOU", -50),
+        ],
+        asOf: "2026-03-31")
+    try Organizer.organize(database)
+    #expect(try links(database) == [
+        "1-out-auto": "card_payment -> 2-in-b", "2-in-b": "card_payment -> 1-out-auto",
+        "3-out-a": "card_payment -> 4-in-a", "4-in-a": "card_payment -> 3-out-a",
+    ])
+}
