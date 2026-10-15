@@ -9,14 +9,22 @@ public struct ClaudeBackend: ModelBackend {
 
     public let model: String
     public let effort: String?
+    /// False for the context-stuffing baseline, which offers only final_answer.
+    public let dataTools: Bool
     private let apiKey: String
 
     /// `effort` is set explicitly (instead of left to each model's own default) so every run
     /// uses the same level. There is deliberately no `temperature`: these models reject it.
-    public init(model: String = defaultModel, effort: String = "medium", apiKey: String) {
+    public init(model: String = defaultModel, effort: String = "medium", apiKey: String, dataTools: Bool = true) {
         self.model = model
         self.effort = effort
         self.apiKey = apiKey
+        self.dataTools = dataTools
+    }
+
+    /// The tool definitions sent with every request. The eval runner hashes the same list.
+    public static func tools(dataTools: Bool) -> [[String: Any]] {
+        (dataTools ? Tool.all.map(\.claudeSchema) : []) + [FinalAnswer.claudeSchema]
     }
 
     /// The API key from the `ANTHROPIC_API_KEY` environment variable (command line), or from
@@ -61,7 +69,7 @@ public struct ClaudeBackend: ModelBackend {
             // "auto" is the only choice: these models reject forcing a tool, so the prompt
             // asks for final_answer instead.
             "tool_choice": ["type": "auto"],
-            "tools": Tool.all.map(\.claudeSchema) + [FinalAnswer.claudeSchema],
+            "tools": Self.tools(dataTools: dataTools),
             "messages": try messages.map(Self.message),
         ]
         return try JSONSerialization.data(withJSONObject: body, options: .sortedKeys)

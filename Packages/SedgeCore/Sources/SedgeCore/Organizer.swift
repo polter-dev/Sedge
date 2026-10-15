@@ -116,6 +116,8 @@ public enum Organizer {
                 }
             }
             try reconcile(db, useReconciliation: useReconciliation)
+            // The profile reads the merchants, series and kinds found above, so it goes last.
+            try Profile.rebuild(db)
         }
     }
 

@@ -4,12 +4,18 @@
 //
 // Writes results.jsonl (one line per answer) and manifest.json into the --out folder.
 // The key comes from the ANTHROPIC_API_KEY environment variable and is never printed.
+//
+//   swift run --package-path Packages/SedgeCore sedge-eval profile --persona maya
+//
+// prints one persona's profile facts instead (see `profile` below).
 import Foundation
 import SedgeCore
 
 let usage = """
     Usage: sedge-eval [options]
-      --config cloud          which model setup answers (only "cloud" for now)
+      --config cloud|context  which model setup answers: cloud uses the organizer and data
+                              tools; context gives the same model every raw transaction in its
+                              prompt, with final_answer as its only tool
       --model <id>            model to ask (default \(ClaudeBackend.defaultModel))
       --questions <csv>       question bank (default tools/eval/questions.csv)
       --split dev|test|all    which questions (default dev, or all when --ids is given)
@@ -20,7 +26,8 @@ let usage = """
       --out <folder>          where to save (default tools/eval/results/<run-id>);
                               run again with the same folder to finish a stopped run
 
-    sedge-eval export-er --help   writes a store-name labeling sheet instead
+    Or: sedge-eval profile --persona <name>   print one persona's profile facts as JSON
+    Or: sedge-eval export-er --help          write a store-name labeling sheet
     """
 
 /// Prints a message and stops with a failure code.
@@ -39,6 +46,26 @@ if CommandLine.arguments.dropFirst().first == "export-er" {
     } catch {
         fail("\(error)")
     }
+    exit(0)
+}
+
+// `profile` loads and organizes one fake persona and prints its profile facts as JSON
+// (value, confidence, evidence transaction ids and rule), to check against a truth file.
+// It needs no key and makes no calls, so it runs before any of the options below.
+if CommandLine.arguments.dropFirst().first == "profile" {
+    let arguments = Array(CommandLine.arguments.dropFirst())
+    guard arguments.count == 3, arguments[1] == "--persona", Persona.all.contains(arguments[2]) else {
+        fail("Usage: sedge-eval profile --persona <\(Persona.all.joined(separator: "|"))>")
+    }
+    let folder = repoRoot.appending(path: "tools/data/\(arguments[2])")
+    let database = try SedgeDatabase()
+    try Persona.load(accounts: folder.appending(path: "accounts.json"),
+                     transactions: folder.appending(path: "transactions.json"), into: database)
+    try Organizer.organize(database)
+
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+    print(String(decoding: try encoder.encode(Profile.facts(in: database)), as: UTF8.self))
     exit(0)
 }
 var options = Options(questions: repoRoot.appending(path: "tools/eval/questions.csv"), out: URL(filePath: "/"))
@@ -69,7 +96,8 @@ while let argument = arguments.next() {
     default: fail("Unknown option \(argument).\n\n\(usage)")
     }
 }
-guard options.config == "cloud" else { fail("Unknown --config \(options.config). Only \"cloud\" exists so far.") }
+guard ["cloud", "context"].contains(options.config) else { fail("Unknown --config \(options.config). Use cloud or context.") }
+if options.config == "context", options.flags != OrganizerFlags() { fail("--config context doesn't use the organizer, so its switches don't apply.") }
 if let split = options.split, !["dev", "test", "all"].contains(split) { fail("--split must be dev, test or all.") }
 guard let key = ClaudeBackend.apiKey() else { fail("Set ANTHROPIC_API_KEY first (it is in .env).") }
 
@@ -80,7 +108,8 @@ let runID = ([options.config] + (options.flags.useGraph ? [] : ["no-graph"])
              + (options.flags.useReconciliation ? [] : ["no-reconciliation"]) + [options.model, stamp]).joined(separator: "-")
 options.out = out ?? repoRoot.appending(path: "tools/eval/results/\(runID)", directoryHint: .isDirectory)
 
-let backend = ClaudeBackend(model: options.model, effort: "medium", apiKey: key)
+// Same model and effort for both configs, so the only difference is how the data arrives.
+let backend = ClaudeBackend(model: options.model, effort: "medium", apiKey: key, dataTools: options.config != "context")
 do {
     try await run(options, backend: backend, repoRoot: repoRoot) { line in
         // Progress goes to stderr, which isn't buffered, so each line shows as it happens.

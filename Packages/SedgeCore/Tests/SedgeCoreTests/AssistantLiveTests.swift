@@ -36,6 +36,13 @@ struct LiveClaude {
         #expect(trace.finalAnswer?.yes_no == (cafe > shell))
     }
 
+    @Test func incomeComesFromTheProfile() async throws {
+        let trace = try await liveAsk("maya", "What's my income?")
+        #expect(trace.error == nil)
+        #expect(trace.finalAnswer != nil)
+        #expect(trace.toolCalls.contains { $0.name == "get_profile" && $0.valid })
+    }
+
     @Test func misspelledStoreIsRetried() async throws {
         // The tool rejects the misspelled name and suggests "Netflix"; the model should retry with it.
         let trace = try await liveAsk("maya", "How much did I spend at Netflx from January through June?")
