@@ -31,7 +31,8 @@ public struct Tool: Sendable {
     let run: @Sendable (_ input: ToolArguments, _ db: Database) throws -> any Encodable
 
     /// Every tool, in the order models see them.
-    public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances]
+    public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
+                             getProfile]
 
     public static func named(_ name: String) -> Tool? { all.first { $0.name == name } }
 

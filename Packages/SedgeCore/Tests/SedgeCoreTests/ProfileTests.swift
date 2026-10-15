@@ -1,0 +1,112 @@
+import Foundation
+import GRDB
+import Testing
+@testable import SedgeCore
+
+// Expected values come from tools/personas.md for the two training personas (maya and daniel).
+// For every persona only the shape is checked, so nothing here is tuned on jordan or elena.
+
+/// kind -> values, so a test can compare one kind of fact at a time.
+func profile(_ database: SedgeDatabase) throws -> [String: [Profile.Value]] {
+    Dictionary(grouping: try Profile.facts(in: database)) { $0.kind }.mapValues { $0.map(\.value) }
+}
+
+@Test(arguments: Persona.all)
+func profileRunsForEveryPersona(persona: String) throws {
+    let database = try organizedPersona(persona)
+    let facts = try Profile.facts(in: database)
+    let kindOf = try database.dbQueue.read { db in
+        try Dictionary(uniqueKeysWithValues: Row.fetchAll(db, sql: "SELECT transaction_id, kind FROM transactions")
+            .map { ($0[0] as String, $0[1] as String) })
+    }
+    let accounts = try database.dbQueue.read { db in try Account.fetchCount(db) }
+    #expect(facts.filter { $0.kind == "account" }.count == accounts)
+    #expect(facts.contains { $0.kind == "income" })
+    for fact in facts {
+        #expect((0...1).contains(fact.confidence), "\(fact.id)")
+        #expect(!fact.rule.isEmpty, "\(fact.id)")
+        #expect(fact.kind == "account" || !fact.evidence.isEmpty, "\(fact.id)")
+        // Transfers and card payments are never evidence of income or of a bill.
+        let wanted = fact.kind == "income" ? "income" : "spending"
+        #expect(fact.evidence.allSatisfy { kindOf[$0] == wanted }, "\(fact.id)")
+    }
+}
+
+@Test func mayaProfile() throws {
+    let facts = try profile(organizedPersona("maya"))
+    #expect(facts["income"] == [Profile.Value(name: "Bean Street Coffee", amount: 520, schedule: "biweekly",
+                                              monthly_average: 1126.67)])
+    #expect(facts["housing"] == [Profile.Value(name: "Oakwood Apartments Rent", type: "rent", amount: 650, schedule: "monthly", day: 1)])
+    #expect(facts["tuition"] == nil)
+    #expect(facts["loan"] == nil)
+    #expect(Set(facts["account"]!.map { $0.type! }) == ["checking", "credit card"])
+}
+
+@Test func danielProfile() throws {
+    let facts = try profile(organizedPersona("daniel"))
+    #expect(facts["income"] == [Profile.Value(name: "Northpoint Services Payroll", amount: 5200, schedule: "monthly",
+                                              monthly_average: 5200)])
+    #expect(facts["housing"] == [Profile.Value(name: "Home Mortgage", type: "mortgage", amount: 1850, schedule: "monthly", day: 1)])
+    #expect(facts["loan"] == [Profile.Value(name: "Auto Loan Payment", type: "auto", amount: 325, schedule: "monthly", day: 7)])
+    #expect(facts["tuition"] == nil)
+    #expect(facts["account"]!.map { $0.type! }.sorted() == ["checking", "credit card", "credit card", "savings"])
+}
+
+@Test func correctionWinsAndSurvivesRebuild() throws {
+    let database = try organizedPersona("maya")
+    let id = try #require(try Profile.facts(in: database).first { $0.kind == "income" }).id
+    let mine = Profile.Value(name: "Bean Street Coffee", amount: 600, schedule: "biweekly")
+    try Profile.correct(id: id, kind: "income", value: mine, in: database)
+    try Organizer.organize(database)
+
+    let income = try Profile.facts(in: database).filter { $0.kind == "income" }
+    #expect(income.count == 1)
+    #expect(income.first?.value == mine)
+    #expect(income.first?.confidence == 1 && income.first?.rule == "user_correction")
+}
+
+@Test func getProfileIsShort() throws {
+    let answer = try call("get_profile", [:], on: organizedPersona("daniel"))
+    let facts = rows(answer, "facts")
+    #expect(facts.map { $0["kind"] as! String } == ["income", "housing", "loan", "account", "account", "account", "account"])
+    // Evidence ids stay in the table; the model gets only what it needs to answer.
+    #expect(facts.allSatisfy { Set($0.keys) == ["kind", "value", "confidence", "rule"] })
+    #expect((facts[0]["value"] as? [String: Any])?["amount"] as? Double == 5200)
+}
+
+/// Made-up data for the rules maya and daniel never reach: pay that isn't on a cadence,
+/// tuition (named, and a large school charge), and a buy-now-pay-later plan.
+@Test func irregularIncomeTuitionAndInstallments() throws {
+    func line(_ id: String, _ date: String, _ name: String, _ amount: Double) -> Transaction {
+        Transaction(transaction_id: id, account_id: "chk", date: date, name: name, amount: amount, pending: false)
+    }
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [Account(account_id: "chk", name: "Checking", type: "depository", balances: Balances())],
+        transactions: [
+            line("g1", "2026-01-09", "GIGCO PAYOUT", -310), line("g2", "2026-02-20", "GIGCO PAYOUT", -455),
+            line("g3", "2026-02-27", "GIGCO PAYOUT", -120), line("g4", "2026-03-15", "GIGCO PAYOUT", -390),
+            line("t1", "2026-01-10", "STATE U TUITION", 4200), line("t2", "2026-02-10", "STATE U TUITION", 4200),
+            line("c1", "2026-01-12", "RIVERSIDE COLLEGE", 1500), line("c2", "2026-02-12", "RIVERSIDE COLLEGE", 25),
+            line("b1", "2026-01-14", "CAMPUS BOOKSTORE", 80),
+            line("a1", "2026-01-05", "AFFIRM INC", 50), line("a2", "2026-02-05", "AFFIRM INC", 50),
+            line("a3", "2026-03-05", "AFFIRM INC", 50),
+        ],
+        asOf: "2026-03-31")
+    try Organizer.organize(database)
+    let facts = Dictionary(grouping: try Profile.facts(in: database)) { $0.kind }
+
+    let income = try #require(facts["income"]?.first)
+    // 1275 over the three months in the data.
+    #expect(income.value == Profile.Value(name: "Gigco Payout", amount: 390, schedule: "irregular", monthly_average: 425))
+    #expect(income.rule == "repeated_deposits" && income.evidence.sorted() == ["g1", "g2", "g3", "g4"])
+
+    let tuition = try #require(facts["tuition"])
+    #expect(tuition.map(\.rule) == ["large_education_charge", "tuition_payment"])
+    #expect(tuition[0].value.total == 1500 && tuition[0].evidence == ["c1"])
+    #expect(tuition[1].value == Profile.Value(name: "State U Tuition", amount: 4200, schedule: "irregular", total: 8400))
+
+    let loan = try #require(facts["loan"]?.first)
+    #expect(loan.value == Profile.Value(name: "Affirm Inc", type: "installment", amount: 50, schedule: "monthly", day: 5))
+    #expect(loan.rule == "recurring_loan_payment")
+}

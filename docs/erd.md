@@ -2,7 +2,8 @@
 
 Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase.swift`:
 `v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
-`transactions.merchant_id`) and `v3` (`transactions.kind` and `transactions.linked_transaction_id`).
+`transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`)
+and `v4` (profile_facts and profile_corrections).
 
 ```mermaid
 erDiagram
@@ -14,6 +15,8 @@ erDiagram
     entities ||--o{ edges : "source (in_category: merchant)"
     entities ||--o{ edges : "target (merchant, account, category)"
     transactions |o--o{ edges : "target (refund_of: original purchase)"
+    transactions }o--o{ profile_facts : "evidence (JSON list of transaction ids)"
+    profile_corrections |o--o| profile_facts : "id (a correction replaces the fact with its id)"
 
     accounts {
         text account_id PK
@@ -60,6 +63,21 @@ erDiagram
         double typical_amount "recurring only"
         text next_expected_date "recurring only, YYYY-MM-DD"
     }
+
+    profile_facts {
+        text id PK "kind plus subject, e.g. income:merchant:northpoint services payroll"
+        text kind "not null: income, housing, tuition, loan or account"
+        text value "not null, JSON: name, type, amount, schedule, day, monthly_average, total"
+        double confidence "not null, 0 to 1"
+        text evidence "not null, JSON list of transaction ids"
+        text rule "not null, which rule found it"
+    }
+
+    profile_corrections {
+        text id PK "the fact it replaces, or a new id"
+        text kind "not null"
+        text value "not null, JSON, same shape as profile_facts.value"
+    }
 ```
 
 - **accounts** and **transactions** keep Plaid's field names. A transaction belongs to one
@@ -93,6 +111,10 @@ erDiagram
   `linked_transaction_id` names the other. The rest are `spending` (money out), `refund`
   (money in named "REFUND ...") or `income`. With `useReconciliation` off, nothing is paired
   and every row is spending or income by its sign.
+- **profile_facts** is rebuilt at the end of `Organizer.organize` (so after every sync) by
+  `Profile`, from the merchants, categories, recurring series and kinds above. Transfers and
+  card payments are never evidence. **profile_corrections** holds the person's own answers;
+  a rebuild never touches it, and a correction always replaces the fact with the same id.
 
 ## Database files
 
