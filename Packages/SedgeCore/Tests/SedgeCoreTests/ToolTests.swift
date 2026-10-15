@@ -243,6 +243,11 @@ func balancesMatchTheKey(persona: String) throws {
     ("total_spent", #"{"category": "pets", "start_date": "2026-01-01", "end_date": "2026-06-30"}"#, "Bad value for \"category\"."),
     ("recurring_charges", #"{"kind": "all", "store": "Netflix"}"#, "Unknown input \"store\"."),
     ("account_balances", #"[1, 2]"#, "The input must be a JSON object."),
+    ("simulate_balance", #"{"days": 61}"#, "Bad value for \"days\"."),
+    ("simulate_balance", #"{"days": 7, "extra_amount": -5}"#, "Bad value for \"extra_amount\"."),
+    ("simulate_balance", #"{"days": 7, "extra_amount": 400, "extra_date": "2026-07-08"}"#, "extra_date is outside the days looked at."),
+    ("simulate_balance", #"{"days": 7, "extra_amount": 400, "extra_date": "2026-06-30"}"#, "extra_date is outside the days looked at."),
+    ("simulate_balance", #"{"days": 7, "extra_date": "2026-07-02"}"#, "extra_date needs extra_amount."),
 ])
 func badInputReturnsAnError(tool: String, input: String, error: String) throws {
     let text = try #require(Tool.named(tool)).call(Data(input.utf8), database: organizedPersona("maya"))
@@ -286,7 +291,7 @@ func claudeSchemaFollowsStrictRules(name: String) throws {
     }
 }
 
-/// The six names and their inputs are frozen for v1.
+/// The six v1 names and their inputs are frozen; simulate_balance (#12) comes after them.
 @Test func toolListIsTheFrozenV1() {
     #expect(Tool.all.map { "\($0.name)(\($0.inputs.map(\.name).joined(separator: ",")))" } == [
         "total_spent(merchant,category,start_date,end_date)",
@@ -295,5 +300,6 @@ func claudeSchemaFollowsStrictRules(name: String) throws {
         "top_merchants(start_date,end_date,limit)",
         "find_transactions(merchant,min_amount,max_amount,start_date,end_date)",
         "account_balances()",
+        "simulate_balance(days,extra_amount,extra_date)",
     ])
 }

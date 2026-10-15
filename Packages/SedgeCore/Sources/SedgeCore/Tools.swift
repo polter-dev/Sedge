@@ -31,7 +31,8 @@ public struct Tool: Sendable {
     let run: @Sendable (_ input: ToolArguments, _ db: Database) throws -> any Encodable
 
     /// Every tool, in the order models see them.
-    public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances]
+    public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
+                             simulateBalance]
 
     public static func named(_ name: String) -> Tool? { all.first { $0.name == name } }
 
@@ -382,5 +383,75 @@ extension Tool {
             let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'")
             return Result(as_of: asOf, accounts: Array(accounts.prefix(maxRows)),
                           total_count: accounts.count > maxRows ? accounts.count : nil)
+        })
+}
+
+// MARK: - What-if (#12)
+
+extension Tool {
+    static let simulateBalance = Tool(
+        name: "simulate_balance",
+        description: "Project the checking balance day by day from today, with upcoming paychecks, bills, card payments "
+            + "and typical daily spending, optionally after one extra purchase. Says whether every bill is covered "
+            + "and how much room is left.",
+        inputs: [ToolInput(name: "days", kind: .integer(1...60), description: "How many days ahead to look, 1 to 60.", required: true),
+                 ToolInput(name: "extra_amount", kind: .number, description: "An extra purchase in dollars. Leave out for none.", required: false),
+                 ToolInput(name: "extra_date", kind: .date,
+                           description: "Day of the extra purchase (YYYY-MM-DD), from tomorrow to the last day looked at. Leave out for tomorrow.",
+                           required: false)],
+        run: { input, db in
+            struct BillDay: Encodable { let date: String; let bills: [String]; let balance: Double }
+            struct Result: Encodable {
+                let account: String
+                let lowest_balance: Double
+                let lowest_date: String
+                /// True when the balance never goes below zero in the window.
+                let can_cover_bills: Bool
+                /// How much more could be spent on the extra purchase's day (tomorrow if none) without
+                /// the balance going below zero later. Negative is the shortfall.
+                let room_left: Double
+                let bill_days: [BillDay]
+                let total_count: Int?
+            }
+            // shortcut: the bank account bills come out of is taken to be the checking account (or the
+            // first bank account); let the model pick an account if someone has two checking accounts.
+            guard let checking = try Row.fetchOne(db, sql: """
+                SELECT account_id, name FROM accounts
+                WHERE type = 'depository' AND json_extract(balances, '$.current') IS NOT NULL
+                ORDER BY subtype = 'checking' DESC, name LIMIT 1
+                """) else { throw ToolError("There is no bank account with a balance.") }
+            let account: String = checking[0]
+            let days = input.int("days")!
+            guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'") else {
+                throw ToolError("No data has been loaded.")
+            }
+            let today = try Simulator.date(asOf)
+            let first = Simulator.text(Simulator.calendar.date(byAdding: .day, value: 1, to: today)!)
+            let last = Simulator.text(Simulator.calendar.date(byAdding: .day, value: days, to: today)!)
+
+            var purchases: [Simulator.Purchase] = []
+            if let amount = input.number("extra_amount") {
+                guard amount > 0 else { throw ToolError("Bad value for \"extra_amount\".", hint: "A positive amount in dollars.") }
+                let date = input.text("extra_date") ?? first
+                guard date >= first, date <= last else {
+                    throw ToolError("extra_date is outside the days looked at.", hint: "Pick a day from \(first) to \(last), or raise days.")
+                }
+                purchases.append(Simulator.Purchase(amount: amount, date: date, account: account))
+            } else if input.text("extra_date") != nil {
+                throw ToolError("extra_date needs extra_amount.", hint: "Send extra_amount too, or leave out both.")
+            }
+
+            let projection = try Simulator.simulate(db, days: days, purchases: purchases)
+            let balances = projection.map { (date: $0.date, balance: $0.balances[account]!) }
+            let lowest = balances.min { $0.balance < $1.balance }! // the earliest day of a tie
+            let fromPurchase = purchases.first?.date ?? first
+            let room = balances.filter { $0.date >= fromPurchase }.map(\.balance).min()!
+            let billDays = projection.compactMap { day -> BillDay? in
+                let names = day.bills.filter { $0.account == account }.map(\.name)
+                return names.isEmpty ? nil : BillDay(date: day.date, bills: names, balance: day.balances[account]!)
+            }
+            return Result(account: checking[1], lowest_balance: lowest.balance, lowest_date: lowest.date,
+                          can_cover_bills: lowest.balance >= 0, room_left: room,
+                          bill_days: Array(billDays.prefix(maxRows)), total_count: billDays.count > maxRows ? billDays.count : nil)
         })
 }
