@@ -79,3 +79,69 @@ let questionBank = repoRoot.appending(path: "tools/eval/questions.csv")
     other.flags = OrganizerFlags()
     await #expect(throws: EvalError.self) { try await run(other, backend: answers(3), repoRoot: repoRoot) { _ in } }
 }
+
+// Ways one results folder could still mix setups, or be changed by a run that was refused.
+
+@Test func resumeWithDifferentQuestionBankIsRefused() async throws {
+    let dir = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let text = try String(contentsOf: questionBank, encoding: .utf8)
+    let a = dir.appending(path: "a.csv"), b = dir.appending(path: "b.csv")
+    try text.write(to: a, atomically: true, encoding: .utf8)
+    let edited = text.replacingOccurrences(of: "Which bills do I pay every month?", with: "CHANGED TEXT?")
+    #expect(edited != text)
+    try edited.write(to: b, atomically: true, encoding: .utf8)
+    let out = dir.appending(path: "out")
+    let answers = { (n: Int) in ScriptedBackend(Array(repeating: calling([("final_answer", answer100)]), count: n)) }
+
+    try await run(Options(questions: a, ids: ["maya-ex-1"], out: out), backend: answers(1), repoRoot: repoRoot) { _ in }
+    await #expect(throws: EvalError.self) {
+        try await run(Options(questions: b, ids: ["maya-ex-1", "maya-ex-2"], out: out), backend: answers(1), repoRoot: repoRoot) { _ in }
+    }
+}
+
+@Test func refusedRerunLeavesResultsUntouched() async throws {
+    let out = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: out) }
+    let options = Options(questions: questionBank, ids: ["maya-ex-1", "maya-ex-2"],
+                          flags: OrganizerFlags(useGraph: false), out: out)
+    let answers = { (count: Int) in ScriptedBackend(Array(repeating: calling([("final_answer", answer100)]), count: count)) }
+    try await run(options, backend: answers(2), repoRoot: repoRoot) { _ in }
+    let results = out.appending(path: "results.jsonl")
+    let lines = try String(contentsOf: results, encoding: .utf8).split(separator: "\n")
+    let apiError = "{\"error_type\":\"api_error\"," + lines[1].dropFirst()
+    try Data((lines[0] + "\n" + apiError + "\n").utf8).write(to: results)
+    let before = try Data(contentsOf: results)
+
+    var other = options
+    other.flags = OrganizerFlags()
+    await #expect(throws: EvalError.self) { try await run(other, backend: answers(2), repoRoot: repoRoot) { _ in } }
+    #expect(try Data(contentsOf: results) == before)
+}
+
+/// Saves one answer, damages the manifest, then resumes with other switches.
+private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async throws {
+    let out = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: out) }
+    let answers = { (count: Int) in ScriptedBackend(Array(repeating: calling([("final_answer", answer100)]), count: count)) }
+    let first = Options(questions: questionBank, ids: ["maya-ex-1"], flags: OrganizerFlags(useGraph: false), out: out)
+    try await run(first, backend: answers(1), repoRoot: repoRoot) { _ in }
+    try damage(out.appending(path: "manifest.json"))
+    let second = Options(questions: questionBank, ids: ["maya-ex-1", "maya-ex-2"], flags: OrganizerFlags(), out: out)
+    try await run(second, backend: answers(1), repoRoot: repoRoot) { _ in }
+}
+
+@Test func deletedManifestIsRefused() async throws {
+    await #expect(throws: EvalError.self) { try await resumeAfterDamagingManifest { try FileManager.default.removeItem(at: $0) } }
+}
+
+@Test func oldManifestMissingAFieldIsRefused() async throws {
+    await #expect(throws: EvalError.self) {
+        try await resumeAfterDamagingManifest { url in
+            var manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+            manifest.removeValue(forKey: "tool_set_version")
+            try JSONSerialization.data(withJSONObject: manifest).write(to: url)
+        }
+    }
+}

@@ -79,7 +79,8 @@ struct Manifest: Codable {
     var settings: [(name: String, value: String)] {
         [("config", config), ("model", model), ("effort", effort ?? "none"),
          ("use_graph", "\(flags.useGraph)"), ("use_reconciliation", "\(flags.useReconciliation)"),
-         ("system prompt", promptSha256), ("tool set", toolSetSha256), ("git commit", gitCommit)]
+         ("system prompt", promptSha256), ("tool set", toolSetSha256), ("question bank", questionsSha256),
+         ("git commit", gitCommit)]
     }
 }
 
@@ -188,7 +189,6 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
     let manifestURL = options.out.appending(path: "manifest.json")
     let saved = try readFinished(resultsURL)
     var finished = saved.finished, reportedModels = saved.models
-    if saved.dropped > 0 { log("Asking \(saved.dropped) answer(s) again: cut off by a stop, or an API error.") }
 
     let toolSet = try JSONSerialization.data(withJSONObject: Tool.all.map(\.claudeSchema) + [FinalAnswer.claudeSchema],
                                              options: .sortedKeys)
@@ -213,6 +213,14 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
             throw EvalError("\(options.out.path) holds results made with a different \(changed.joined(separator: ", ")). Use a new --out.")
         }
         manifest.startedAt = old.startedAt
+    } else if !finished.isEmpty || saved.dropped > 0 {
+        // Without the old manifest there is nothing to compare against, so any setting could differ.
+        throw EvalError("\(options.out.path) holds results but its manifest.json is missing or can't be read. Use a new --out.")
+    }
+    // Only now, with the settings known to match, may the old results file change.
+    if saved.dropped > 0 {
+        try saved.kept.write(to: resultsURL, options: .atomic)
+        log("Asking \(saved.dropped) answer(s) again: cut off by a stop, or an API error.")
     }
     try write(manifest, to: manifestURL)
 
@@ -264,9 +272,10 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
 /// The answers already saved, as "id#repeat", the model ids they report, and how many lines
 /// were dropped so they are asked again: a last line cut off by a killed run, and answers that
 /// never reached the model (`api_error`: network, rate limit, spending cap), which say nothing
-/// about the configuration. Every other line, model mistakes included, stays as it is.
-func readFinished(_ url: URL) throws -> (finished: Set<String>, models: Set<String>, dropped: Int) {
-    guard let data = try? Data(contentsOf: url) else { return ([], [], 0) }
+/// about the configuration. Every other line, model mistakes included, stays as it is in
+/// `kept`, the file's new contents. Nothing is written here: the caller checks the settings first.
+func readFinished(_ url: URL) throws -> (finished: Set<String>, models: Set<String>, dropped: Int, kept: Data) {
+    guard let data = try? Data(contentsOf: url) else { return ([], [], 0, Data()) }
     var lines = data.split(separator: UInt8(ascii: "\n"), omittingEmptySubsequences: false)
     // After the last newline: nothing, or the cut-off line of a killed run.
     var dropped = lines.popLast()?.isEmpty == false ? 1 : 0
@@ -284,8 +293,7 @@ func readFinished(_ url: URL) throws -> (finished: Set<String>, models: Set<Stri
         finished.insert("\(id)#\(pass)")
         if let model = (object["trace"] as? [String: Any])?["reported_model"] as? String { models.insert(model) }
     }
-    if dropped > 0 { try kept.write(to: url, options: .atomic) }
-    return (finished, models, dropped)
+    return (finished, models, dropped, kept)
 }
 
 func write(_ manifest: Manifest, to url: URL) throws {
