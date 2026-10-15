@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sedge-server",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-30",
+
+  // Plain settings. Secrets (PLAID_CLIENT_ID, PLAID_SECRET, ANTHROPIC_API_KEY,
+  // SERVER_KEY) are never written here: they go in with `wrangler secret put`.
+  "vars": {
+    // "sandbox" or "production". Switch the Plaid secret along with it.
+    "PLAID_ENV": "sandbox",
+    // <Apple Team ID>.<bundle id>. Replace both parts once the paid team and bundle id exist.
+    "APP_ID": "TEAMID.dev.polter.sedge",
+    // "development" for builds run from Xcode, "production" for TestFlight and the App Store.
+    "APP_ATTEST_ENV": "development",
+    "ALLOWED_MODELS": "claude-sonnet-5-5",
+    "DAILY_MESSAGE_CAP": "200",
+    // Empty until the redirect URI is registered in the Plaid dashboard (see README).
+    "PLAID_REDIRECT_URI": ""
+  },
+
+  // One small storage object per app install: its key, its encrypted Plaid token, its daily count.
+  "durable_objects": {
+    "bindings": [{ "name": "INSTALLS", "class_name": "Install" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Install"] }],
+
+  "observability": { "enabled": true }
+}
