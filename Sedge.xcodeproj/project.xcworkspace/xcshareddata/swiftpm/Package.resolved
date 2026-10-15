@@ -1,6 +1,15 @@
 {
-  "originHash" : "58620475b326837784365601e24dfb547c7df2220c710fff8023a611cf5c1944",
+  "originHash" : "0335d33b6a9b2d41fee2407363d03a5717a57f1bfb66be7b555db641b0c1db01",
   "pins" : [
+    {
+      "identity" : "grdb.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/groue/GRDB.swift",
+      "state" : {
+        "revision" : "b83108d10f42680d78f23fe4d4d80fc88dab3212",
+        "version" : "7.11.1"
+      }
+    },
     {
       "identity" : "plaid-link-ios-spm",
       "kind" : "remoteSourceControl",
