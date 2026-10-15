@@ -10,3 +10,16 @@ registerHooks({
     ? { url: `data:text/javascript,${encodeURIComponent(stub)}`, shortCircuit: true }
     : next(specifier, context),
 });
+
+// /api/attest only trusts Apple's root, and tests can't get a certificate
+// Apple signed. This lets a test set `globalThis.TEST_ROOT` to its own root.
+// It changes the code only as the tests load it; the deployed file is untouched.
+registerHooks({
+  load(url, context, next) {
+    const out = next(url, context);
+    if (url.endsWith('/src/attest.js')) {
+      out.source = String(out.source).replace('root = APPLE_ROOT', 'root = globalThis.TEST_ROOT ?? APPLE_ROOT');
+    }
+    return out;
+  },
+});

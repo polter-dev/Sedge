@@ -116,8 +116,9 @@ const CHALLENGE_LIFETIME_MS = 5 * 60 * 1000;
 
 /**
  * A challenge is "<time>.<signature>": the server can check it later without
- * storing it. Replaying an old attestation still fails, because an install id
- * can only be registered once.
+ * storing it. A challenge can be reused until it expires, but replaying an
+ * attestation still fails: an install id can only be registered once, and only
+ * the one exact spelling of the key id is accepted (see isInstallId).
  */
 async function makeChallenge(env) {
   const time = String(Date.now());
@@ -135,8 +136,11 @@ async function isFreshChallenge(env, challenge) {
 
 // An install id is the App Attest key id: base64 of a 32-byte hash, so it is
 // anonymous and unique per install. Checking the shape first keeps junk ids
-// from ever reaching storage.
+// from ever reaching storage. The round trip refuses the 3 other spellings of
+// the same 32 bytes (the last character has 2 bits base64 ignores), so one key
+// can't be registered under several ids.
 const INSTALL_ID = /^[A-Za-z0-9+/]{43}=$/;
+const isInstallId = (id) => INSTALL_ID.test(id) && toBase64(fromBase64(id)) === id;
 
 const installFor = (env, installId) => env.INSTALLS.get(env.INSTALLS.idFromName(installId));
 
@@ -148,7 +152,7 @@ const installFor = (env, installId) => env.INSTALLS.get(env.INSTALLS.idFromName(
 async function authenticate(request, env, path, body) {
   const installId = request.headers.get('X-Install-Id') ?? '';
   const assertion = request.headers.get('X-Assertion');
-  if (!INSTALL_ID.test(installId) || !assertion) return null;
+  if (!isInstallId(installId) || !assertion) return null;
   const install = installFor(env, installId);
   const record = await install.read();
   if (!record) return null;
@@ -175,7 +179,7 @@ async function attest(env, body) {
     return json({ error: 'bad_request' }, 400);
   }
   const { keyId, attestation, challenge } = input ?? {};
-  if (!INSTALL_ID.test(keyId ?? '') || typeof attestation !== 'string') return json({ error: 'bad_request' }, 400);
+  if (!isInstallId(keyId ?? '') || typeof attestation !== 'string') return json({ error: 'bad_request' }, 400);
   try {
     if (!(await isFreshChallenge(env, challenge))) return refused();
     const publicKey = await verifyAttestation({

@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { APPLE_ROOT, concat, parseCertificate, sha256, toBase64, utf8, verifyAttestation } from '../src/attest.js';
+import { APPLE_ROOT, concat, fromBase64, parseCertificate, sha256, toBase64, utf8, verifyAttestation } from '../src/attest.js';
 import worker, { Install } from '../src/index.js';
 
 const APP_ID = 'TEAMID.dev.polter.sedge';
@@ -184,6 +184,34 @@ test('/api/attest refuses stale challenges and fake attestations', async () => {
   assert.equal((await attest({ ...real, challenge: `${Date.now()}.AAAA` })).status, 401, 'unsigned challenge');
   assert.equal((await attest({ ...real, challenge: `${Date.now() - 6 * 60e3}.${challenge.split('.')[1]}` })).status, 401, 'old challenge');
   assert.equal((await attest({ keyId: 'nope' })).status, 400);
+});
+
+// The 43rd base64 character carries 6 bits but only 4 are used, so 4 strings decode to the same 32 bytes.
+function spellingsOf(id) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const i = alphabet.indexOf(id[42]);
+  return [0, 1, 2, 3].map((low) => id.slice(0, 42) + alphabet[(i & ~3) | low] + '=');
+}
+
+test('an App Attest key registers under one install id only', async () => {
+  const { env, stores } = makeEnv();
+  const { challenge } = await (await call(env, 'GET', '/api/challenge')).json();
+  const made = await makeAttestation({ challenge });
+  globalThis.TEST_ROOT = made.root;
+  try {
+    const canonical = toBase64(made.keyId);
+    const others = spellingsOf(canonical).filter((s) => s !== canonical);
+    assert.deepEqual(fromBase64(others[0]), fromBase64(canonical)); // same bytes, different string
+
+    const attest = (keyId) => call(env, 'POST', '/api/attest', {
+      body: JSON.stringify({ keyId, attestation: toBase64(made.attestation), challenge }),
+    });
+    assert.equal((await attest(canonical)).status, 200, 'canonical registers');
+    for (const keyId of others) assert.notEqual((await attest(keyId)).status, 200, `non-canonical ${keyId} must be refused`);
+    assert.equal(stores.size, 1, 'one App Attest key, one install record');
+  } finally {
+    delete globalThis.TEST_ROOT;
+  }
 });
 
 // ---- Requests without valid attestation ----
