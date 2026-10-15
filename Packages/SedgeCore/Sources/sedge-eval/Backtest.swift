@@ -41,8 +41,3 @@ func backtest(_ arguments: [String]) throws {
     try csv.write(to: file, atomically: true, encoding: .utf8)
     print("Wrote \(file.path)")
 }
-
-func fail(_ message: String) -> Never {
-    print(message)
-    exit(2)
-}

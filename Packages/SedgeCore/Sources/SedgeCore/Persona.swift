@@ -14,7 +14,7 @@ public enum Persona {
     /// An earlier `asOf` pretends today is that day: later transactions are left out and
     /// each balance is wound back to what it was at the end of that day.
     public static func load(accounts accountsURL: URL, transactions transactionsURL: URL, into database: SedgeDatabase,
-                            asOf: String = asOf) throws {
+                            asOf: String = Persona.asOf) throws {
         let (accounts, transactions) = try read(accounts: accountsURL, transactions: transactionsURL)
         try database.save(accounts: balances(accounts, transactions, on: asOf),
                           transactions: transactions.filter { $0.date <= asOf }, asOf: asOf)

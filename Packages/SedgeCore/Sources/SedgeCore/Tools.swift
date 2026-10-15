@@ -30,9 +30,13 @@ public struct Tool: Sendable {
     /// read-only connection, so a tool cannot change the data.
     let run: @Sendable (_ input: ToolArguments, _ db: Database) throws -> any Encodable
 
+    /// Bump whenever a tool's name, inputs, description or output changes, like
+    /// `SystemPrompt.version`: every eval run records it next to a hash of the definitions.
+    public static let version = "v3"
+
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
-                             simulateBalance]
+                             getProfile, simulateBalance]
 
     public static func named(_ name: String) -> Tool? { all.first { $0.name == name } }
 

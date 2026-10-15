@@ -291,7 +291,7 @@ func claudeSchemaFollowsStrictRules(name: String) throws {
     }
 }
 
-/// The six v1 names and their inputs are frozen; simulate_balance (#12) comes after them.
+/// The six names and their inputs are frozen for v1. Later tools are added after them.
 @Test func toolListIsTheFrozenV1() {
     #expect(Tool.all.map { "\($0.name)(\($0.inputs.map(\.name).joined(separator: ",")))" } == [
         "total_spent(merchant,category,start_date,end_date)",
@@ -300,6 +300,7 @@ func claudeSchemaFollowsStrictRules(name: String) throws {
         "top_merchants(start_date,end_date,limit)",
         "find_transactions(merchant,min_amount,max_amount,start_date,end_date)",
         "account_balances()",
+        "get_profile()",
         "simulate_balance(days,extra_amount,extra_date)",
     ])
 }
