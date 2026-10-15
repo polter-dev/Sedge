@@ -62,6 +62,46 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(rows.waitForExistence(timeout: 5), "No tool rows under Show work")
         add(XCTAttachment(screenshot: app.screenshot()))    }
 
+    /// Opens the spending, what-if and profile screens for every sample person and checks each
+    /// shows its data, with a screenshot of each. Nothing is corrected, so the saved files stay as they were.
+    @MainActor
+    func testNewScreensForEveryPersona() throws {
+        for persona in ["maya", "daniel", "jordan", "elena"] {
+            let app = XCUIApplication()
+            app.launchArguments = ["-persona", persona]
+            app.launch()
+
+            app.tabBars.buttons["Spending"].tap()
+            XCTAssertTrue(app.switches["Include money moved between my accounts"].waitForExistence(timeout: 10))
+            XCTAssertTrue(app.staticTexts["By category"].exists)
+            XCTAssertFalse(app.staticTexts["No spending yet"].exists)
+            attachScreenshot(app, "\(persona) spending")
+
+            app.tabBars.buttons["What if"].tap()
+            let field = app.textFields["Extra purchase in dollars"]
+            XCTAssertTrue(field.waitForExistence(timeout: 10))
+            field.tap()
+            field.typeText("400")
+            XCTAssertTrue(app.staticTexts["With the purchase"].waitForExistence(timeout: 5))
+            app.collectionViews.firstMatch.swipeDown() // hides the keyboard
+            attachScreenshot(app, "\(persona) what if")
+
+            app.tabBars.buttons["About you"].tap()
+            let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+            XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+            attachScreenshot(app, "\(persona) profile")
+        }
+    }
+
+    /// Keeps a screenshot in the test results, named for what it shows.
+    @MainActor
+    private func attachScreenshot(_ app: XCUIApplication, _ name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
     @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.
