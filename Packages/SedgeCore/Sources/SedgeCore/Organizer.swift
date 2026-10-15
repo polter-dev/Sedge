@@ -158,24 +158,25 @@ public enum Organizer {
             let inflows = sides.filter { kind[$0.id] == "income" }
             // Money leaving one account pairs with the same amount arriving in another of this
             // person's accounts (one database is one person) within a few days.
-            // Oldest first, and each side is used once.
-            for out in sides where out.amount > 0 {
-                let candidates = inflows.filter { inflow in
-                    partner[inflow.id] == nil && inflow.account != out.account
-                        && abs(inflow.amount + out.amount) < 0.005 && abs(inflow.day - out.day) <= transferWindowDays
-                        && (looksLikeTransfer(out) || looksLikeTransfer(inflow))
+            // The first pass only pairs an outflow with an account its name mentions
+            // ("PAYMENT CARD A" with "Card A", "TRANSFER TO SAVINGS" with "Savings"), so another
+            // same-amount move that posts on a closer date can't take that inflow. The second
+            // pass pairs what is left by closest date. Oldest first, and each side is used once.
+            for namedOnly in [true, false] {
+                for out in sides where out.amount > 0 && partner[out.id] == nil {
+                    let candidates = inflows.filter { inflow in
+                        partner[inflow.id] == nil && inflow.account != out.account
+                            && abs(inflow.amount + out.amount) < 0.005 && abs(inflow.day - out.day) <= transferWindowDays
+                            && (looksLikeTransfer(out) || looksLikeTransfer(inflow))
+                            && (!namedOnly || out.raw.lowercased().contains(inflow.accountName.lowercased()))
+                    }
+                    guard let inflow = candidates.min(by: { abs($0.day - out.day) < abs($1.day - out.day) }) else { continue }
+                    partner[out.id] = inflow.id
+                    partner[inflow.id] = out.id
+                    let pairKind = out.accountType == "credit" || inflow.accountType == "credit" ? "card_payment" : "transfer"
+                    kind[out.id] = pairKind
+                    kind[inflow.id] = pairKind
                 }
-                // Prefer the closest date, then the account the name mentions: two cards paid the
-                // same amount on the same day go "PAYMENT CARD A" to "Card A".
-                func rank(_ inflow: Side) -> (Int, Int) {
-                    (abs(inflow.day - out.day), out.raw.lowercased().contains(inflow.accountName.lowercased()) ? 0 : 1)
-                }
-                guard let inflow = candidates.min(by: { rank($0) < rank($1) }) else { continue }
-                partner[out.id] = inflow.id
-                partner[inflow.id] = out.id
-                let pairKind = out.accountType == "credit" || inflow.accountType == "credit" ? "card_payment" : "transfer"
-                kind[out.id] = pairKind
-                kind[inflow.id] = pairKind
             }
         }
 

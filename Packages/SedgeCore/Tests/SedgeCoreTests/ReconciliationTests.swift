@@ -98,3 +98,51 @@ func totalsMatchTheAnswerKey(persona: String) throws {
         "4-out-b": "card_payment -> 1-in-b", "1-in-b": "card_payment -> 4-out-b",
     ])
 }
+
+private func account(_ id: String, _ name: String, _ type: String) -> Account {
+    Account(account_id: id, name: name, type: type, balances: Balances())
+}
+private func line(_ id: String, _ account: String, _ date: String, _ name: String, _ amount: Double) -> Transaction {
+    Transaction(transaction_id: id, account_id: account, date: date, name: name, amount: amount, pending: false)
+}
+
+/// Two same-amount card payments a day apart, with each card posting on a different lag:
+/// the closest date would cross them, so the card named in the payment must win.
+@Test func overlappingCardPaymentsWithDifferentLags() throws {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [account("chk", "Checking", "depository"), account("a", "Card A", "credit"), account("b", "Card B", "credit")],
+        transactions: [
+            line("1-out-a", "chk", "2026-03-20", "PAYMENT CARD A", 40),
+            line("2-out-b", "chk", "2026-03-21", "PAYMENT CARD B", 40),
+            line("3-in-b", "b", "2026-03-20", "PAYMENT RECEIVED THANK YOU", -40),
+            line("4-in-a", "a", "2026-03-21", "PAYMENT RECEIVED THANK YOU", -40),
+        ],
+        asOf: "2026-03-31")
+    try Organizer.organize(database)
+    let got = try links(database)
+    #expect(got == [
+        "1-out-a": "card_payment -> 4-in-a", "4-in-a": "card_payment -> 1-out-a",
+        "2-out-b": "card_payment -> 3-in-b", "3-in-b": "card_payment -> 2-out-b",
+    ])
+}
+
+/// A savings transfer whose inflow posts late must not take the card's same-day inflow.
+@Test func transferDoesNotTakeTheCardInflow() throws {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [account("chk", "Checking", "depository"), account("a", "Card A", "credit"), account("sav", "Savings", "depository")],
+        transactions: [
+            line("1-xfer", "chk", "2026-03-01", "ONLINE TRANSFER TO SAVINGS", 100),
+            line("2-card", "chk", "2026-03-02", "PAYMENT CARD A", 100),
+            line("3-in-a", "a", "2026-03-02", "PAYMENT RECEIVED THANK YOU", -100),
+            line("4-in-sav", "sav", "2026-03-04", "ONLINE TRANSFER FROM CHECKING", -100),
+        ],
+        asOf: "2026-03-31")
+    try Organizer.organize(database)
+    let got = try links(database)
+    #expect(got == [
+        "1-xfer": "transfer -> 4-in-sav", "4-in-sav": "transfer -> 1-xfer",
+        "2-card": "card_payment -> 3-in-a", "3-in-a": "card_payment -> 2-card",
+    ])
+}
