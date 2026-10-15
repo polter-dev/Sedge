@@ -164,7 +164,7 @@ public struct FinalAnswer: Codable, Sendable, Equatable {
 
     /// Claude's definition of the tool. Strict mode makes every field present; "null" in a
     /// field's type lets the model leave it empty on purpose.
-    static var claudeSchema: [String: Any] {
+    public static var claudeSchema: [String: Any] {
         func nullable(_ type: String, _ description: String) -> [String: Any] {
             ["type": [type, "null"], "description": description]
         }
