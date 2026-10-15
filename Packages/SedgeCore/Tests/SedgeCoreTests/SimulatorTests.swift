@@ -141,3 +141,67 @@ func simulate(_ database: SedgeDatabase, days: Int, purchases: [Simulator.Purcha
                                cutoff: "2026-06-20", days: 14, useReconciliation: true)
     }
 }
+
+// MARK: - Month-end series and late charges
+
+/// Checking and a card, today `asOf`: rent of 500 on each of `rent`, a paycheck of `paycheck`
+/// on each of `paydays`, and a 150 card payment on each of `cardPayments`.
+func seriesDatabase(asOf: String, rent: [String] = [], paydays: [String] = [], paycheck: Double = 3000,
+                    checking: Double = 5000, cardPayments: [String] = []) throws -> SedgeDatabase {
+    var count = 0
+    func charge(_ account: String, _ date: String, _ name: String, _ amount: Double) -> Transaction {
+        count += 1
+        return Transaction(transaction_id: "t\(count)", account_id: account, date: date, name: name, amount: amount, pending: false)
+    }
+    var transactions = rent.map { charge("checking", $0, "OAKWOOD APARTMENTS RENT", 500) }
+    transactions += paydays.map { charge("checking", $0, "ACME PAYROLL", -paycheck) }
+    for date in cardPayments {
+        transactions.append(charge("checking", date, "PAYMENT CREDIT CARD", 150))
+        transactions.append(charge("card", date, "PAYMENT RECEIVED THANK YOU", -150))
+    }
+    func account(_ id: String, _ name: String, _ type: String, _ balance: Double) -> Account {
+        Account(account_id: id, name: name, type: type, subtype: type == "credit" ? "credit card" : "checking",
+                balances: Balances(current: balance))
+    }
+    let database = try SedgeDatabase()
+    try database.save(accounts: [account("checking", "Checking", "depository", checking), account("card", "Credit Card", "credit", 200)],
+                      transactions: transactions, asOf: asOf)
+    try Organizer.organize(database, useReconciliation: true)
+    return database
+}
+
+/// Days the checking balance rises by more than 700 from the day before, i.e. paydays.
+func paydays(_ days: [Simulator.Day], from opening: Double) -> [String] {
+    zip(days, [opening] + days.map { $0.balances["checking"]! }).filter { $0.balances["checking"]! - $1 > 700 }.map(\.0.date)
+}
+
+/// Rent on month end whose latest charge was Feb 28 still lands on Mar 31, not Mar 28.
+@Test func monthEndRentAfterFebruary() throws {
+    let database = try seriesDatabase(asOf: "2026-03-05", rent: ["2025-10-31", "2025-11-30", "2025-12-31", "2026-01-31", "2026-02-28"],
+                                      paydays: ["2026-01-02", "2026-01-16", "2026-01-30", "2026-02-13", "2026-02-27"])
+    let rent = try simulate(database, days: 40).filter { $0.bills.contains { $0.name.contains("Rent") } }.map(\.date)
+    #expect(rent == ["2026-03-31"])
+}
+
+/// A card paid on Jan 31 and Feb 28 is next paid on Mar 31, not Mar 28.
+@Test func monthEndCardPaymentAfterFebruary() throws {
+    let database = try seriesDatabase(asOf: "2026-03-05", rent: ["2026-01-31", "2026-02-28"],
+                                      paydays: ["2026-01-02", "2026-01-16", "2026-01-30", "2026-02-13", "2026-02-27"],
+                                      cardPayments: ["2026-01-31", "2026-02-28"])
+    let payments = try simulate(database, days: 40).filter { $0.bills.contains { $0.name == "Credit Card payment" } }.map(\.date)
+    #expect(payments == ["2026-03-31"])
+}
+
+/// A biweekly paycheck next expected Feb 27 that hasn't posted by Feb 28 is one day late, not
+/// stopped: it is projected tomorrow (Mar 1) and the later paydays are kept.
+@Test func lateChargeStaysInProjection() throws {
+    let pay = ["2026-01-02", "2026-01-16", "2026-01-30", "2026-02-13"]
+    let late = try simulate(seriesDatabase(asOf: "2026-02-28", paydays: pay, paycheck: 800, checking: 1000), days: 30)
+    #expect(paydays(late, from: 1000) == ["2026-03-01", "2026-03-13", "2026-03-27"])
+    // Due today and not posted yet: projected tomorrow too.
+    let dueToday = try simulate(seriesDatabase(asOf: "2026-02-27", paydays: pay, paycheck: 800, checking: 1000), days: 30)
+    #expect(paydays(dueToday, from: 1000) == ["2026-02-28", "2026-03-13", "2026-03-27"])
+    // Four days late is past the 3-day grace, so the series counts as stopped.
+    let stopped = try simulate(seriesDatabase(asOf: "2026-03-03", paydays: pay, paycheck: 800, checking: 1000), days: 30)
+    #expect(paydays(stopped, from: 1000).isEmpty)
+}

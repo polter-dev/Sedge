@@ -83,32 +83,46 @@ public enum Simulator {
         // SQLite fills the plain columns from the row with the latest date (because of MAX), so
         // `account_id` is the account the series last used.
         var scheduled: [String: [(name: String, account: String, amount: Double, isBill: Bool)]] = [:]
-        let steps: [String: (unit: Calendar.Component, count: Int)] = ["weekly": (.day, 7), "biweekly": (.day, 14), "monthly": (.month, 1)]
+        // How late a charge can be before its series counts as stopped. It reuses the organizer's
+        // transfer matching window (3 days) rather than a separate tuned number; change it here if needed.
+        let graceStart = calendar.date(byAdding: .day, value: -Organizer.transferWindowDays, to: start)!
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: start)!
+        let weeks = ["weekly": 1, "biweekly": 2]
         for row in try Row.fetchAll(db, sql: """
-            SELECT m.name, t.kind, t.amount > 0 AS outflow, e.cadence, e.typical_amount, e.next_expected_date,
-                   MAX(t.date), t.account_id
+            SELECT m.name, t.kind, t.amount > 0 AS outflow, e.cadence, e.typical_amount,
+                   MAX(t.date), t.account_id, GROUP_CONCAT(t.date)
             FROM edges e JOIN transactions t ON t.transaction_id = e.source JOIN entities m ON m.id = e.target
             WHERE e.kind = 'recurring' AND t.kind != 'card_payment'
             GROUP BY e.target, t.kind, outflow
             """) {
-            // A series whose next date has already passed without a charge has probably stopped.
-            guard let step = steps[row[3]], (row[5] as String) >= asOf else { continue }
-            let outflow: Bool = row[2], kind: String = row[1], typical: Double = row[4]
-            let last = try date(row[6])
-            // Counted from the last charge each time (not from the previous projected date), so a
-            // bill on the 31st lands on Feb 28 and then on Mar 31 again instead of drifting to the 28th.
+            let cadence: String = row[3], outflow: Bool = row[2], kind: String = row[1], typical: Double = row[4]
+            guard cadence == "monthly" || weeks[cadence] != nil else { continue }
+            let latest = try date(row[5])
+            // A monthly series is due on the day of the month of its latest charge in a 31-day month,
+            // so a bill on the 31st stays on month end (Feb 28, then Mar 31) even when the latest
+            // charge was the Feb 28 one. That's also why the dates are worked out here rather than
+            // taken from the organizer's next_expected_date, which is the latest charge plus a month.
+            let anchor = (row[7] as String).split(separator: ",").map(String.init).filter(inLongMonth).max() ?? row[5]
+            let anchorDay = Int(anchor.suffix(2))!
             for k in 1... {
-                let day = calendar.date(byAdding: step.unit, value: k * step.count, to: last)!
+                // Counted from the latest charge each time (not from the previous projected date).
+                var day = weeks[cadence].map { calendar.date(byAdding: .day, value: 7 * $0 * k, to: latest)! }
+                    ?? monthDay(anchorDay, monthsAfter: k, latest)
                 if day > end { break }
-                if day > start {
-                    scheduled[text(day), default: []].append(
-                        (row[0], row[7], outflow ? typical : -typical, outflow && kind == "spending"))
+                if day <= start {
+                    // Due on or before today and not charged yet. Past the grace the series has
+                    // probably stopped; within it the charge is just late, so it is projected tomorrow.
+                    if day < graceStart { break }
+                    day = tomorrow
                 }
+                scheduled[text(day), default: []].append(
+                    (row[0], row[6], outflow ? typical : -typical, outflow && kind == "spending"))
             }
         }
 
-        // Card payments: each card is paid from the account and on the day of the month of its latest
-        // matched payment (#4), and the payment is what the card owed at the last month end, less
+        // Card payments: each card is paid from the account of its latest matched payment (#4), on the
+        // day of the month of its latest payment in a 31-day month (so a Feb 28 payment doesn't turn
+        // a 31st into a 28th), and the payment is what the card owed at the last month end, less
         // anything already paid since. That is how the fake banks bill.
         // shortcut: assumes every statement closes on the last day of the month and is paid in full;
         // read Plaid's liabilities (statement date and balance) if real cards need it.
@@ -119,10 +133,11 @@ public enum Simulator {
             WHERE card.kind = 'card_payment' AND card.account_id IN (SELECT account_id FROM accounts WHERE type = 'credit')
             ORDER BY card.date
             """) {
-            plans[row[0]] = (row[1], Int((row[2] as String).suffix(2))!) // later rows overwrite earlier ones
+            // Later rows overwrite earlier ones; the day only from a 31-day month, unless it's the first.
+            let paidOn: String = row[2], earlier = plans[row[0]]
+            plans[row[0]] = (row[1], earlier == nil || inLongMonth(paidOn) ? Int(paidOn.suffix(2))! : earlier!.day)
         }
         // The last month end on or before today: the day before the first of the month tomorrow is in.
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: start)!
         let monthEnd = calendar.date(byAdding: .day, value: -1, to: calendar.dateInterval(of: .month, for: tomorrow)!.start)!
         // What each card owed at that month end (today's balance with the charges since undone),
         // and what has been paid on it since.
@@ -206,4 +221,17 @@ public enum Simulator {
 
     static func date(_ text: String) throws -> Date { try Date(text + "T00:00:00Z", strategy: .iso8601) }
     static func text(_ date: Date) -> String { date.formatted(.iso8601.year().month().day()) }
+
+    /// The `day`th of the month `months` after `date`'s month, or that month's last day if it is shorter.
+    static func monthDay(_ day: Int, monthsAfter months: Int, _ date: Date) -> Date {
+        let first = calendar.date(byAdding: .month, value: months, to: calendar.dateInterval(of: .month, for: date)!.start)!
+        let length = calendar.range(of: .day, in: .month, for: first)!.count
+        return calendar.date(byAdding: .day, value: min(day, length) - 1, to: first)!
+    }
+
+    /// Whether "YYYY-MM-DD" falls in a month with 31 days, where any day of the month can happen.
+    static func inLongMonth(_ text: String) -> Bool {
+        guard let day = try? date(text) else { return false }
+        return calendar.range(of: .day, in: .month, for: day)!.count == 31
+    }
 }
