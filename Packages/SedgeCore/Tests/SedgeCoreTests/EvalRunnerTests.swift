@@ -145,3 +145,49 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
         }
     }
 }
+
+// The context-stuffing baseline: raw data in the prompt, final_answer as the only tool.
+
+@Test func contextConfigPutsRawDataInThePromptAndRefusesDataTools() async throws {
+    let out = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: out) }
+    var options = Options(questions: questionBank, ids: ["maya-ex-1"], out: out)
+    options.config = "context"
+    // The model tries a data tool anyway; it must be turned away, not run.
+    let backend = ScriptedBackend([calling([("total_spent", netflix)]), calling([("final_answer", answer100)])])
+    try await run(options, backend: backend, repoRoot: repoRoot) { _ in }
+
+    let system = try #require(await backend.systems.first)
+    #expect(system.hasPrefix(SystemPrompt.text(asOf: "2026-06-30")))
+    #expect(system.contains("date,name,amount,account\n2026-01-01,") && system.contains("OAKWOOD APARTMENTS RENT,650.00,Checking"))
+    #expect(system.contains("name,type,balance\nChecking,checking,1993.45"))
+    // Nothing from the grader's columns reaches the model.
+    #expect(!system.contains("SELECT") && !system.contains("5804.56"))
+
+    let line = try JSONSerialization.jsonObject(with: Data(contentsOf: out.appending(path: "results.jsonl"))) as! [String: Any]
+    let calls = (line["trace"] as! [String: Any])["tool_calls"] as! [[String: Any]]
+    #expect(calls.map { $0["name"] as! String } == ["total_spent", "final_answer"])
+    #expect(calls[0]["error"] as? String == "Unknown tool \"total_spent\".")
+    #expect(line["config"] as? String == "context" && line["input_tokens"] as? Int == 20)
+
+    let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: out.appending(path: "manifest.json"))) as! [String: Any]
+    #expect(manifest["config"] as? String == "context" && manifest["prompt_version"] as? String == "v1+context-v1")
+    #expect(manifest["prompt_sha256"] as? String == sha256(Data(SystemPrompt.template(dataTools: false).utf8)))
+
+    // A cloud run can't resume into a context folder.
+    options.config = "cloud"
+    await #expect(throws: EvalError.self) {
+        try await run(options, backend: ScriptedBackend([calling([("final_answer", answer100)])]), repoRoot: repoRoot) { _ in }
+    }
+}
+
+@Test func contextBackendOffersOnlyFinalAnswer() throws {
+    let body = try ClaudeBackend(apiKey: "test", dataTools: false).body(system: "", messages: [.user("?")])
+    let tools = (try JSONSerialization.jsonObject(with: body) as! [String: Any])["tools"] as! [[String: Any]]
+    #expect(tools.map { $0["name"] as! String } == ["final_answer"])
+}
+
+@Test func contextCSVSurvivesCommasAndQuotes() {
+    let rows = [["date", "name"], ["2026-01-01", "AMAZON, INC \"MKTP\""]]
+    #expect(parseCSV(SystemPrompt.csv(rows) + "\n") == rows)
+}

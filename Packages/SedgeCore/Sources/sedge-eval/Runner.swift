@@ -157,13 +157,13 @@ func select(_ questions: [Question], split: String, ids: [String]?) throws -> [Q
 }
 
 /// A fresh in-memory database holding one persona as it stood on `asOf`, organized with
-/// this run's switches. `dataFolder` is `tools/data`.
-func prepareDatabase(persona: String, asOf: String, dataFolder: URL, flags: OrganizerFlags) throws -> SedgeDatabase {
+/// this run's switches, or left raw when `flags` is nil. `dataFolder` is `tools/data`.
+func prepareDatabase(persona: String, asOf: String, dataFolder: URL, flags: OrganizerFlags?) throws -> SedgeDatabase {
     let folder = dataFolder.appending(path: persona)
     let database = try SedgeDatabase()
     try Persona.load(accounts: folder.appending(path: "accounts.json"),
                      transactions: folder.appending(path: "transactions.json"), into: database, asOf: asOf)
-    try Organizer.organize(database, useGraph: flags.useGraph, useReconciliation: flags.useReconciliation)
+    if let flags { try Organizer.organize(database, useGraph: flags.useGraph, useReconciliation: flags.useReconciliation) }
     return database
 }
 
@@ -190,8 +190,12 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
     let saved = try readFinished(resultsURL)
     var finished = saved.finished, reportedModels = saved.models
 
-    let toolSet = try JSONSerialization.data(withJSONObject: Tool.all.map(\.claudeSchema) + [FinalAnswer.claudeSchema],
-                                             options: .sortedKeys)
+    // The context-stuffing baseline reads raw transactions from its prompt: no organizer, no data tools.
+    let dataTools = options.config != "context"
+    if let claude = backend as? ClaudeBackend, claude.dataTools != dataTools {
+        throw EvalError("--config \(options.config) needs a backend made with dataTools: \(dataTools)")
+    }
+    let toolSet = try JSONSerialization.data(withJSONObject: ClaudeBackend.tools(dataTools: dataTools), options: .sortedKeys)
     var manifest = Manifest(
         runId: options.out.lastPathComponent, startedAt: Date.now.ISO8601Format(), endedAt: nil,
         gitCommit: git(["rev-parse", "HEAD"], in: repoRoot) ?? "unknown",
@@ -200,7 +204,8 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
         macosBuild: ProcessInfo.processInfo.operatingSystemVersionString,
         machine: sysctl("hw.model") + ", " + sysctl("machdep.cpu.brand_string"),
         config: options.config, model: backend.model, effort: backend.effort, reportedModels: [],
-        promptVersion: SystemPrompt.version, promptSha256: sha256(Data(SystemPrompt.text(asOf: "{as_of}").utf8)),
+        promptVersion: SystemPrompt.version(dataTools: dataTools),
+        promptSha256: sha256(Data(SystemPrompt.template(dataTools: dataTools).utf8)),
         toolSetVersion: Tool.version, toolSetSha256: sha256(toolSet),
         questionsFile: options.questions.path, questionsSha256: sha256(questionsData),
         flags: options.flags, split: split, ids: options.ids, repeat: options.repeats, results: finished.count)
@@ -246,10 +251,11 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
             }
             let key = question.persona + " " + question.asOf
             let database = try databases[key] ?? prepareDatabase(persona: question.persona, asOf: question.asOf,
-                                                                 dataFolder: repoRoot.appending(path: "tools/data"), flags: options.flags)
+                                                                 dataFolder: repoRoot.appending(path: "tools/data"),
+                                                                 flags: dataTools ? options.flags : nil)
             databases[key] = database
 
-            let trace = await Assistant(backend: backend, database: database).ask(question.text)
+            let trace = await Assistant(backend: backend, database: database, dataTools: dataTools).ask(question.text)
             let line = ResultLine(id: question.id, persona: question.persona, type: question.type, asOf: question.asOf,
                                   config: options.config, model: backend.model, repeat: pass, flags: options.flags,
                                   finalAnswer: trace.finalAnswer, rawText: trace.text, errorType: errorType(trace),
