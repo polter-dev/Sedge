@@ -103,7 +103,8 @@ Each dataset has its own SQLite file, and every file has the tables above:
 - One separate bank file for Plaid data (`sedge.sqlite`).
 
 The rule: Plaid data always goes into the bank file and never into a persona's file, and
-the app reads the chosen database at launch. Building this is #13's job. Today the app
-chooses the file at launch (`-persona <name>` opens that persona's file, otherwise
-`sedge.sqlite`), but the Plaid save in `ConnectBankView.swift` still writes to whichever
-file is open.
+the app reads the chosen database at launch. The data picker remembers the choice (a
+persona's name or `bank`), and launching with `-persona <name>` picks that persona too.
+Opening a persona's file reloads it from the bundled fake data (so its `as_of` stays
+2026-06-30) and runs the organizer. Only the bank file is ever handed to the Plaid flow
+in `ConnectBankView.swift`, so a sync can't write into a persona's file.

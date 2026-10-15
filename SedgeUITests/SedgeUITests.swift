@@ -33,6 +33,35 @@ final class SedgeUITests: XCTestCase {
         // https://developer.apple.com/documentation/xcuiautomation
     }
 
+    /// Asks Maya's Netflix question end to end, through the real cloud model.
+    /// Needs a key: run with `TEST_RUNNER_ANTHROPIC_API_KEY=... xcodebuild test`, which
+    /// hands it to this test (never stored in the repo). Skipped without one.
+    @MainActor
+    func testAskNetflixAsMaya() throws {
+        guard let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"], !key.isEmpty else {
+            throw XCTSkip("No ANTHROPIC_API_KEY for the test runner")
+        }
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launchEnvironment["ANTHROPIC_API_KEY"] = key
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText("How much did I spend at Netflix this year?")
+        app.collectionViews.buttons["Ask"].tap()
+
+        // The answer can take a while: the model thinks and calls tools first.
+        let answer = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '100.44'")).firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 180), "No answer with 100.44")
+
+        app.buttons["Show work"].tap()
+        // The tool's reply lists Maya's Netflix rows by store name.
+        let rows = app.staticTexts.containing(NSPredicate(format: "label CONTAINS '\"store\":\"Netflix\"'")).firstMatch
+        XCTAssertTrue(rows.waitForExistence(timeout: 5), "No tool rows under Show work")
+        add(XCTAttachment(screenshot: app.screenshot()))    }
+
     @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.
