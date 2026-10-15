@@ -120,6 +120,40 @@ let questionBank = repoRoot.appending(path: "tools/eval/questions.csv")
     #expect(try Data(contentsOf: results) == before)
 }
 
+@Test func resumeWithAnotherBackendOrOSBuildIsRefused() async throws {
+    let out = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: out) }
+    let answers = { (count: Int) in ScriptedBackend(Array(repeating: calling([("final_answer", answer100)]), count: count)) }
+    var options = Options(questions: questionBank, ids: ["maya-ex-1"], out: out)
+    try await run(options, backend: answers(1), repoRoot: repoRoot) { _ in }
+    options.ids = ["maya-ex-1", "maya-ex-2"]
+    options.config = "apple"
+    await #expect(throws: EvalError.self) { try await run(options, backend: answers(1), repoRoot: repoRoot) { _ in } }
+
+    // An on-device folder from another OS build holds another model version.
+    let apple = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: apple) }
+    options.out = apple
+    options.ids = ["maya-ex-1"]
+    try await run(options, backend: answers(1), repoRoot: repoRoot) { _ in }
+    let url = apple.appending(path: "manifest.json")
+    var manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+    manifest["macos_build"] = "Version 26.0 (Build 25A1)"
+    try JSONSerialization.data(withJSONObject: manifest).write(to: url)
+    options.ids = ["maya-ex-1", "maya-ex-2"]
+    await #expect(throws: EvalError.self) { try await run(options, backend: answers(1), repoRoot: repoRoot) { _ in } }
+}
+
+@Test func errorLabelsBecomeErrorTypes() {
+    var trace = Trace(question: "?", model: "m", effort: nil, promptVersion: "v1")
+    for (error, type) in [("refusal: cyber", "refusal"), ("guardrail: x", "guardrail"), ("context_window: x", "context_window"),
+                          ("model_unavailable: x", "model_unavailable"), ("bad_arguments: x", "bad_arguments"),
+                          ("tool_error: x", "tool_error"), ("max_tokens", "max_tokens"), ("Claude API error 500", "api_error")] {
+        trace.error = error
+        #expect(errorType(trace) == type)
+    }
+}
+
 /// Saves one answer, damages the manifest, then resumes with other switches.
 private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async throws {
     let out = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")

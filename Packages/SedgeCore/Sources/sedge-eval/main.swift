@@ -3,16 +3,19 @@
 //   swift run --package-path Packages/SedgeCore sedge-eval --config cloud --split dev
 //
 // Writes results.jsonl (one line per answer) and manifest.json into the --out folder.
-// The key comes from the ANTHROPIC_API_KEY environment variable and is never printed.
+// `--config apple` asks Apple's on-device model instead and needs no key. For the cloud, the
+// key comes from the ANTHROPIC_API_KEY environment variable and is never printed.
 import Foundation
 import SedgeCore
 
 let usage = """
     Usage: sedge-eval [options]
-      --config cloud|context  which model setup answers: cloud uses the organizer and data
+      --config cloud|context|apple
+                              which model setup answers: cloud uses the organizer and data
                               tools; context gives the same model every raw transaction in its
-                              prompt, with final_answer as its only tool
-      --model <id>            model to ask (default \(ClaudeBackend.defaultModel))
+                              prompt, with final_answer as its only tool; apple is Apple's
+                              on-device model with the data tools
+      --model <id>            cloud model to ask (default \(ClaudeBackend.defaultModel))
       --questions <csv>       question bank (default tools/eval/questions.csv)
       --split dev|test|all    which questions (default dev, or all when --ids is given)
       --ids a,b,c             only these question ids
@@ -59,10 +62,23 @@ while let argument = arguments.next() {
     default: fail("Unknown option \(argument).\n\n\(usage)")
     }
 }
-guard ["cloud", "context"].contains(options.config) else { fail("Unknown --config \(options.config). Use cloud or context.") }
 if options.config == "context", options.flags != OrganizerFlags() { fail("--config context doesn't use the organizer, so its switches don't apply.") }
 if let split = options.split, !["dev", "test", "all"].contains(split) { fail("--split must be dev, test or all.") }
-guard let key = ClaudeBackend.apiKey() else { fail("Set ANTHROPIC_API_KEY first (it is in .env).") }
+let backend: any ModelBackend
+switch options.config {
+case "cloud", "context":
+    guard let key = ClaudeBackend.apiKey() else { fail("Set ANTHROPIC_API_KEY first (it is in .env).") }
+    // Same model and effort for both configs, so the only difference is how the data arrives.
+    backend = ClaudeBackend(model: options.model, effort: "medium", apiKey: key, dataTools: options.config != "context")
+case "apple":
+    // Checked once up front, so a run with Apple Intelligence off stops with the reason
+    // instead of saving a hundred identical errors.
+    if let reason = AppleBackend.unavailableReason() { fail(reason) }
+    backend = AppleBackend()
+    options.model = backend.model
+default:
+    fail("Unknown --config \(options.config). Use cloud, context or apple.")
+}
 
 // The run id names the folder: config, flags, model and start time, e.g. cloud-no-graph-claude-sonnet-5-5-20261015-142233.
 let stamp = Date.now.formatted(.verbatim("\(year: .defaultDigits)\(month: .twoDigits)\(day: .twoDigits)-\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))\(minute: .twoDigits)\(second: .twoDigits)",
@@ -71,8 +87,6 @@ let runID = ([options.config] + (options.flags.useGraph ? [] : ["no-graph"])
              + (options.flags.useReconciliation ? [] : ["no-reconciliation"]) + [options.model, stamp]).joined(separator: "-")
 options.out = out ?? repoRoot.appending(path: "tools/eval/results/\(runID)", directoryHint: .isDirectory)
 
-// Same model and effort for both configs, so the only difference is how the data arrives.
-let backend = ClaudeBackend(model: options.model, effort: "medium", apiKey: key, dataTools: options.config != "context")
 do {
     try await run(options, backend: backend, repoRoot: repoRoot) { line in
         // Progress goes to stderr, which isn't buffered, so each line shows as it happens.
