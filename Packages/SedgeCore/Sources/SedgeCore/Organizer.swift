@@ -3,7 +3,8 @@ import GRDB
 
 /// Turns raw statement names into a merchant graph: cleaned store names, one
 /// merchant per store, a category per merchant, refund links and recurring charges.
-/// It works only from each transaction's raw `name`, date, amount and account.
+/// It works only from each transaction's raw `name`, date, amount and account
+/// (plus Plaid's category as an optional hint when matching transfers).
 public enum Organizer {
     /// Two cleaned names at least this similar (0 to 1, from edit distance) are one store.
     /// 0.8 lets "beanstreet cafe" join "bean street coffee" (0.81) but keeps
@@ -49,10 +50,19 @@ public enum Organizer {
         ("weekly", 6...8), ("biweekly", 12...16), ("monthly", 26...35),
     ]
 
+    /// The two sides of a transfer may post up to this many days apart: banks often
+    /// show the money arriving a day or two after it left.
+    static let transferWindowDays = 3
+
+    /// Whole words in a statement name that say money is moving between accounts.
+    static let transferWords: Set<String> = ["payment", "transfer", "xfer", "pmt", "pymt", "autopay"]
+
     /// Rebuilds the graph from the saved transactions, replacing any earlier result.
     /// `useGraph: false` is the "no graph" ablation: each raw statement name is its own
     /// store, and nothing is linked as recurring or as a refund.
-    public static func organize(_ database: SedgeDatabase, useGraph: Bool = true) throws {
+    /// `useReconciliation: false` is the "no reconciliation" ablation: no card payments or
+    /// transfers are matched, and every transaction is spending or income by its sign.
+    public static func organize(_ database: SedgeDatabase, useGraph: Bool = true, useReconciliation: Bool = true) throws {
         try database.dbQueue.write { db in
             // Only the columns the organizer is allowed to use.
             let lines = try Row.fetchAll(db, sql: """
@@ -105,6 +115,95 @@ public enum Organizer {
                     }
                 }
             }
+            try reconcile(db, useReconciliation: useReconciliation)
+        }
+    }
+
+    /// Sets every transaction's `kind`, and links the two sides of each card payment and
+    /// own-account transfer through `linked_transaction_id`. Without this, paying a card
+    /// would count the same money twice: once at the store, once as the payment.
+    static func reconcile(_ db: Database, useReconciliation: Bool) throws {
+        /// One transaction plus the facts about its account that matching needs.
+        struct Side {
+            let id, account, accountType, accountName, raw: String
+            let amount: Double
+            let day: Int // days since 1970, so two dates subtract to a gap in days
+            let hint: String? // Plaid's detailed category, nil in the fake data
+        }
+        let sides = try Row.fetchAll(db, sql: """
+            SELECT t.transaction_id, t.account_id, a.type, a.name, t.name, t.amount, t.date,
+                   json_extract(t.personal_finance_category, '$.detailed')
+            FROM transactions t JOIN accounts a USING (account_id)
+            ORDER BY t.date, t.transaction_id
+            """).map { row in
+                let date = try Date((row[6] as String) + "T00:00:00Z", strategy: .iso8601)
+                return Side(id: row[0], account: row[1], accountType: row[2], accountName: row[3], raw: row[4],
+                            amount: row[5], day: Int(date.timeIntervalSince1970 / 86_400), hint: row[7])
+            }
+
+        // Start from the sign: money out is spending, money in is income or, when the
+        // name says so, a refund. The ablation stops here, so its refunds count as income.
+        var kind: [String: String] = [:], partner: [String: String] = [:]
+        for side in sides {
+            kind[side.id] = side.amount >= 0 ? "spending" : useReconciliation && clean(side.raw).isRefund ? "refund" : "income"
+        }
+
+        if useReconciliation {
+            // The name ("PAYMENT CREDIT CARD") or Plaid's category must say it's a transfer,
+            // so a paycheck and a store charge that happen to match aren't paired.
+            func looksLikeTransfer(_ side: Side) -> Bool {
+                if let hint = side.hint, hint.hasPrefix("TRANSFER_") || hint == "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT" { return true }
+                return !transferWords.isDisjoint(with: side.raw.lowercased().split { !$0.isLetter }.map(String.init))
+            }
+            let inflows = sides.filter { kind[$0.id] == "income" }
+            // Money leaving one account pairs with the same amount arriving in another of this
+            // person's accounts (one database is one person) within a few days.
+            // The first pass only pairs an outflow with the account its name mentions
+            // ("PAYMENT CARD A" with "Card A", "TRANSFER TO SAVINGS" with "Savings"), so another
+            // same-amount move that posts on a closer date can't take that inflow. The second
+            // pass pairs what is left by closest date. Oldest first, and each side is used once.
+            // Names are compared as whole words: " card a " is not inside " card autopay ".
+            // The spaces at both ends let a name match at the start or end of the text.
+            func wordText(_ text: String) -> String {
+                " " + text.lowercased().split { !$0.isLetter && !$0.isNumber }.joined(separator: " ") + " "
+            }
+            // Longest first, so "tax savings" is checked before "savings". Of two names the same
+            // length, the alphabetically last goes first, so every run picks the same one.
+            let accountNames = Set(sides.map { wordText($0.accountName) }).sorted { ($0.count, $0) > ($1.count, $1) }
+            // The longest other account the outflow's name mentions. The first match wins, so
+            // "TO TAX SAVINGS" names Tax Savings, not Savings. The outflow's own name is cut out
+            // when found, so "FROM TAX SAVINGS TO HSA" on Tax Savings names HSA, not Savings.
+            func namedAccount(_ out: Side) -> String? {
+                var text = wordText(out.raw)
+                let own = wordText(out.accountName)
+                for name in accountNames where text.contains(name) {
+                    if name != own { return name }
+                    text = text.replacingOccurrences(of: name, with: " ")
+                }
+                return nil
+            }
+            for namedOnly in [true, false] {
+                for out in sides where out.amount > 0 && partner[out.id] == nil {
+                    let named = namedAccount(out)
+                    let candidates = inflows.filter { inflow in
+                        partner[inflow.id] == nil && inflow.account != out.account
+                            && abs(inflow.amount + out.amount) < 0.005 && abs(inflow.day - out.day) <= transferWindowDays
+                            && (looksLikeTransfer(out) || looksLikeTransfer(inflow))
+                            && (!namedOnly || wordText(inflow.accountName) == named)
+                    }
+                    guard let inflow = candidates.min(by: { abs($0.day - out.day) < abs($1.day - out.day) }) else { continue }
+                    partner[out.id] = inflow.id
+                    partner[inflow.id] = out.id
+                    let pairKind = out.accountType == "credit" || inflow.accountType == "credit" ? "card_payment" : "transfer"
+                    kind[out.id] = pairKind
+                    kind[inflow.id] = pairKind
+                }
+            }
+        }
+
+        for side in sides {
+            try db.execute(sql: "UPDATE transactions SET kind = ?, linked_transaction_id = ? WHERE transaction_id = ?",
+                           arguments: [kind[side.id], partner[side.id], side.id])
         }
     }
 

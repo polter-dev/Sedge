@@ -1,13 +1,14 @@
 # Sedge database
 
 Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase.swift`:
-`v1` (accounts, transactions, meta) and `v2` (the merchant graph: entities, edges and
-`transactions.merchant_id`).
+`v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
+`transactions.merchant_id`) and `v3` (`transactions.kind` and `transactions.linked_transaction_id`).
 
 ```mermaid
 erDiagram
     accounts ||--o{ transactions : "account_id"
     transactions |o--o| transactions : "pending_transaction_id (posted to pending copy)"
+    transactions |o--o| transactions : "linked_transaction_id (other side of a transfer or card payment)"
     entities |o--o{ transactions : "merchant_id"
     transactions ||--o{ edges : "source (at_merchant, from_account, refund_of, recurring)"
     entities ||--o{ edges : "source (in_category: merchant)"
@@ -34,8 +35,10 @@ erDiagram
         boolean pending "not null"
         text pending_transaction_id "on a posted row: the pending copy it replaces"
         text merchant_name "comparison baseline only, the organizer never reads it"
-        text personal_finance_category "JSON; comparison baseline only, the organizer never reads it"
+        text personal_finance_category "JSON; comparison baseline, the organizer reads it only as a transfer hint"
         text merchant_id "indexed, v2, an entities.id of kind merchant"
+        text kind "v3: spending, income, transfer, card_payment or refund"
+        text linked_transaction_id "v3, transfers and card payments only: the other side"
     }
 
     meta {
@@ -65,7 +68,8 @@ erDiagram
   `pending_transaction_id` names the pending copy. `save` deletes that pending copy, so the
   link usually points at a row that is gone. It only records which pending copy was replaced.
 - **merchant_name** and **personal_finance_category** are Plaid's own cleanup. They are kept
-  as the comparison baseline only, and the organizer never reads them. The fake personas leave them empty.
+  as the comparison baseline only, and the organizer never reads them, except that transfer
+  matching may use the category as a hint. The fake personas leave them empty.
 - **meta** holds facts about the dataset. Today that is only `as_of`, the dataset's "today".
 - **entities** and **edges** are the merchant graph, rebuilt by `Organizer.organize`.
   `edges.source` and `edges.target` hold either a `transaction_id` or an `entities.id`,
@@ -82,6 +86,13 @@ erDiagram
 - **transactions.merchant_id** copies the at_merchant edge so "spending at X" is one indexed
   lookup. With `useGraph` off, every raw name is its own merchant and there are no
   refund_of or recurring edges.
+- **transactions.kind** and **linked_transaction_id** are also written by `Organizer.organize`.
+  Money leaving one account and the same amount arriving in another of the person's accounts
+  within 3 days, with a transfer word in a name (or Plaid's transfer category), is one pair:
+  `card_payment` when a credit card is one side, `transfer` otherwise, and each side's
+  `linked_transaction_id` names the other. The rest are `spending` (money out), `refund`
+  (money in named "REFUND ...") or `income`. With `useReconciliation` off, nothing is paired
+  and every row is spending or income by its sign.
 
 ## Database files
 
