@@ -16,8 +16,9 @@ let package = Package(
         .target(name: "SedgeCore", dependencies: [.product(name: "GRDB", package: "GRDB.swift")]),
         // Asks one question about one persona and prints the trace (debugging only).
         .executableTarget(name: "sedge-ask", dependencies: ["SedgeCore"]),
-        // The evaluation command line. Today it has one command: `profile`.
+        // Runs the question bank through one configuration and saves every answer, or prints
+        // one persona's profile facts with `profile --persona <name>` (macOS only).
         .executableTarget(name: "sedge-eval", dependencies: ["SedgeCore"]),
-        .testTarget(name: "SedgeCoreTests", dependencies: ["SedgeCore"]),
+        .testTarget(name: "SedgeCoreTests", dependencies: ["SedgeCore", "sedge-eval"]),
     ]
 )
