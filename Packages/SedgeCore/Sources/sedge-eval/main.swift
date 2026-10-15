@@ -27,7 +27,7 @@ let usage = """
                               run again with the same folder to finish a stopped run
 
     Or: sedge-eval profile --persona <name>   print one persona's profile facts as JSON
-    Or: sedge-eval export-er --help          write a store-name labeling sheet
+    Or: sedge-eval export-er --help           write a store-name labeling sheet
     """
 
 /// Prints a message and stops with a failure code.
