@@ -55,10 +55,15 @@ public struct Assistant: Sendable {
         let system = try systemPrompt(asOf: asOf)
         var messages: [ModelMessage] = [.user(question)]
         var callsLeft = Self.maxToolCalls
-
         // Worst case is one call per reply: six replies with calls, one more whose calls are
         // refused for being over the limit, and a last chance to call final_answer.
-        for _ in 0..<(Self.maxToolCalls + 2) {
+        var repliesLeft = Self.maxToolCalls + 2
+        // The first reply that asks the person gets its reply back, so asking never costs
+        // that last chance. Only the first, so asking again and again can't loop forever.
+        var askRefunded = false
+
+        while repliesLeft > 0 {
+            repliesLeft -= 1
             let turn = try await backend.next(system: system, messages: messages)
             trace.turns += 1
             trace.inputTokens += turn.inputTokens
@@ -101,6 +106,7 @@ public struct Assistant: Sendable {
                     if let clarification = asked.clarification {
                         trace.askedUser = true
                         trace.clarifications.append(clarification)
+                        if !askRefunded { askRefunded = true; repliesLeft += 1 }
                     }
                 } else if dataTools, let tool = Tool.named(call.name) {
                     if callsLeft > 0 {

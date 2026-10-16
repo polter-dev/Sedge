@@ -86,3 +86,27 @@ func askThenAnswer(_ ask: String = askFood) -> ScriptedBackend {
     #expect(trace.clarifications.first?.answeredFromMemory == true)
     #expect(trace.clarifications.first?.answer?.contains("\"type\":\"rent\"") == true)
 }
+
+// R1-1: an ask must not use up the last chance to call final_answer. `asks` replies that ask,
+// then six data calls, a seventh refused, then final_answer.
+func askThenUseEveryCall(asks: Int) -> ScriptedBackend {
+    ScriptedBackend(Array(repeating: calling([("ask_user", askFood)]), count: asks)
+        + Array(repeating: calling([("total_spent", netflix)]), count: Assistant.maxToolCalls + 1)
+        + [calling([("final_answer", answer100)])])
+}
+
+@Test func askDoesNotCostTheLastReply() async throws {
+    for asks in [0, 1] {
+        let trace = await Assistant(backend: askThenUseEveryCall(asks: asks), database: try organizedPersona("maya"),
+                                    askPerson: Person("Yes, groceries too").ask).ask("?")
+        #expect(trace.error == nil, "asks: \(asks), error: \(trace.error ?? "nil"), turns: \(trace.turns)")
+        #expect(trace.finalAnswer != nil)
+    }
+}
+
+@Test func onlyTheFirstAskGetsItsReplyBack() async throws {
+    // A second asking reply isn't given back, so a model that keeps asking still stops.
+    let trace = await Assistant(backend: askThenUseEveryCall(asks: 2), database: try organizedPersona("maya"),
+                                askPerson: Person("Yes, groceries too").ask).ask("?")
+    #expect(trace.error == "tool_limit" && trace.turns == Assistant.maxToolCalls + 3)
+}
