@@ -28,14 +28,15 @@ struct OnDeviceDebugView: View {
                 answer = reason
                 return
             }
+            let database: SedgeDatabase
             do {
-                // The tools read the store names the organizer builds.
-                try Organizer.organize(.app)
+                // The same file the app opens for `-persona`, loaded and organized.
+                database = try .open(UserDefaults.standard.string(forKey: "persona") ?? SedgeDatabase.bankChoice)
             } catch {
-                answer = "Could not organize the data: \(error)"
+                answer = "Could not open the data: \(error)"
                 return
             }
-            let trace = await Assistant(backend: AppleBackend(), database: .app).ask(question)
+            let trace = await Assistant(backend: AppleBackend(), database: database).ask(question)
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             print(String(decoding: (try? encoder.encode(trace)) ?? Data(), as: UTF8.self))

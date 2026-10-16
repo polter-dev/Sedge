@@ -148,10 +148,34 @@ let questionBank = repoRoot.appending(path: "tools/eval/questions.csv")
     var trace = Trace(question: "?", model: "m", effort: nil, promptVersion: "v1")
     for (error, type) in [("refusal: cyber", "refusal"), ("guardrail: x", "guardrail"), ("context_window: x", "context_window"),
                           ("model_unavailable: x", "model_unavailable"), ("bad_arguments: x", "bad_arguments"),
-                          ("tool_error: x", "tool_error"), ("max_tokens", "max_tokens"), ("Claude API error 500", "api_error")] {
+                          ("tool_error: x", "tool_error"), ("max_tokens", "max_tokens"), ("Claude API error 500", "api_error"),
+                          ("unsupported_language: x", "unsupported_language"), ("unsupported_capability: x", "unsupported_capability"),
+                          ("unsupported_content: x", "unsupported_content"), ("rate_limited: x", "rate_limited"),
+                          ("busy: x", "busy"), ("timeout: x", "timeout")] {
         trace.error = error
         #expect(errorType(trace) == type)
     }
+}
+
+@Test func resumeAsksTransientOnDeviceErrorsAgainButKeepsQuestionFailures() async throws {
+    let out = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: out) }
+    let ids = ["maya-ex-1", "maya-ex-2", "maya-ex-3"]
+    let options = Options(questions: questionBank, ids: ids, out: out)
+    let answers = { (count: Int) in ScriptedBackend(Array(repeating: calling([("final_answer", answer100)]), count: count)) }
+    try await run(options, backend: answers(3), repoRoot: repoRoot) { _ in }
+    let results = out.appending(path: "results.jsonl")
+    let lines = try String(contentsOf: results, encoding: .utf8).split(separator: "\n")
+    // The question's language can be the cause, so that line is kept; a busy device isn't, so it is asked again.
+    let kept = "{\"error_type\":\"unsupported_language\"," + lines[1].dropFirst()
+    let retried = "{\"error_type\":\"rate_limited\"," + lines[2].dropFirst()
+    try Data((lines[0] + "\n" + kept + "\n" + retried + "\n").utf8).write(to: results)
+
+    var progress: [String] = []
+    try await run(options, backend: answers(1), repoRoot: repoRoot) { progress.append($0) }
+    let resumed = try String(contentsOf: results, encoding: .utf8).split(separator: "\n")
+    #expect(progress.first?.hasPrefix("Asking 1 ") == true)
+    #expect(resumed.count == 3 && resumed[1] == kept && !resumed[2].contains("rate_limited"))
 }
 
 /// Saves one answer, damages the manifest, then resumes with other switches.

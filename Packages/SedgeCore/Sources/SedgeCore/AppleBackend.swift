@@ -25,12 +25,36 @@ public actor AppleBackend: ModelBackend {
         case done(Result<GeneratedContent, any Error>)
     }
 
+    /// One reply from a session: the structured final answer, with any tool calls made on the
+    /// way. A session is kept for the whole question, so a retry continues the same conversation.
+    typealias Respond = @Sendable (_ prompt: String) async throws -> GeneratedContent
+    /// Opens a session with this system prompt and these tools. Tests pass a scripted one.
+    typealias MakeSession = @Sendable (_ system: String, _ tools: [any FoundationModels.Tool]) -> Respond
+
+    private let makeSession: MakeSession
+    private var session: Respond?
     private var events: AsyncStream<Event>?
+    /// The tools and the session write their events here.
+    private var feed: AsyncStream<Event>.Continuation?
     private var task: Task<Void, Never>?
     /// Tool calls the session is waiting on, by call id.
     private var waiting: [String: CheckedContinuation<String, any Error>] = [:]
+    /// The id the final answer goes out under, so its rejection can be told from a tool result.
+    static let finalID = "final"
 
-    public init() {}
+    public init() { makeSession = Self.systemSession }
+    init(makeSession: @escaping MakeSession) { self.makeSession = makeSession }
+
+    /// A session with Apple's system model.
+    static let systemSession: MakeSession = { system, tools in
+        let session = LanguageModelSession(model: .default, tools: tools, instructions: system)
+        return { prompt in
+            if let reason = unavailableReason() { throw AssistantError("model_unavailable: \(reason)") }
+            // Greedy decoding: the same question gets the same answer on every run.
+            return try await session.respond(to: prompt, generating: AppleFinalAnswer.self,
+                                             options: GenerationOptions(samplingMode: .greedy)).rawContent
+        }
+    }
 
     /// The model and the OS build it ships in, e.g. "apple-foundation-models, macOS Version
     /// 26.6.2 (Build 25G83)". The model changes with OS updates, so this is its version.
@@ -66,12 +90,24 @@ public actor AppleBackend: ModelBackend {
     }
 
     public func next(system: String, messages: [ModelMessage]) async throws -> ModelTurn {
-        if let reason = Self.unavailableReason() { throw AssistantError("model_unavailable: \(reason)") }
         switch messages.last {
         case .user(let question) where messages.count == 1:
             start(system: system, question: question)
         case .toolResults(let results):
-            for result in results { waiting.removeValue(forKey: result.id)?.resume(returning: result.content) }
+            var resumed = false
+            for result in results {
+                guard let continuation = waiting.removeValue(forKey: result.id) else { continue }
+                continuation.resume(returning: result.content)
+                resumed = true
+            }
+            // A rejected final answer goes back to the same session as the next prompt, so the
+            // model gets the retry Claude gets when the loop sends it the error as a tool result.
+            if let rejected = results.first(where: { $0.id == Self.finalID }) {
+                respond(to: rejected.content)
+                resumed = true
+            }
+            // Nothing in the session would reply, so waiting below would never end.
+            guard resumed else { throw AssistantError("The on-device session isn't waiting for these results.") }
         default:
             throw AssistantError("The on-device model can only continue its own conversation.")
         }
@@ -85,36 +121,39 @@ public actor AppleBackend: ModelBackend {
             return turn(calls: [call], stop: "tool_use")
         case .done(.success(let content)):
             // The final answer arrives as the structured reply, passed on unchanged as a
-            // final_answer call so the loop checks it exactly like Claude's.
-            stop()
-            let call = ToolCall(id: "final", name: FinalAnswer.toolName, input: Data(content.jsonString.utf8))
+            // final_answer call so the loop checks it exactly like Claude's. The session stays
+            // open in case the loop rejects it.
+            let call = ToolCall(id: Self.finalID, name: FinalAnswer.toolName, input: Data(content.jsonString.utf8))
             return turn(calls: [call], stop: "tool_use")
         case .done(.failure(let error)):
             stop()
             throw AssistantError(Self.label(error))
         case nil:
-            // The session already ended, e.g. its final answer was rejected: it can't retry.
-            throw AssistantError("bad_arguments: the final answer was rejected and the session has ended.")
+            throw AssistantError("The on-device session has already ended.")
         }
     }
 
-    /// Starts a new session for a new question, ending any earlier one first.
+    /// Starts a new session for a new question, ending any earlier one first. It is offered
+    /// the same tools as Claude's cloud setup: the data tools and ask_user.
     private func start(system: String, question: String) {
         stop()
-        let (stream, events) = AsyncStream<Event>.makeStream()
-        self.events = stream
-        let tools = Tool.all.map { AppleTool(tool: $0, events: events) }
+        let (stream, feed) = AsyncStream<Event>.makeStream()
+        events = stream
+        self.feed = feed
+        let tools = Tool.all.map { AppleTool(tool: $0, events: feed) } + [AppleTool.askUser(events: feed)]
+        session = makeSession(system, tools)
+        respond(to: question)
+    }
+
+    /// Asks the open session for its next reply, which arrives as events.
+    private func respond(to prompt: String) {
+        guard let session, let feed else { return }
         task = Task {
             do {
-                let session = LanguageModelSession(model: .default, tools: tools, instructions: system)
-                // Greedy decoding: the same question gets the same answer on every run.
-                let response = try await session.respond(to: question, generating: AppleFinalAnswer.self,
-                                                         options: GenerationOptions(samplingMode: .greedy))
-                events.yield(.done(.success(response.rawContent)))
+                feed.yield(.done(.success(try await session(prompt))))
             } catch {
-                events.yield(.done(.failure(error)))
+                feed.yield(.done(.failure(error)))
             }
-            events.finish()
         }
     }
 
@@ -124,6 +163,9 @@ public actor AppleBackend: ModelBackend {
         waiting = [:]
         task?.cancel()
         task = nil
+        feed?.finish()
+        feed = nil
+        session = nil
     }
 
     private func turn(calls: [ToolCall], stop: String) -> ModelTurn {
@@ -134,9 +176,18 @@ public actor AppleBackend: ModelBackend {
     }
 
     /// One short label in front of the framework's own message, so the runner can count
-    /// failures by kind: context_window, guardrail, refusal, model_unavailable, bad_arguments,
-    /// tool_error. Anything else (rate limits, a busy session) is left unlabeled, like a
-    /// network error from the cloud, because it says nothing about the model.
+    /// failures by kind. The labels fall in two groups, and the runner treats them differently
+    /// when a stopped run is resumed:
+    /// - Final: the failure can come from the question itself, so asking again would give the
+    ///   same failure, or keep re-asking until one run happens to pass. These count as the
+    ///   model's failure and are kept: context_window, guardrail, refusal, bad_arguments,
+    ///   tool_error, unsupported_language (the model decides the question's language),
+    ///   unsupported_capability and unsupported_content (what the conversation asked for or
+    ///   held, which the question shapes).
+    /// - Transient: the device was busy or not ready, which says nothing about the question,
+    ///   so resume asks again, like a cloud network error: model_unavailable, rate_limited,
+    ///   busy (another request on the same session), timeout.
+    /// Anything else is left unlabeled and becomes an api_error, which resume also asks again.
     static func label(_ error: any Error) -> String {
         let label: String?
         switch error {
@@ -147,6 +198,9 @@ public actor AppleBackend: ModelBackend {
             case .refusal: label = "refusal"
             case .assetsUnavailable: label = "model_unavailable"
             case .decodingFailure, .unsupportedGuide: label = "bad_arguments"
+            case .unsupportedLanguageOrLocale: label = "unsupported_language"
+            case .rateLimited: label = "rate_limited"
+            case .concurrentRequests: label = "busy"
             default: label = nil
             }
         case is LanguageModelSession.ToolCallError: label = "tool_error"
@@ -165,8 +219,14 @@ public actor AppleBackend: ModelBackend {
             case .guardrailViolation: return "guardrail"
             case .refusal: return "refusal"
             case .unsupportedGenerationGuide: return "bad_arguments"
-            default: return nil
+            case .unsupportedLanguageOrLocale: return "unsupported_language"
+            case .unsupportedCapability: return "unsupported_capability"
+            case .unsupportedTranscriptContent: return "unsupported_content"
+            case .rateLimited: return "rate_limited"
+            case .timeout: return "timeout"
+            @unknown default: return nil
             }
+        case let error as LanguageModelSession.Error where error == .concurrentRequests: return "busy"
         case is SystemLanguageModel.Error: return "model_unavailable"
         case is GeneratedContent.ParsingError: return "bad_arguments"
         default: return nil
@@ -174,26 +234,42 @@ public actor AppleBackend: ModelBackend {
     }
 }
 
-/// One of the `Tool.all` data tools as Apple's model sees it. Its inputs are built from the same
-/// `ToolInput` list as Claude's schema, so the two can't drift apart.
+/// One of the `Tool.all` data tools, or `ask_user`, as Apple's model sees it. Its inputs are built
+/// from the same definitions as Claude's schema, so the two can't drift apart.
 struct AppleTool: FoundationModels.Tool {
     let name: String
     let description: String
     let parameters: GenerationSchema
     let events: AsyncStream<AppleBackend.Event>.Continuation
 
-    init(tool: Tool, events: AsyncStream<AppleBackend.Event>.Continuation) {
-        name = tool.name
-        description = tool.description
-        // The definitions are fixed and tested, so a schema error here is a programming mistake.
-        parameters = try! Self.schema(for: tool)
-        self.events = events
-    }
-
     /// Hands the call to `AppleBackend.next` and waits for the loop's answer.
     func call(arguments: GeneratedContent) async throws -> String {
         let call = ToolCall(id: UUID().uuidString, name: name, input: Data(arguments.jsonString.utf8))
         return try await withCheckedThrowingContinuation { events.yield(.call(call, $0)) }
+    }
+}
+
+extension AppleTool {
+    // In an extension, so the struct keeps its memberwise init for `askUser`.
+    init(tool: Tool, events: AsyncStream<AppleBackend.Event>.Continuation) {
+        // The definitions are fixed and tested, so a schema error here is a programming mistake.
+        self.init(name: tool.name, description: tool.description, parameters: try! Self.schema(for: tool), events: events)
+    }
+
+    /// `ask_user`, with the name and descriptions taken from Claude's definition. Like
+    /// Claude's, the options list has no length limit in the schema; `AskUser.run` checks it.
+    static func askUser(events: AsyncStream<AppleBackend.Event>.Continuation) -> AppleTool {
+        let claude = AskUser.claudeSchema
+        let properties = (claude["input_schema"] as! [String: Any])["properties"] as! [String: [String: Any]]
+        func property(_ name: String, _ schema: DynamicGenerationSchema) -> DynamicGenerationSchema.Property {
+            DynamicGenerationSchema.Property(name: name, description: properties[name]?["description"] as? String, schema: schema)
+        }
+        let text = DynamicGenerationSchema(type: String.self)
+        let root = DynamicGenerationSchema(name: AskUser.toolName, properties: [
+            property("question", text), property("options", DynamicGenerationSchema(arrayOf: text)), property("fact_key", text),
+        ])
+        return AppleTool(name: AskUser.toolName, description: claude["description"] as! String,
+                         parameters: try! GenerationSchema(root: root, dependencies: []), events: events)
     }
 
     /// The tool's inputs as a schema the model must follow while it writes the call.
