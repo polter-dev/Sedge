@@ -21,7 +21,8 @@ let usage = """
                               tools; context gives the same model every raw transaction in its
                               prompt, with final_answer as its only tool
       --model <id>            model to ask (default \(ClaudeBackend.defaultModel))
-      --questions <csv>       question bank (default tools/eval/questions.csv)
+      --questions <csv>       question bank (default tools/eval/questions.csv); a question's
+                              clarify_reply answers ask_user (blank: nobody answers)
       --split dev|test|all    which questions (default dev, or all when --ids is given)
       --ids a,b,c             only these question ids
       --repeat N              ask each question N times (default 1)

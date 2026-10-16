@@ -104,6 +104,16 @@ public struct SedgeDatabase: Sendable {
                 t.column("value", .text).notNull() // JSON
             }
         }
+        // The person's answers to clarifying questions (`AskUser`), one per fact, so a
+        // question is asked only once. Nothing rebuilds this table; only a reset clears it.
+        migrator.registerMigration("v5") { db in
+            try db.create(table: "saved_answers") { t in
+                t.primaryKey("fact_key", .text)
+                t.column("question", .text).notNull()
+                t.column("answer", .text).notNull()
+                t.column("date", .text).notNull() // the dataset's as_of when it was answered
+            }
+        }
         return migrator
     }
 

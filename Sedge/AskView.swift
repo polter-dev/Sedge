@@ -15,6 +15,15 @@ struct AskView: View {
     @State private var trace: Trace?
     @State private var isAsking = false
     @State private var missingKey = false
+    /// The clarifying question the model is waiting on, if any.
+    @State private var waiting: Waiting?
+    @State private var resetDone = false
+
+    /// A question on screen, and the way to hand the tapped reply back to the paused model.
+    struct Waiting {
+        let clarification: Clarification
+        let reply: CheckedContinuation<String?, Never>
+    }
 
     /// `trace` fills the screen with an earlier answer (used by the preview).
     init(database: SedgeDatabase, trace: Trace? = nil) {
@@ -34,7 +43,16 @@ struct AskView: View {
             if missingKey {
                 Text("No ANTHROPIC_API_KEY is set, so there's no model to ask. See Secrets.xcconfig.")
             }
-            if isAsking {
+            if let waiting {
+                Section("Quick question") {
+                    Text(waiting.clarification.question)
+                        .accessibilityIdentifier("clarify-question")
+                    ForEach(waiting.clarification.options, id: \.self) { option in
+                        Button(option) { answer(option) }
+                    }
+                    Button("Skip", role: .cancel) { answer(nil) }
+                }
+            } else if isAsking {
                 ProgressView("Thinking…")
             } else if let trace {
                 Section {
@@ -62,7 +80,21 @@ struct AskView: View {
                     }
                 }
             }
+            Section {
+                Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
+                    resetDone = (try? AskUser.reset(database)) != nil
+                }
+                .disabled(isAsking)
+            } footer: {
+                Text(resetDone ? "Saved answers cleared." : "Answers to quick questions are saved, so each is asked only once.")
+            }
         }
+    }
+
+    /// Hands the tapped reply (nil for Skip) back to the waiting model, exactly once.
+    private func answer(_ reply: String?) {
+        waiting?.reply.resume(returning: reply)
+        waiting = nil
     }
 
     private func ask() {
@@ -75,8 +107,15 @@ struct AskView: View {
             return
         }
         isAsking = true
+        resetDone = false
+        // ask_user pauses the model here until a button on the card is tapped.
+        let askPerson: AskPerson = { clarification in
+            await withCheckedContinuation { reply in
+                Task { @MainActor in waiting = Waiting(clarification: clarification, reply: reply) }
+            }
+        }
         Task {
-            trace = await Assistant(backend: ClaudeBackend(apiKey: key), database: database).ask(text)
+            trace = await Assistant(backend: ClaudeBackend(apiKey: key), database: database, askPerson: askPerson).ask(text)
             isAsking = false
         }
     }
@@ -101,7 +140,7 @@ struct AskView: View {
     let trace = try! JSONDecoder().decode(Trace.self, from: Data(#"""
         {"question": "How much did I spend at Netflix this year?", "model": "claude-sonnet-5-5",
          "reportedModel": "claude-sonnet-5-5", "effort": "medium", "promptVersion": "v1",
-         "toolCalls": [
+         "askedUser": false, "clarifications": [], "toolCalls": [
            {"name": "spending_total", "input": "{\"merchant\":\"Netflix\",\"start_date\":\"2026-01-01\",\"end_date\":\"2026-06-30\"}",
             "valid": true, "resultBytes": 120,
             "result": "{\"total\":100.44,\"count\":6,\"rows\":[{\"date\":\"2026-06-15\",\"store\":\"Netflix\",\"amount\":17.99,\"kind\":\"spending\"}]}"},

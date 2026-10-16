@@ -98,7 +98,7 @@ let answer100 = #"{"answer": "You spent $100.44.", "value": 100.44, "items": nul
     #expect((body["output_config"] as? [String: Any])?["effort"] as? String == "medium")
     #expect((body["tool_choice"] as? [String: Any])?["type"] as? String == "auto")
     let tools = try #require(body["tools"] as? [[String: Any]])
-    #expect(tools.map { $0["name"] as! String } == Tool.all.map(\.name) + ["final_answer"])
+    #expect(tools.map { $0["name"] as! String } == Tool.all.map(\.name) + ["ask_user", "final_answer"])
     #expect(tools.allSatisfy { $0["strict"] as? Bool == true })
     let messages = try #require(body["messages"] as? [[String: Any]])
     #expect(messages.map { $0["role"] as! String } == ["user", "assistant", "user"])
