@@ -59,7 +59,7 @@ let questionBank = repoRoot.appending(path: "tools/eval/questions.csv")
 
     let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: out.appending(path: "manifest.json"))) as! [String: Any]
     #expect((manifest["flags"] as? [String: Bool]) == ["use_graph": false, "use_reconciliation": true])
-    #expect(manifest["results"] as? Int == 3 && manifest["ended_at"] is String && manifest["prompt_version"] as? String == "v1")
+    #expect(manifest["results"] as? Int == 3 && manifest["ended_at"] is String && manifest["prompt_version"] as? String == "v1+ask-user-v1")
 
     // A kill partway through writing an answer, after another answer hit an API error
     // (e.g. the spending cap): both are asked again, the good answer is kept as it was.
@@ -146,6 +146,42 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
     }
 }
 
+@Test func runnerAnswersAskUserWithTheScriptedReply() async throws {
+    let dir = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let csv = dir.appending(path: "q.csv")
+    try """
+        id,persona,type,split,as_of,question,clarify_reply
+        a,maya,clarify,dev,,How much do I spend on food?,"Yes, groceries too"
+        b,maya,clarify,dev,,How much did I spend on food in June?,
+        c,maya,aggregation,dev,,How much did I spend at Netflix?,
+
+        """.write(to: csv, atomically: true, encoding: .utf8)
+    // a and b ask about the same fact on the same database; c doesn't ask.
+    let backend = ScriptedBackend([calling([("ask_user", askFood)]), calling([("final_answer", answer100)]),
+                                   calling([("ask_user", askFood)]), calling([("final_answer", answer100)]),
+                                   calling([("final_answer", answer100)])])
+    let out = dir.appending(path: "out")
+    var progress: [String] = []
+    try await run(Options(questions: csv, split: "all", out: out), backend: backend, repoRoot: repoRoot) { progress.append($0) }
+
+    let traces = try String(contentsOf: out.appending(path: "results.jsonl"), encoding: .utf8).split(separator: "\n")
+        .map { (try JSONSerialization.jsonObject(with: Data($0.utf8)) as! [String: Any])["trace"] as! [String: Any] }
+    #expect(traces.map { $0["asked_user"] as? Bool } == [true, true, false])
+    let asked = traces.map { ($0["clarifications"] as! [[String: Any]]).first }
+    #expect(asked[0]?["fact_key"] as? String == "food_includes_groceries" && asked[0]?["answer"] as? String == "Yes, groceries too")
+    // b has no scripted reply, and a's saved answer was forgotten, so nobody answered it.
+    #expect(asked[1]?["answer"] == nil && asked[1]?["answered_from_memory"] as? Bool == false)
+    #expect(asked[2] == nil)
+    #expect(progress[0].hasSuffix(", asked food_includes_groceries") && !progress[2].contains("asked"))
+    // Every question saw the plain prompt: no saved answers carried over from a.
+    #expect(await backend.systems.allSatisfy { $0 == SystemPrompt.template(dataTools: true).replacingOccurrences(of: "{as_of}", with: Persona.asOf) })
+
+    let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: out.appending(path: "manifest.json"))) as! [String: Any]
+    #expect(manifest["clarify_replies"] as? Bool == true && manifest["tool_set_version"] as? String == "v4")
+}
+
 // The context-stuffing baseline: raw data in the prompt, final_answer as the only tool.
 
 @Test func contextConfigPutsRawDataInThePromptAndRefusesDataTools() async throws {
@@ -172,6 +208,7 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
 
     let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: out.appending(path: "manifest.json"))) as! [String: Any]
     #expect(manifest["config"] as? String == "context" && manifest["prompt_version"] as? String == "v1+context-v1")
+    #expect(manifest["clarify_replies"] as? Bool == false)
     #expect(manifest["prompt_sha256"] as? String == sha256(Data(SystemPrompt.template(dataTools: false).utf8)))
 
     // A cloud run can't resume into a context folder.

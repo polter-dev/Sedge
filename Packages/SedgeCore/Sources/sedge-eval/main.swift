@@ -7,7 +7,11 @@
 //
 //   swift run --package-path Packages/SedgeCore sedge-eval profile --persona maya
 //
-// prints one persona's profile facts instead (see `profile` below).
+// prints one persona's profile facts instead (see `profile` below), and
+//
+//   swift run --package-path Packages/SedgeCore sedge-eval backtest --cutoff 2026-06-16 --days 14
+//
+// writes the balance backtest CSV (see Backtest.swift).
 import Foundation
 import SedgeCore
 
@@ -17,7 +21,8 @@ let usage = """
                               tools; context gives the same model every raw transaction in its
                               prompt, with final_answer as its only tool
       --model <id>            model to ask (default \(ClaudeBackend.defaultModel))
-      --questions <csv>       question bank (default tools/eval/questions.csv)
+      --questions <csv>       question bank (default tools/eval/questions.csv); a question's
+                              clarify_reply answers ask_user (blank: nobody answers)
       --split dev|test|all    which questions (default dev, or all when --ids is given)
       --ids a,b,c             only these question ids
       --repeat N              ask each question N times (default 1)
@@ -28,6 +33,9 @@ let usage = """
 
     Or: sedge-eval profile --persona <name>   print one persona's profile facts as JSON
     Or: sedge-eval export-er --help           write a store-name labeling sheet
+    Or: sedge-eval backtest --cutoff YYYY-MM-DD [--cutoff ...] [--days 14] [--no-reconciliation] [--out file.csv]
+                              project every account from each cutoff and write projected
+                              and actual balances as CSV
     """
 
 /// Prints a message and stops with a failure code.
@@ -52,6 +60,11 @@ if CommandLine.arguments.dropFirst().first == "export-er" {
 // `profile` loads and organizes one fake persona and prints its profile facts as JSON
 // (value, confidence, evidence transaction ids and rule), to check against a truth file.
 // It needs no key and makes no calls, so it runs before any of the options below.
+// `backtest` needs no key either and has its own options.
+if CommandLine.arguments.dropFirst().first == "backtest" {
+    try backtest(Array(CommandLine.arguments.dropFirst(2)))
+    exit(0)
+}
 if CommandLine.arguments.dropFirst().first == "profile" {
     let arguments = Array(CommandLine.arguments.dropFirst())
     guard arguments.count == 3, arguments[1] == "--persona", Persona.all.contains(arguments[2]) else {

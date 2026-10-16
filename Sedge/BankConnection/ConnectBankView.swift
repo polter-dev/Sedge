@@ -45,11 +45,12 @@ func exchangePublicToken(_ publicToken: String) async throws {
     print("Exchange response:", String(data: data, encoding: .utf8) ?? "")
 }
 
-/// Downloads every transaction and account from the quickstart server and saves them.
+/// Downloads every transaction and account from the quickstart server, saves them into
+/// `database` (always the bank file, never a persona's) and rebuilds the store names.
 /// Safe to run again: the database updates rows it already has instead of adding copies.
 // shortcut: a transaction Plaid later drops entirely (e.g. a cancelled pending charge)
 // stays in the database; handle Plaid's `removed` list once sync becomes incremental.
-func syncTransactions() async throws {
+func syncTransactions(into database: SedgeDatabase) async throws {
     let url = URL(string: "http://localhost:8000/api/all_transactions")!
     let (data, _) = try await URLSession.shared.data(from: url)
     let response = try JSONDecoder().decode(AllTransactionsResponse.self, from: data)
@@ -58,7 +59,33 @@ func syncTransactions() async throws {
         print("Plaid returned no transactions yet")
         return
     }
-    try SedgeDatabase.app.save(accounts: response.accounts, transactions: response.transactions, asOf: asOf)
+    try database.save(accounts: response.accounts, transactions: response.transactions, asOf: asOf)
+    try Organizer.organize(database)
+}
+
+/// Gets a link token from the quickstart server, then shows the Connect button.
+struct ConnectBankScreen: View {
+    let database: SedgeDatabase
+    let onSynced: () -> Void
+    @State private var linkToken: String?
+    @State private var error: String?
+
+    var body: some View {
+        if let linkToken {
+            ConnectBankView(linkToken: linkToken, database: database, onSynced: onSynced)
+        } else if let error {
+            ContentUnavailableView("Can't reach the bank server", systemImage: "network.slash", description: Text(error))
+        } else {
+            ProgressView()
+                .task {
+                    do {
+                        linkToken = try await fetchLinkToken()
+                    } catch {
+                        self.error = error.localizedDescription
+                    }
+                }
+        }
+    }
 }
 
 
@@ -66,55 +93,33 @@ func syncTransactions() async throws {
 struct ConnectBankView: View
 {
     let linkToken: String
+    /// The bank file. Plaid data is only ever saved here.
+    let database: SedgeDatabase
+    /// Called after a sync, so the screen can show the new transactions.
+    let onSynced: () -> Void
     @State private var linkSession: PlaidLinkSession?
     @State private var isPresentingLink = false
     @State private var isReady = false
-    /// Filled from the database after each sync, newest first.
-    @State private var transactions: [SedgeCore.Transaction] = []
     
     var body: some View
     {
-        if transactions.isEmpty
+        Button("Connect Account")
         {
-            Button("Connect Account")
-            {
-                isPresentingLink = true
-            }
-            .disabled(!isReady)
-            .onAppear(perform: createSession)
-            .sheet(isPresented: $isPresentingLink)
-            {
-                linkSession?.sheet()
-            }
+            isPresentingLink = true
         }
-        else
+        .disabled(!isReady)
+        .onAppear(perform: createSession)
+        .sheet(isPresented: $isPresentingLink)
         {
-            List(transactions)
-            { transaction in
-                HStack
-                {
-                    VStack(alignment: .leading)
-                    {
-                        Text(transaction.name)
-                        Text(transaction.date)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Text(transaction.amount, format: .currency(code: "USD"))
-                }
-            }
-            // Pull down to sync again with the same bank login.
-            .refreshable { await sync() }
+            linkSession?.sheet()
         }
     }
 
-    /// Saves everything from Plaid, then shows what the database now holds.
+    /// Saves everything from Plaid, then lets the screen show it.
     private func sync() async {
         do {
-            try await syncTransactions()
-            transactions = try SedgeDatabase.app.allTransactions()
-            print("Transactions in database:", transactions.count)
+            try await syncTransactions(into: database)
+            onSynced()
         } catch {
             print("Sync error:", error)
         }

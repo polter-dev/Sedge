@@ -23,8 +23,9 @@ public struct ClaudeBackend: ModelBackend {
     }
 
     /// The tool definitions sent with every request. The eval runner hashes the same list.
+    /// The context baseline gets neither the data tools nor ask_user, so it stays as it was.
     public static func tools(dataTools: Bool) -> [[String: Any]] {
-        (dataTools ? Tool.all.map(\.claudeSchema) : []) + [FinalAnswer.claudeSchema]
+        (dataTools ? Tool.all.map(\.claudeSchema) + [AskUser.claudeSchema] : []) + [FinalAnswer.claudeSchema]
     }
 
     /// The API key from the `ANTHROPIC_API_KEY` environment variable (command line), or from
