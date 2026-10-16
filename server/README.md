@@ -24,7 +24,11 @@ For each app install, the server keeps only:
 
 "Disconnect bank and delete my data" in the app calls `DELETE /api/install`,
 which removes the bank link at Plaid and deletes everything above for that
-install.
+install. Removing the bank link at Plaid is best effort in one case: if the
+saved token can't be decrypted (for example, after `SERVER_KEY` changed), the
+server can't ask Plaid to remove it. It still deletes everything it stores and
+replies `{"deleted": true, "plaid_item_removed": false, "message": ...}`; the
+user can also remove Sedge from their bank's connected apps.
 
 Cloudflare keeps its own request logs for a few days: the time, path, status
 and request headers (which include the install id). Request and reply bodies
@@ -42,16 +46,18 @@ are not logged.
 | `POST /api/create_link_token` | yes | Same reply as the quickstart: `{"link_token": ...}` |
 | `POST /api/set_access_token` | yes | Same form body as the quickstart: `public_token=...`. Replies `{"ok": true}` |
 | `GET /api/all_transactions` | yes | Same reply as the quickstart: `{"accounts": [...], "transactions": [...]}` |
-| `POST /api/messages` | yes | A Claude Messages API request body, relayed to Anthropic |
-| `DELETE /api/install` | yes | Removes the Plaid item and everything stored for the install |
+| `POST /api/messages` | yes | A Claude Messages API request body, relayed to Anthropic. `model` must be in `ALLOWED_MODELS` and `max_tokens` at most `MAX_OUTPUT_TOKENS`. The server forwards the JSON as it read it, re-encoded, not the raw bytes. |
+| `DELETE /api/install` | yes | Removes the Plaid item (best effort, see above) and everything stored for the install |
 
 The Plaid routes keep the quickstart's paths and reply shapes, so the app only
 needs a different base URL and two extra headers.
 
 Errors are JSON with an `error` code and, where useful, a `message`:
 `attestation_required` (401), `model_not_allowed` (400),
-`daily_limit_reached` (429), `no_bank_linked` (409), `transactions_not_ready`
-(503), `plaid_error` with `plaid_error_code` (502).
+`max_tokens_too_high` (400), `daily_limit_reached` (429),
+`server_misconfigured` (503, when `DAILY_MESSAGE_CAP` or `MAX_OUTPUT_TOKENS` is
+missing or not a whole number above zero), `no_bank_linked` (409),
+`transactions_not_ready` (503), `plaid_error` with `plaid_error_code` (502).
 
 ## How the app proves it's the app (App Attest)
 
@@ -73,7 +79,10 @@ On every other request, send two headers:
   (empty for GET and DELETE).
 
 The server refuses an assertion whose counter isn't higher than the last one,
-so a captured request can't be replayed. After `DELETE /api/install`, or if the
+so a captured request can't be replayed. Because of that, **send requests one
+at a time**: wait for each reply before making the next assertion. Two requests
+in flight together can arrive out of order, and the one with the lower counter
+is then refused with 401. After `DELETE /api/install`, or if the
 app is reinstalled, the app makes a new key and attests again.
 
 App Attest doesn't work in the Simulator. Debug builds keep using the local
@@ -89,7 +98,8 @@ Plain settings live in `wrangler.jsonc` under `vars`:
 | `APP_ID` | `<Apple Team ID>.<bundle id>`, e.g. `ABCDE12345.dev.polter.sedge` |
 | `APP_ATTEST_ENV` | `development` for builds run from Xcode, `production` for TestFlight and the App Store |
 | `ALLOWED_MODELS` | Comma-separated model ids the relay accepts |
-| `DAILY_MESSAGE_CAP` | Cloud requests per install per UTC day |
+| `DAILY_MESSAGE_CAP` | Cloud requests per install per UTC day. Missing or not a whole number above zero: the relay refuses every request. |
+| `MAX_OUTPUT_TOKENS` | Highest `max_tokens` a relayed request may ask for (16000, what the app sends). Larger requests are refused, not trimmed. Same rule as above when missing. |
 | `PLAID_REDIRECT_URI` | Empty, or `https://<server>/plaid/oauth` once registered with Plaid |
 
 Secrets live only in Cloudflare's secret store, never in this repo:

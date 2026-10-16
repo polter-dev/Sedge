@@ -220,19 +220,42 @@ async function allTransactions(env, installId, record) {
   return json({ accounts, transactions: added });
 }
 
-/** Forwards one Messages API request to Anthropic, within the model allow-list and the daily cap. */
+/** A whole number above zero from a setting, or null when the setting is missing or garbled. */
+function positiveSetting(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+/** Forwards one Messages API request to Anthropic, within the model allow-list, the output cap and the daily cap. */
 async function relayMessage(env, install, body) {
-  let model;
+  let request;
   try {
-    ({ model } = JSON.parse(new TextDecoder().decode(body)));
+    request = JSON.parse(new TextDecoder().decode(body));
   } catch {
     return json({ error: 'bad_request' }, 400);
   }
+  if (typeof request !== 'object' || request === null || Array.isArray(request)) return json({ error: 'bad_request' }, 400);
+
+  // A missing or garbled limit must stop the relay, not quietly remove the limit.
+  const cap = positiveSetting(env.DAILY_MESSAGE_CAP);
+  const maxTokens = positiveSetting(env.MAX_OUTPUT_TOKENS);
+  if (!cap || !maxTokens) {
+    console.error('DAILY_MESSAGE_CAP and MAX_OUTPUT_TOKENS must be whole numbers above zero');
+    return json({
+      error: 'server_misconfigured',
+      message: 'The server\'s request limits are not set up, so cloud requests are off for now.',
+    }, 503);
+  }
+
   const allowed = String(env.ALLOWED_MODELS).split(',').map((name) => name.trim());
-  if (!allowed.includes(model)) {
+  if (!allowed.includes(request.model)) {
     return json({ error: 'model_not_allowed', message: `Allowed models: ${allowed.join(', ')}` }, 400);
   }
-  const cap = Number(env.DAILY_MESSAGE_CAP);
+  // max_tokens bounds what one reply (thinking included) can cost, so the daily cap limits spend, not just request count.
+  if (!(Number.isInteger(request.max_tokens) && request.max_tokens > 0 && request.max_tokens <= maxTokens)) {
+    return json({ error: 'max_tokens_too_high', message: `max_tokens must be a whole number from 1 to ${maxTokens}.` }, 400);
+  }
+
   // The cap is a server limit, not data logic, so the real clock (UTC day) is right here.
   const today = new Date().toISOString().slice(0, 10);
   if (!(await install.takeMessage(today, cap))) {
@@ -242,7 +265,9 @@ async function relayMessage(env, install, body) {
     }, 429);
   }
   const headers = { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' };
-  const upstream = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body });
+  // Send the body as this server read it, not the raw bytes: if the JSON repeats a key
+  // (two "model"s), another parser might pick the other one and skip the checks above.
+  const upstream = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify(request) });
   // Pass the reply through untouched, so streamed replies keep streaming.
   return new Response(upstream.body, {
     status: upstream.status,
@@ -312,8 +337,22 @@ async function route(request, env) {
       return relayMessage(env, install, body);
     case 'DELETE /api/install': {
       if (record.token) {
+        let accessToken;
         try {
-          await plaid(env, '/item/remove', { access_token: await unseal(env, installId, record.token) });
+          accessToken = await unseal(env, installId, record.token);
+        } catch {
+          // The token can't be read (for example, SERVER_KEY changed), so the bank link
+          // can't be removed at Plaid. Deleting the user's data here must still work.
+          console.error('Could not decrypt token; Plaid item not removed', record.itemId);
+          await install.destroy();
+          return json({
+            deleted: true,
+            plaid_item_removed: false,
+            message: 'Your data on this server is deleted, but the bank link at Plaid could not be removed. You can also remove Sedge from your bank\'s connected apps.',
+          });
+        }
+        try {
+          await plaid(env, '/item/remove', { access_token: accessToken });
         } catch (error) {
           // Already gone at Plaid is fine; anything else keeps the token so the user can retry.
           if (!['ITEM_NOT_FOUND', 'INVALID_ACCESS_TOKEN'].includes(error.code)) throw error;

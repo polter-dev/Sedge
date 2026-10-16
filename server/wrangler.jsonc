@@ -13,8 +13,11 @@
     "APP_ID": "TEAMID.dev.polter.sedge",
     // "development" for builds run from Xcode, "production" for TestFlight and the App Store.
     "APP_ATTEST_ENV": "development",
-    "ALLOWED_MODELS": "claude-sonnet-5-5",
+    "ALLOWED_MODELS": "claude-sonnet-5-5,claude-opus-5-5",
+    // Both limits must be whole numbers above zero, or the relay refuses every request.
     "DAILY_MESSAGE_CAP": "200",
+    // The highest max_tokens a relayed request may ask for. The app sends 16000.
+    "MAX_OUTPUT_TOKENS": "16000",
     // Empty until the redirect URI is registered in the Plaid dashboard (see README).
     "PLAID_REDIRECT_URI": ""
   },

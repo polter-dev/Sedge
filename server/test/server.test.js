@@ -5,6 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { APPLE_ROOT, concat, fromBase64, parseCertificate, sha256, toBase64, utf8, verifyAttestation } from '../src/attest.js';
 import worker, { Install } from '../src/index.js';
 
@@ -105,7 +106,7 @@ function makeEnv(overrides = {}) {
   };
   const env = {
     INSTALLS, PLAID_ENV: 'sandbox', APP_ID, APP_ATTEST_ENV: 'development', ALLOWED_MODELS: 'claude-sonnet-5-5',
-    DAILY_MESSAGE_CAP: '2', PLAID_REDIRECT_URI: '', PLAID_CLIENT_ID: 'test-client', PLAID_SECRET: 'test-plaid-secret',
+    DAILY_MESSAGE_CAP: '2', MAX_OUTPUT_TOKENS: '16000', PLAID_REDIRECT_URI: '', PLAID_CLIENT_ID: 'test-client', PLAID_SECRET: 'test-plaid-secret',
     ANTHROPIC_API_KEY: 'test-anthropic-key', SERVER_KEY: toBase64(new Uint8Array(32).fill(7)), ...overrides,
   };
   return { env, stores };
@@ -134,8 +135,9 @@ async function makeDevice(env) {
 function stubUpstream(handlers) {
   const calls = [];
   globalThis.fetch = async (url, init) => {
-    const body = JSON.parse(new TextDecoder().decode(typeof init.body === 'string' ? utf8(init.body) : init.body));
-    calls.push({ url: String(url), headers: init.headers, body });
+    const raw = typeof init.body === 'string' ? init.body : new TextDecoder().decode(init.body);
+    const body = JSON.parse(raw);
+    calls.push({ url: String(url), headers: init.headers, body, raw });
     const handler = handlers[new URL(url).pathname];
     return handler ? handler(body) : Response.json({ error_code: 'NOT_STUBBED' }, { status: 400 });
   };
@@ -270,6 +272,56 @@ test('the relay forwards allowed models and stops at the daily cap', async () =>
   assert.equal(calls.length, 2, 'the capped request never reached Anthropic');
 });
 
+test('a repeated "model" key cannot slip a model past the allow-list', async () => {
+  const { env } = makeEnv();
+  const device = await makeDevice(env);
+  const calls = stubUpstream({ '/v1/messages': () => Response.json({ ok: true }) });
+  // JSON.parse keeps the last "model"; a parser that keeps the first would see the other one.
+  const body = '{"model":"some-expensive-model","model":"claude-sonnet-5-5","max_tokens":10,"messages":[]}';
+  assert.equal((await device.request('POST', '/api/messages', body)).status, 200);
+  assert.ok(!calls[0].raw.includes('some-expensive-model'), 'only the checked model is forwarded');
+  assert.equal(calls[0].body.model, 'claude-sonnet-5-5');
+});
+
+test('the relay refuses max_tokens above MAX_OUTPUT_TOKENS', async () => {
+  const { env } = makeEnv({ DAILY_MESSAGE_CAP: '10', MAX_OUTPUT_TOKENS: '16000' });
+  const device = await makeDevice(env);
+  const calls = stubUpstream({ '/v1/messages': () => Response.json({ ok: true }) });
+  const ask = (fields) => device.request('POST', '/api/messages', JSON.stringify({ model: 'claude-sonnet-5-5', messages: [], ...fields }));
+
+  assert.equal((await ask({ max_tokens: 16000 })).status, 200, 'what the app sends is allowed');
+  const tooHigh = await ask({ max_tokens: 16001 });
+  assert.equal(tooHigh.status, 400);
+  const error = await tooHigh.json();
+  assert.equal(error.error, 'max_tokens_too_high');
+  assert.match(error.message, /1 to 16000/);
+  assert.equal((await ask({})).status, 400, 'max_tokens is required');
+  assert.equal((await ask({ max_tokens: '999999' })).status, 400, 'a string is not a number');
+  assert.equal(calls.length, 1, 'refused requests never reached Anthropic');
+});
+
+test('a missing or garbled limit setting turns the relay off', async () => {
+  for (const overrides of [{ DAILY_MESSAGE_CAP: undefined }, { DAILY_MESSAGE_CAP: 'lots' }, { DAILY_MESSAGE_CAP: '' },
+    { MAX_OUTPUT_TOKENS: undefined }, { MAX_OUTPUT_TOKENS: '1.5' }]) {
+    const { env } = makeEnv(overrides);
+    const device = await makeDevice(env);
+    const calls = stubUpstream({ '/v1/messages': () => Response.json({ ok: true }) });
+    const reply = await device.request('POST', '/api/messages', JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 10, messages: [] }));
+    assert.equal(reply.status, 503, JSON.stringify(overrides));
+    assert.equal((await reply.json()).error, 'server_misconfigured');
+    assert.equal(calls.length, 0, 'nothing reached Anthropic');
+  }
+});
+
+test('wrangler.jsonc allows both cloud models and sets valid limits', () => {
+  const config = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+  const setting = (name) => config.match(new RegExp(`"${name}":\\s*"([^"]*)"`))[1];
+  assert.deepEqual(setting('ALLOWED_MODELS').split(','), ['claude-sonnet-5-5', 'claude-opus-5-5']);
+  assert.ok(Number.isInteger(Number(setting('DAILY_MESSAGE_CAP'))) && Number(setting('DAILY_MESSAGE_CAP')) > 0);
+  // The app's ClaudeBackend sends max_tokens 16000, so the limit must allow at least that.
+  assert.ok(Number(setting('MAX_OUTPUT_TOKENS')) >= 16000);
+});
+
 // ---- Plaid ----
 
 test('Plaid link, sync, and delete keep the access token on the server', async () => {
@@ -305,6 +357,26 @@ test('Plaid link, sync, and delete keep the access token on the server', async (
   assert.equal(calls.at(-1).url, 'https://sandbox.plaid.com/item/remove');
   assert.equal(stores.get(device.id).size, 0, 'nothing is left for this install');
   assert.equal((await device.request('POST', '/api/create_link_token')).status, 401, 'a deleted install must attest again');
+});
+
+test('delete still removes the install when its token can no longer be decrypted', async () => {
+  const { env, stores } = makeEnv();
+  const device = await makeDevice(env);
+  const calls = stubUpstream({
+    '/item/public_token/exchange': () => Response.json({ access_token: 'access-sandbox-secret', item_id: 'item-1' }),
+    '/item/remove': () => Response.json({}),
+  });
+  assert.equal((await device.request('POST', '/api/set_access_token', 'public_token=public-sandbox-1')).status, 200);
+
+  env.SERVER_KEY = toBase64(new Uint8Array(32).fill(8)); // the key changed, so the saved token is unreadable
+  const removed = await device.request('DELETE', '/api/install');
+  assert.equal(removed.status, 200);
+  const reply = await removed.json();
+  assert.equal(reply.deleted, true);
+  assert.equal(reply.plaid_item_removed, false);
+  assert.match(reply.message, /could not be removed/);
+  assert.equal(stores.get(device.id).size, 0, 'nothing is left for this install');
+  assert.ok(!calls.some((c) => c.url.endsWith('/item/remove')), 'Plaid removal was skipped, not sent a bad token');
 });
 
 test('public routes answer without attestation', async () => {
