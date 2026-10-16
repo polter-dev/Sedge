@@ -106,6 +106,25 @@ let answer100 = #"{"answer": "You spent $100.44.", "value": 100.44, "items": nul
     #expect(result["tool_use_id"] as? String == "call0" && result["is_error"] as? Bool == true)
 }
 
+/// Strict mode makes the model write inputs in the order the schema lists them. Sorted keys
+/// put end_date before merchant, and the model kept leaving the store out of total_spent.
+@Test func claudeRequestListsRequiredInputsFirstThenDeclaredOrder() throws {
+    let body = String(decoding: try ClaudeBackend(apiKey: "test").body(system: "", messages: [.user("?")]), as: UTF8.self)
+    for schema in ClaudeBackend.tools(dataTools: true) {
+        let text = try ClaudeBackend.json(tool: schema)
+        #expect(body.contains(text))
+        let input = try #require(schema["input_schema"] as? [String: Any])
+        let required = try #require(input["required"] as? [String])
+        let declared = Tool.named(schema["name"] as! String)?.inputs.map(\.name) ?? required
+        // Each property's position in the text, read in order.
+        let written = try #require(input["properties"] as? [String: Any]).keys
+            .sorted { text.range(of: "\"\($0)\":{")!.lowerBound < text.range(of: "\"\($1)\":{")!.lowerBound }
+        #expect(written == required + declared.filter { !required.contains($0) }, "\(schema["name"]!)")
+    }
+    #expect(body.contains(#""properties":{"start_date":"#) && body.contains(#""required":["start_date","end_date"]"#))
+    #expect(try JSONSerialization.jsonObject(with: Data(body.utf8)) is [String: Any])
+}
+
 @Test func claudeReplyIsParsedAndKeptWhole() throws {
     let reply = #"""
     {"model": "claude-sonnet-5-5", "stop_reason": "tool_use", "stop_details": null,
