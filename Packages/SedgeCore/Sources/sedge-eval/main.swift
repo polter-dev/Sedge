@@ -32,6 +32,7 @@ let usage = """
                               run again with the same folder to finish a stopped run
 
     Or: sedge-eval profile --persona <name>   print one persona's profile facts as JSON
+    Or: sedge-eval export-er --help           write a store-name labeling sheet
     Or: sedge-eval backtest --cutoff YYYY-MM-DD [--cutoff ...] [--days 14] [--no-reconciliation] [--out file.csv]
                               project every account from each cutoff and write projected
                               and actual balances as CSV
@@ -45,6 +46,16 @@ func fail(_ message: String) -> Never {
 
 // The repository root, four folders up from this source file.
 let repoRoot = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../..").standardized
+
+// `sedge-eval export-er ...` writes the store-name labeling sheet instead (see ExportER.swift).
+if CommandLine.arguments.dropFirst().first == "export-er" {
+    do {
+        try exportER(Array(CommandLine.arguments.dropFirst(2)), repoRoot: repoRoot) { FileHandle.standardError.write(Data(($0 + "\n").utf8)) }
+    } catch {
+        fail("\(error)")
+    }
+    exit(0)
+}
 
 // `profile` loads and organizes one fake persona and prints its profile facts as JSON
 // (value, confidence, evidence transaction ids and rule), to check against a truth file.
