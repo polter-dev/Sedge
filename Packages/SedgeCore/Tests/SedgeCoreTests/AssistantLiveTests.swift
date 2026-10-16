@@ -21,17 +21,28 @@ func liveAsk(_ persona: String, _ question: String, asOf: String = Persona.asOf)
 /// True when `text` states `amount`, written exactly or rounded to fewer decimals:
 /// 943.45 matches "$943.45", "943.45", "$943.5" and "$943", but not "$944" or "943.46".
 func mentions(_ amount: Double, in text: String) -> Bool {
-    text.matches(of: /\d[\d,]*(\.\d+)?/).contains { match in
-        guard let number = Double(match.output.0.replacingOccurrences(of: ",", with: "")) else { return false }
+    // Decimal, not Double: 943.45 has no exact Double, so 943.45 * 10 lands just under 9434.5 and rounds the wrong way.
+    guard let exact = Decimal(string: "\(amount)") else { return false }
+    return text.matches(of: /\d[\d,]*(\.\d+)?/).contains { match in
+        guard let number = Decimal(string: match.output.0.replacingOccurrences(of: ",", with: "")) else { return false }
         let decimals = match.output.1.map { $0.count - 1 } ?? 0
-        // Half of the last written digit, plus a little for floating-point error.
-        return abs(number - amount) <= 0.5 / pow(10, Double(decimals)) + 1e-9
+        // The written number must equal the amount rounded half away from zero to that many decimals.
+        var value = exact, rounded = Decimal()
+        NSDecimalRound(&rounded, &value, decimals, .plain)
+        return number == rounded
     }
 }
 
 @Test func mentionsAcceptsRoundingButNotOtherAmounts() {
     for text in ["$943.45 left", "943.45", "about $943.5", "You'd have $943 left."] { #expect(mentions(943.45, in: text), "\(text)") }
     for text in ["$944 left", "943.46", "$1,943.45", "$94", "no amount"] { #expect(!mentions(943.45, in: text), "\(text)") }
+}
+
+@Test func mentionsRejectsWrongHalfRounding() {
+    #expect(!mentions(943.45, in: "$943.4"))
+    #expect(!mentions(943.5, in: "$943"))
+    for text in ["$943", "$943.45", "943.45", "$943.5"] { #expect(mentions(943.45, in: text), "\(text)") }
+    for text in ["$9,943", "$943.40", "943.455"] { #expect(!mentions(943.45, in: text), "\(text)") }
 }
 
 @Suite(.enabled(if: liveKey != nil, "Set SEDGE_LIVE_TESTS=1 and ANTHROPIC_API_KEY"), .serialized)
