@@ -70,10 +70,38 @@ public struct ClaudeBackend: ModelBackend {
             // "auto" is the only choice: these models reject forcing a tool, so the prompt
             // asks for final_answer instead.
             "tool_choice": ["type": "auto"],
-            "tools": Self.tools(dataTools: dataTools),
             "messages": try messages.map(Self.message),
         ]
-        return try JSONSerialization.data(withJSONObject: body, options: .sortedKeys)
+        // The tools are added as text because JSONSerialization can't keep their inputs' order.
+        let tools = try "[" + Self.tools(dataTools: dataTools).map(Self.json(tool:)).joined(separator: ",") + "]"
+        return try JSONSerialization.data(withJSONObject: body, options: .sortedKeys).dropLast() + Data((",\"tools\":" + tools + "}").utf8)
+    }
+
+    /// One tool definition as JSON text. In strict mode the model has to write a tool's inputs
+    /// in the order its schema lists them, and can't go back for one it skipped. With sorted
+    /// keys, total_spent listed end_date, merchant, start_date: the model wrote both dates and
+    /// had no way left to name the store. So the required inputs come first, then the optional
+    /// ones in the order the tool declares them. Every other key stays sorted.
+    static func json(tool schema: [String: Any]) throws -> String {
+        let required = (schema["input_schema"] as? [String: Any])?["required"] as? [String] ?? []
+        let declared = Tool.named(schema["name"] as? String ?? "")?.inputs.map(\.name) ?? []
+        return try json(schema, propertyOrder: required + declared.filter { !required.contains($0) })
+    }
+
+    /// JSON text with sorted keys, except that a "properties" object's keys follow `propertyOrder`.
+    private static func json(_ value: Any, propertyOrder: [String], isProperties: Bool = false) throws -> String {
+        if let object = value as? [String: Any] {
+            let order = isProperties ? propertyOrder : []
+            // Keys missing from `order` (all of them, outside "properties") go last, sorted.
+            let rank = { (key: String) in (order.firstIndex(of: key) ?? order.count, key) }
+            return try "{" + object.keys.sorted { rank($0) < rank($1) }.map { key in
+                try json(key, propertyOrder: []) + ":" + json(object[key]!, propertyOrder: propertyOrder, isProperties: key == "properties")
+            }.joined(separator: ",") + "}"
+        }
+        if let array = value as? [Any] {
+            return try "[" + array.map { try json($0, propertyOrder: propertyOrder) }.joined(separator: ",") + "]"
+        }
+        return String(decoding: try JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed), as: UTF8.self)
     }
 
     /// One conversation entry in the Messages API's shape.

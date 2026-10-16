@@ -18,6 +18,22 @@ func liveAsk(_ persona: String, _ question: String, asOf: String = Persona.asOf)
     return trace
 }
 
+/// True when `text` states `amount`, written exactly or rounded to fewer decimals:
+/// 943.45 matches "$943.45", "943.45", "$943.5" and "$943", but not "$944" or "943.46".
+func mentions(_ amount: Double, in text: String) -> Bool {
+    text.matches(of: /\d[\d,]*(\.\d+)?/).contains { match in
+        guard let number = Double(match.output.0.replacingOccurrences(of: ",", with: "")) else { return false }
+        let decimals = match.output.1.map { $0.count - 1 } ?? 0
+        // Half of the last written digit, plus a little for floating-point error.
+        return abs(number - amount) <= 0.5 / pow(10, Double(decimals)) + 1e-9
+    }
+}
+
+@Test func mentionsAcceptsRoundingButNotOtherAmounts() {
+    for text in ["$943.45 left", "943.45", "about $943.5", "You'd have $943 left."] { #expect(mentions(943.45, in: text), "\(text)") }
+    for text in ["$944 left", "943.46", "$1,943.45", "$94", "no amount"] { #expect(!mentions(943.45, in: text), "\(text)") }
+}
+
 @Suite(.enabled(if: liveKey != nil, "Set SEDGE_LIVE_TESTS=1 and ANTHROPIC_API_KEY"), .serialized)
 struct LiveClaude {
     @Test func mayaNetflixFirstHalf() async throws {
@@ -56,7 +72,7 @@ struct LiveClaude {
         let trace = try await liveAsk("maya", "If I spend $400 on Friday, can I still pay rent this month?", asOf: "2026-06-24")
         #expect(trace.error == nil)
         #expect(trace.finalAnswer?.yes_no == true)
-        #expect(trace.finalAnswer?.answer.contains("943.45") == true)
+        #expect(mentions(943.45, in: trace.finalAnswer?.answer ?? ""))
         #expect(trace.toolCalls.contains { $0.name == "simulate_balance" && $0.valid })
     }
 
