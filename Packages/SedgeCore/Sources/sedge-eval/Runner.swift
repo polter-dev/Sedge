@@ -3,9 +3,12 @@ import Foundation
 import SedgeCore
 
 /// One row of `tools/eval/questions.csv`, keeping only what the runner needs. The
-/// `expected` and `truth_sql` columns belong to the grader and are never read here.
+/// `expected`, `truth_sql` and `needs_clarification` columns belong to the grader and are
+/// never read here.
 struct Question {
     let id, persona, type, split, asOf, text: String
+    /// The scripted reply to ask_user, or "" when the person wouldn't answer.
+    var clarifyReply = ""
 }
 
 /// The organizer's ablation switches, recorded with every answer.
@@ -70,6 +73,9 @@ struct Manifest: Codable {
     var questionsFile: String
     var questionsSha256: String
     var flags: OrganizerFlags
+    /// True when ask_user is offered and answered with each question's clarify_reply (and
+    /// left unanswered when it has none). The context baseline has no ask_user, so false.
+    var clarifyReplies: Bool
     var split: String
     var ids: [String]?
     var `repeat`: Int
@@ -81,6 +87,7 @@ struct Manifest: Codable {
     var settings: [(name: String, value: String)] {
         [("config", config), ("model", model), ("effort", effort ?? "none"),
          ("use_graph", "\(flags.useGraph)"), ("use_reconciliation", "\(flags.useReconciliation)"),
+         ("clarify_replies", "\(clarifyReplies)"),
          ("system prompt", promptSha256), ("tool set", toolSetSha256), ("question bank", questionsSha256),
          ("git commit", gitCommit)]
             // The on-device model's version is the OS build, so an OS update changes the model.
@@ -139,9 +146,11 @@ func loadQuestions(_ data: Data) throws -> [Question] {
         throw EvalError("questions file has no \"\(name)\" column")
     }
     return try rows.dropFirst().filter { $0 != [""] }.map { row in
-        func cell(_ name: String) -> String { column[name]! < row.count ? row[column[name]!] : "" }
+        // A missing optional column (clarify_reply in an older file) reads as empty.
+        func cell(_ name: String) -> String { column[name].map { $0 < row.count ? row[$0] : "" } ?? "" }
         let question = Question(id: cell("id"), persona: cell("persona"), type: cell("type"), split: cell("split"),
-                                asOf: cell("as_of").isEmpty ? Persona.asOf : cell("as_of"), text: cell("question"))
+                                asOf: cell("as_of").isEmpty ? Persona.asOf : cell("as_of"), text: cell("question"),
+                                clarifyReply: cell("clarify_reply"))
         guard Persona.all.contains(question.persona) else { throw EvalError("\(question.id): unknown persona \"\(question.persona)\"") }
         // Dates are compared as text, which only works in this exact shape.
         guard question.asOf.wholeMatch(of: /\d{4}-\d{2}-\d{2}/) != nil else { throw EvalError("\(question.id): as_of must be YYYY-MM-DD") }
@@ -214,7 +223,7 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
         promptSha256: sha256(Data(SystemPrompt.template(dataTools: dataTools).utf8)),
         toolSetVersion: Tool.version, toolSetSha256: sha256(toolSet),
         questionsFile: options.questions.path, questionsSha256: sha256(questionsData),
-        flags: options.flags, split: split, ids: options.ids, repeat: options.repeats, results: finished.count)
+        flags: options.flags, clarifyReplies: dataTools, split: split, ids: options.ids, repeat: options.repeats, results: finished.count)
 
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -243,7 +252,8 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
     let encoder = JSONEncoder()
     encoder.keyEncodingStrategy = .convertToSnakeCase
     encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-    // Questions about the same persona and day share one organized database; tools only read it.
+    // Questions about the same persona and day share one organized database. Tools only read
+    // it; ask_user writes saved_answers, which is cleared before each question below.
     var databases: [String: SedgeDatabase] = [:]
     let total = questions.count * options.repeats
     var count = 0
@@ -261,7 +271,12 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
                                                                  flags: dataTools ? options.flags : nil)
             databases[key] = database
 
-            let trace = await Assistant(backend: backend, database: database, dataTools: dataTools).ask(question.text)
+            // The database is shared, so answers saved by an earlier question (or pass) are
+            // forgotten first: each question must ask for itself, in any order.
+            try AskUser.reset(database)
+            let reply = question.clarifyReply
+            let trace = await Assistant(backend: backend, database: database, dataTools: dataTools,
+                                        askPerson: { _ in reply.isEmpty ? nil : reply }).ask(question.text)
             let line = ResultLine(id: question.id, persona: question.persona, type: question.type, asOf: question.asOf,
                                   config: options.config, model: backend.model, repeat: pass, flags: options.flags,
                                   finalAnswer: trace.finalAnswer, rawText: trace.text, errorType: errorType(trace),
@@ -272,7 +287,8 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
             finished.insert("\(question.id)#\(pass)")
             if let model = trace.reportedModel { reportedModels.insert(model) }
             log("\(label) \(line.errorType ?? "ok") \(String(format: "%.1f", trace.latencySeconds))s "
-                + "\(trace.inputTokens) in / \(trace.outputTokens) out")
+                + "\(trace.inputTokens) in / \(trace.outputTokens) out"
+                + (trace.askedUser ? ", asked " + trace.clarifications.map(\.factKey).joined(separator: ", ") : ""))
         }
     }
     manifest.endedAt = Date.now.ISO8601Format()

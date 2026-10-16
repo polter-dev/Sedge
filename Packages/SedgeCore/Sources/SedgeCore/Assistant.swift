@@ -5,7 +5,7 @@ import GRDB
 /// what the tools return, never the raw transactions (unless `dataTools` is false, for the
 /// context-stuffing baseline), and must end with `final_answer`.
 public struct Assistant: Sendable {
-    /// Most data-tool calls allowed per question (`final_answer` doesn't count).
+    /// Most data-tool calls allowed per question (`final_answer` and `ask_user` don't count).
     public static let maxToolCalls = 6
 
     public let backend: any ModelBackend
@@ -14,16 +14,22 @@ public struct Assistant: Sendable {
     /// reads every account and transaction from the system prompt instead. The backend must
     /// offer the same tools (`ClaudeBackend(dataTools:)`).
     public let dataTools: Bool
+    /// Who answers `ask_user` when no saved answer does. Nil means nobody can, and the model
+    /// is told to go with the likeliest reading.
+    public let askPerson: AskPerson?
 
-    public init(backend: any ModelBackend, database: SedgeDatabase, dataTools: Bool = true) {
+    public init(backend: any ModelBackend, database: SedgeDatabase, dataTools: Bool = true, askPerson: AskPerson? = nil) {
         self.backend = backend
         self.database = database
         self.dataTools = dataTools
+        self.askPerson = askPerson
     }
 
     /// The full system prompt for a question asked on `asOf`.
     func systemPrompt(asOf: String) throws -> String {
-        guard !dataTools else { return SystemPrompt.text(asOf: asOf) }
+        guard !dataTools else {
+            return SystemPrompt.text(asOf: asOf) + SystemPrompt.askUser + SystemPrompt.savedAnswers(try AskUser.saved(database))
+        }
         let accounts = try database.dbQueue.read { try Account.order(Column("name")).fetchAll($0) }
         // Oldest first, the way a statement reads.
         return SystemPrompt.text(asOf: asOf)
@@ -49,10 +55,15 @@ public struct Assistant: Sendable {
         let system = try systemPrompt(asOf: asOf)
         var messages: [ModelMessage] = [.user(question)]
         var callsLeft = Self.maxToolCalls
-
         // Worst case is one call per reply: six replies with calls, one more whose calls are
         // refused for being over the limit, and a last chance to call final_answer.
-        for _ in 0..<(Self.maxToolCalls + 2) {
+        var repliesLeft = Self.maxToolCalls + 2
+        // The first reply that asks the person gets its reply back, so asking never costs
+        // that last chance. Only the first, so asking again and again can't loop forever.
+        var askRefunded = false
+
+        while repliesLeft > 0 {
+            repliesLeft -= 1
             let turn = try await backend.next(system: system, messages: messages)
             trace.turns += 1
             trace.inputTokens += turn.inputTokens
@@ -88,6 +99,15 @@ public struct Assistant: Sendable {
                     case .failure(let error):
                         content = Tool.json(error)
                     }
+                } else if dataTools, call.name == AskUser.toolName {
+                    // The loop waits here until the person (or a saved answer) replies.
+                    let asked = await AskUser.run(call.input, database: database, askPerson: askPerson)
+                    content = asked.content
+                    if let clarification = asked.clarification {
+                        trace.askedUser = true
+                        trace.clarifications.append(clarification)
+                        if !askRefunded { askRefunded = true; repliesLeft += 1 }
+                    }
                 } else if dataTools, let tool = Tool.named(call.name) {
                     if callsLeft > 0 {
                         callsLeft -= 1
@@ -97,7 +117,7 @@ public struct Assistant: Sendable {
                     }
                 } else {
                     content = Tool.json(ToolError("Unknown tool \"\(call.name)\".",
-                                                  hint: "Tools: " + ((dataTools ? Tool.all.map(\.name) : []) + [FinalAnswer.toolName]).joined(separator: ", ")))
+                                                  hint: "Tools: " + ((dataTools ? Tool.all.map(\.name) + [AskUser.toolName] : []) + [FinalAnswer.toolName]).joined(separator: ", ")))
                 }
                 let error = trace.record(call, result: content)
                 results.append(ToolResult(id: call.id, content: content, isError: error != nil))
@@ -118,6 +138,11 @@ public struct Trace: Codable, Sendable {
     /// The model id the API reported on its last reply.
     public var reportedModel: String?
     public var toolCalls: [ToolCallRecord] = []
+    /// True when the model made a good ask_user call, whoever replied (the person, a saved
+    /// answer, or nobody). Graded against the question bank's needs_clarification.
+    public var askedUser = false
+    /// Each ask_user call: its fact_key, the reply, and whether memory answered it.
+    public var clarifications: [Clarification] = []
     /// How many replies the model gave.
     public var turns = 0
     public var latencySeconds = 0.0

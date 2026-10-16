@@ -31,15 +31,39 @@ public enum SystemPrompt {
     /// Bump whenever `contextData`'s wording or columns change, like `version`.
     public static let contextVersion = "context-v1"
 
-    /// The version a trace records: the context baseline's prompt is the main text plus its data.
+    /// Bump whenever `askUser`'s wording changes, like `version`.
+    public static let askUserVersion = "ask-user-v1"
+
+    /// Added after `text(asOf:)` when the model has the data tools (and so `ask_user`). The
+    /// context baseline doesn't get it, so its prompt is unchanged.
+    public static let askUser = """
+
+
+        Only if the question can be read more than one way and the readings give different answers, \
+        call ask_user once before answering, with a short question, two to four short options, and a \
+        fact_key naming the fact. Ask instead of answering every reading at once. Don't ask when the tools, \
+        get_profile, or the question itself already settle it. If ask_user returns no answer, use the \
+        likeliest reading and say which one you used.
+        """
+
+    /// What the person already told ask_user, added after `askUser` so the model uses it
+    /// instead of guessing or asking again. Empty when nothing is saved, which is always the
+    /// case in the eval runner (it resets before each question), so `template` leaves it out.
+    static func savedAnswers(_ answers: [(key: String, question: String, answer: String)]) -> String {
+        guard !answers.isEmpty else { return "" }
+        return "\n\nThe person already answered these questions, so use their answers and don't ask again:\n"
+            + answers.map { "- \($0.key) (\($0.question)): \($0.answer)" }.joined(separator: "\n")
+    }
+
+    /// The version a trace records: each setup's prompt is the main text plus its own part.
     public static func version(dataTools: Bool) -> String {
-        dataTools ? version : version + "+" + contextVersion
+        version + "+" + (dataTools ? askUserVersion : contextVersion)
     }
 
     /// The prompt with placeholders where each question's date and data go, so its hash
     /// changes only when the wording does.
     public static func template(dataTools: Bool) -> String {
-        text(asOf: "{as_of}") + (dataTools ? "" : contextData(accounts: [], transactions: []))
+        text(asOf: "{as_of}") + (dataTools ? askUser : contextData(accounts: [], transactions: []))
     }
 
     /// The context-stuffing baseline's data, added after `text(asOf:)`: the raw accounts and

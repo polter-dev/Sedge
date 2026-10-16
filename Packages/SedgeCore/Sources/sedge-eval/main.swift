@@ -24,7 +24,8 @@ let usage = """
                               prompt, with final_answer as its only tool; apple is Apple's
                               on-device model with the data tools
       --model <id>            cloud model to ask (default \(ClaudeBackend.defaultModel))
-      --questions <csv>       question bank (default tools/eval/questions.csv)
+      --questions <csv>       question bank (default tools/eval/questions.csv); a question's
+                              clarify_reply answers ask_user (blank: nobody answers)
       --split dev|test|all    which questions (default dev, or all when --ids is given)
       --ids a,b,c             only these question ids
       --repeat N              ask each question N times (default 1)

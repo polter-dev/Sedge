@@ -2,8 +2,8 @@
 
 Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase.swift`:
 `v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
-`transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`)
-and `v4` (profile_facts and profile_corrections).
+`transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`),
+`v4` (profile_facts and profile_corrections) and `v5` (saved_answers).
 
 ```mermaid
 erDiagram
@@ -78,6 +78,13 @@ erDiagram
         text kind "not null"
         text value "not null, JSON, same shape as profile_facts.value"
     }
+
+    saved_answers {
+        text fact_key PK "snake_case fact the model asked about, e.g. food_definition"
+        text question "not null, the question as asked"
+        text answer "not null, the reply the person tapped"
+        text date "not null, the dataset's as_of when it was answered"
+    }
 ```
 
 - **accounts** and **transactions** keep Plaid's field names. A transaction belongs to one
@@ -115,6 +122,12 @@ erDiagram
   `Profile`, from the merchants, categories, recurring series and kinds above. Transfers and
   card payments are never evidence. **profile_corrections** holds the person's own answers;
   a rebuild never touches it, and a correction always replaces the fact with the same id.
+- **saved_answers** holds the person's replies to `ask_user`, one per `fact_key`, so a
+  clarifying question is asked only once. Before asking, `ask_user` checks this table and
+  then profile_corrections (a correction whose kind starts the key, e.g. `housing` for
+  `housing_type`). Saved answers are also listed in the system prompt. Nothing rebuilds the
+  table; the Ask screen's "Reset saved questions" clears it, and the eval runner clears it
+  before each question so one question's answer can't reach another.
 
 ## Database files
 
@@ -125,7 +138,8 @@ Each dataset has its own SQLite file, and every file has the tables above:
 - One separate bank file for Plaid data (`sedge.sqlite`).
 
 The rule: Plaid data always goes into the bank file and never into a persona's file, and
-the app reads the chosen database at launch. Building this is #13's job. Today the app
-chooses the file at launch (`-persona <name>` opens that persona's file, otherwise
-`sedge.sqlite`), but the Plaid save in `ConnectBankView.swift` still writes to whichever
-file is open.
+the app reads the chosen database at launch. The data picker remembers the choice (a
+persona's name or `bank`), and launching with `-persona <name>` picks that persona too.
+Opening a persona's file reloads it from the bundled fake data (so its `as_of` stays
+2026-06-30) and runs the organizer. Only the bank file is ever handed to the Plaid flow
+in `ConnectBankView.swift`, so a sync can't write into a persona's file.
