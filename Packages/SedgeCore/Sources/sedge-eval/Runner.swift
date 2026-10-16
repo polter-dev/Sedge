@@ -40,7 +40,10 @@ struct ResultLine: Codable {
     var finalAnswer: FinalAnswer?
     /// The model's last plain text, kept as given even when it is also in `final_answer`.
     var rawText: String
-    /// nil when there is an answer; otherwise format_error, refusal, max_tokens, tool_limit or api_error.
+    /// nil when there is an answer; otherwise format_error, refusal, max_tokens, tool_limit,
+    /// api_error, or one of the on-device labels (see `AppleBackend.label`): guardrail,
+    /// context_window, bad_arguments, tool_error, unsupported_language, unsupported_capability,
+    /// unsupported_content, and the transient model_unavailable, rate_limited, busy, timeout.
     var errorType: String?
     var latencySeconds: Double
     var inputTokens: Int
@@ -88,6 +91,8 @@ struct Manifest: Codable {
          ("clarify_replies", "\(clarifyReplies)"),
          ("system prompt", promptSha256), ("tool set", toolSetSha256), ("question bank", questionsSha256),
          ("git commit", gitCommit)]
+            // The on-device model's version is the OS build, so an OS update changes the model.
+            + (config == "apple" ? [("macOS build", macosBuild)] : [])
     }
 }
 
@@ -180,7 +185,10 @@ func prepareDatabase(persona: String, asOf: String, dataFolder: URL, flags: Orga
 func errorType(_ trace: Trace) -> String? {
     if trace.finalAnswer != nil { return nil }
     if trace.formatError { return "format_error" }
-    if trace.error?.hasPrefix("refusal") == true { return "refusal" }
+    // The backends start these errors with their label, e.g. "refusal: cyber".
+    let labels = ["refusal", "guardrail", "context_window", "bad_arguments", "tool_error",
+                  "unsupported_language", "unsupported_capability", "unsupported_content"] + retriedErrorTypes
+    if let label = labels.first(where: { trace.error?.hasPrefix($0 + ":") == true }) { return label }
     if trace.error == "max_tokens" || trace.error == "tool_limit" { return trace.error }
     return "api_error"
 }
@@ -234,7 +242,7 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
     // Only now, with the settings known to match, may the old results file change.
     if saved.dropped > 0 {
         try saved.kept.write(to: resultsURL, options: .atomic)
-        log("Asking \(saved.dropped) answer(s) again: cut off by a stop, or an API error.")
+        log("Asking \(saved.dropped) answer(s) again: cut off by a stop, or a temporary error.")
     }
     try write(manifest, to: manifestURL)
 
@@ -291,10 +299,15 @@ func run(_ options: Options, backend: any ModelBackend, repoRoot: URL, log: (Str
     try write(manifest, to: manifestURL)
 }
 
+/// Error types that say nothing about the question or the model, so resume asks them again:
+/// `api_error` (network, rate limit, spending cap) and the on-device model being off, not
+/// ready, rate limited, busy or timed out. Question-dependent failures such as
+/// `unsupported_language` are not here: re-asking could repeat forever or hide a failure.
+let retriedErrorTypes = ["api_error", "model_unavailable", "rate_limited", "busy", "timeout"]
+
 /// The answers already saved, as "id#repeat", the model ids they report, and how many lines
-/// were dropped so they are asked again: a last line cut off by a killed run, and answers that
-/// never reached the model (`api_error`: network, rate limit, spending cap), which say nothing
-/// about the configuration. Every other line, model mistakes included, stays as it is in
+/// were dropped so they are asked again: a last line cut off by a killed run, and answers with
+/// one of the `retriedErrorTypes`. Every other line, model mistakes included, stays as it is in
 /// `kept`, the file's new contents. Nothing is written here: the caller checks the settings first.
 func readFinished(_ url: URL) throws -> (finished: Set<String>, models: Set<String>, dropped: Int, kept: Data) {
     guard let data = try? Data(contentsOf: url) else { return ([], [], 0, Data()) }
@@ -307,7 +320,7 @@ func readFinished(_ url: URL) throws -> (finished: Set<String>, models: Set<Stri
               let id = object["id"] as? String, let pass = object["repeat"] as? Int else {
             throw EvalError("line \(number + 1) of \(url.path) can't be read")
         }
-        if object["error_type"] as? String == "api_error" {
+        if retriedErrorTypes.contains(object["error_type"] as? String ?? "") {
             dropped += 1
             continue
         }

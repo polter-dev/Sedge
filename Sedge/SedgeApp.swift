@@ -13,7 +13,15 @@ import SwiftUI
 struct SedgeApp: App {
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if let question = UserDefaults.standard.string(forKey: "askOnDevice") {
+                OnDeviceDebugView(question: question)
+            } else {
+                ContentView()
+            }
+            #else
             ContentView()
+            #endif
         }
     }
 }
