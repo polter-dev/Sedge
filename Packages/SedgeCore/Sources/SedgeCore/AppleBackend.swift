@@ -8,7 +8,9 @@ import FoundationModels
 /// running tools (same limits, same checks, same trace as the cloud), each Apple tool here
 /// only hands its call over and waits. `next` returns that call as the model's turn, and the
 /// next `next` delivers the loop's result back to the waiting tool, so the session carries on
-/// exactly as if it had run the tool itself.
+/// exactly as if it had run the tool itself. Calls the model makes together in one response
+/// (the session runs them at the same time) go out as one turn, the way Claude sends them, so
+/// the loop's reply limit costs both models the same for the same calls.
 ///
 /// It is an actor because it remembers the conversation in progress between `next` calls.
 /// One backend answers one question at a time, which is how the runner and the app use it.
@@ -23,16 +25,25 @@ public actor AppleBackend: ModelBackend {
     enum Event {
         case call(ToolCall, CheckedContinuation<String, any Error>)
         case done(Result<GeneratedContent, any Error>)
+        /// Sent a while after the first of several calls made together (by its call id), so a
+        /// call that never comes can't hold the turn forever.
+        case late(String)
     }
 
-    /// One reply from a session: the structured final answer, with any tool calls made on the
-    /// way. A session is kept for the whole question, so a retry continues the same conversation.
-    typealias Respond = @Sendable (_ prompt: String) async throws -> GeneratedContent
+    /// An open conversation with the model. It is kept for the whole question, so a retry
+    /// continues the same conversation.
+    struct Session: Sendable {
+        /// One reply: the structured final answer, with any tool calls made on the way.
+        var respond: @Sendable (_ prompt: String) async throws -> GeneratedContent
+        /// The calls in the model's latest response, in its order, each as `key(name:input:)`.
+        /// Empty means each call came alone.
+        var latestCalls: @Sendable () -> [String] = { [] }
+    }
     /// Opens a session with this system prompt and these tools. Tests pass a scripted one.
-    typealias MakeSession = @Sendable (_ system: String, _ tools: [any FoundationModels.Tool]) -> Respond
+    typealias MakeSession = @Sendable (_ system: String, _ tools: [any FoundationModels.Tool]) -> Session
 
     private let makeSession: MakeSession
-    private var session: Respond?
+    private var session: Session?
     private var events: AsyncStream<Event>?
     /// The tools and the session write their events here.
     private var feed: AsyncStream<Event>.Continuation?
@@ -48,12 +59,28 @@ public actor AppleBackend: ModelBackend {
     /// A session with Apple's system model.
     static let systemSession: MakeSession = { system, tools in
         let session = LanguageModelSession(model: .default, tools: tools, instructions: system)
-        return { prompt in
+        return Session(respond: { prompt in
             if let reason = unavailableReason() { throw AssistantError("model_unavailable: \(reason)") }
             // Greedy decoding: the same question gets the same answer on every run.
             return try await session.respond(to: prompt, generating: AppleFinalAnswer.self,
                                              options: GenerationOptions(samplingMode: .greedy)).rawContent
-        }
+        }, latestCalls: {
+            // The session writes a response's calls to its transcript before it runs them.
+            for entry in session.transcript.reversed() {
+                if case .toolCalls(let calls) = entry {
+                    return calls.map { key(name: $0.toolName, input: $0.arguments.jsonString) }
+                }
+            }
+            return []
+        })
+    }
+
+    /// One call's name and inputs as a single string, to find it among the latest calls. The
+    /// inputs' keys are sorted first: the same inputs come out of `jsonString` in any key order.
+    static func key(name: String, input: String) -> String {
+        let object = try? JSONSerialization.jsonObject(with: Data(input.utf8))
+        let sorted = object.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: .sortedKeys) }
+        return name + " " + (sorted.map { String(decoding: $0, as: UTF8.self) } ?? input)
     }
 
     /// The model and the OS build it ships in, e.g. "apple-foundation-models, macOS Version
@@ -115,22 +142,50 @@ public actor AppleBackend: ModelBackend {
         // A copy of the iterator reads the same stream; it is copied because an actor's stored
         // value can't be changed across an `await`.
         var iterator = events?.makeAsyncIterator()
-        switch await iterator?.next() {
-        case .call(let call, let continuation):
-            waiting[call.id] = continuation
-            return turn(calls: [call], stop: "tool_use")
-        case .done(.success(let content)):
-            // The final answer arrives as the structured reply, passed on unchanged as a
-            // final_answer call so the loop checks it exactly like Claude's. The session stays
-            // open in case the loop rejects it.
-            let call = ToolCall(id: Self.finalID, name: FinalAnswer.toolName, input: Data(content.jsonString.utf8))
-            return turn(calls: [call], stop: "tool_use")
-        case .done(.failure(let error)):
-            stop()
-            throw AssistantError(Self.label(error))
-        case nil:
-            throw AssistantError("The on-device session has already ended.")
-        }
+        var calls: [ToolCall] = []
+        var together: [String] = []
+        var gaveUp = false
+        repeat {
+            switch await iterator?.next() {
+            case .call(let call, let continuation):
+                waiting[call.id] = continuation
+                calls.append(call)
+                // The first call's response says how many more calls are on their way. It is
+                // trusted only if it holds that call, in case the transcript is behind.
+                if calls.count == 1, let latest = session?.latestCalls(), latest.count > 1, latest.contains(Self.key(call)) {
+                    together = latest
+                    // The calls start at the same moment. If one hasn't come after a second,
+                    // the session is running them one at a time (it would wait for this
+                    // result first), so the turn goes out with what has arrived.
+                    Task { [feed] in
+                        try? await Task.sleep(for: .seconds(1))
+                        feed?.yield(.late(call.id))
+                    }
+                }
+            case .late(let id):
+                // One left over from an earlier turn is ignored.
+                gaveUp = id == calls.first?.id
+            case .done(.success(let content)):
+                // The final answer arrives as the structured reply, passed on unchanged as a
+                // final_answer call so the loop checks it exactly like Claude's. The session
+                // stays open in case the loop rejects it.
+                let call = ToolCall(id: Self.finalID, name: FinalAnswer.toolName, input: Data(content.jsonString.utf8))
+                return turn(calls: [call], stop: "tool_use")
+            case .done(.failure(let error)):
+                stop()
+                throw AssistantError(Self.label(error))
+            case nil:
+                throw AssistantError("The on-device session has already ended.")
+            }
+        } while calls.isEmpty || (!gaveUp && calls.count < together.count)
+        // The session runs calls at the same time, so they can arrive in any order; put them
+        // back in the model's order so the loop runs (and limits) them the same way every time.
+        calls.sort { (together.firstIndex(of: Self.key($0)) ?? .max) < (together.firstIndex(of: Self.key($1)) ?? .max) }
+        return turn(calls: calls, stop: "tool_use")
+    }
+
+    private static func key(_ call: ToolCall) -> String {
+        key(name: call.name, input: String(decoding: call.input, as: UTF8.self))
     }
 
     /// Starts a new session for a new question, ending any earlier one first. It is offered
@@ -150,7 +205,7 @@ public actor AppleBackend: ModelBackend {
         guard let session, let feed else { return }
         task = Task {
             do {
-                feed.yield(.done(.success(try await session(prompt))))
+                feed.yield(.done(.success(try await session.respond(prompt))))
             } catch {
                 feed.yield(.done(.failure(error)))
             }
