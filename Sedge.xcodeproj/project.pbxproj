@@ -32,6 +32,8 @@
 		3BBCF15B306B4636003E35C6 /* Sedge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sedge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BBCF16A306B4636003E35C6 /* SedgeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SedgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BBCF174306B4636003E35C6 /* SedgeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SedgeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BC0FF01306B4636003E35C6 /* Sedge-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Sedge-Debug.xcconfig"; sourceTree = "<group>"; };
+		3BC0FF02306B4636003E35C6 /* Sedge-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Sedge-Release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -88,6 +90,7 @@
 		3BBCF152306B4636003E35C6 = {
 			isa = PBXGroup;
 			children = (
+				3BC0FF03306B4636003E35C6 /* Config */,
 				3BBCF1F0306B4AFF003E35C6 /* milestones */,
 				3BBCF15D306B4636003E35C6 /* Sedge */,
 				3BBCF16D306B4636003E35C6 /* SedgeTests */,
@@ -95,6 +98,15 @@
 				3B032716306D696800906AA6 /* Frameworks */,
 				3BBCF15C306B4636003E35C6 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		3BC0FF03306B4636003E35C6 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				3BC0FF01306B4636003E35C6 /* Sedge-Debug.xcconfig */,
+				3BC0FF02306B4636003E35C6 /* Sedge-Release.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		3BBCF15C306B4636003E35C6 /* Products */ = {
@@ -390,6 +402,7 @@
 		};
 		3BBCF17D306B4636003E35C6 /* Debug configuration for PBXNativeTarget "Sedge" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3BC0FF01306B4636003E35C6 /* Sedge-Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -401,6 +414,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Sedge-Info.plist";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -435,6 +449,7 @@
 		};
 		3BBCF17E306B4636003E35C6 /* Release configuration for PBXNativeTarget "Sedge" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3BC0FF02306B4636003E35C6 /* Sedge-Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -446,6 +461,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Sedge-Info.plist";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

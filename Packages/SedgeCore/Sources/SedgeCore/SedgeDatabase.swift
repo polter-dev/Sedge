@@ -53,6 +53,67 @@ public struct SedgeDatabase: Sendable {
                 t.column("value", .text).notNull()
             }
         }
+        // The merchant graph, written by `Organizer`. Nodes are merchants, accounts
+        // and categories; edges connect transactions and nodes. Ids are readable text
+        // such as "merchant:value mart" or "account:maya-card".
+        migrator.registerMigration("v2") { db in
+            try db.create(table: "entities") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull() // merchant, account or category
+                t.column("name", .text).notNull()
+            }
+            try db.create(table: "edges") { t in
+                t.column("source", .text).notNull().indexed()
+                // at_merchant, from_account, refund_of (source and target are transactions),
+                // in_category (merchant to category) or recurring (transaction to merchant).
+                t.column("kind", .text).notNull()
+                t.column("target", .text).notNull().indexed()
+                // Filled only on recurring edges.
+                t.column("cadence", .text)
+                t.column("typical_amount", .double)
+                t.column("next_expected_date", .text)
+            }
+            // A copy of the at_merchant edge, so "spending at X" is one indexed lookup.
+            // It isn't part of `Transaction`, so re-saving Plaid data leaves it alone.
+            try db.alter(table: "transactions") { t in t.add(column: "merchant_id", .text) }
+            try db.create(indexOn: "transactions", columns: ["merchant_id"])
+        }
+        // What each transaction is (spending, income, transfer, card_payment or refund)
+        // and, for the two sides of a transfer or card payment, the other side's id.
+        // Written by `Organizer`; like merchant_id they aren't part of `Transaction`.
+        migrator.registerMigration("v3") { db in
+            try db.alter(table: "transactions") { t in
+                t.add(column: "kind", .text)
+                t.add(column: "linked_transaction_id", .text)
+            }
+        }
+        // Facts about the person (`Profile`): what the data says, rebuilt by `Organizer`, and
+        // the person's own corrections, kept apart so a rebuild never erases them.
+        migrator.registerMigration("v4") { db in
+            try db.create(table: "profile_facts") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                t.column("value", .text).notNull() // JSON
+                t.column("confidence", .double).notNull()
+                t.column("evidence", .text).notNull() // JSON array of transaction ids
+                t.column("rule", .text).notNull()
+            }
+            try db.create(table: "profile_corrections") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                t.column("value", .text).notNull() // JSON
+            }
+        }
+        // The person's answers to clarifying questions (`AskUser`), one per fact, so a
+        // question is asked only once. Nothing rebuilds this table; only a reset clears it.
+        migrator.registerMigration("v5") { db in
+            try db.create(table: "saved_answers") { t in
+                t.primaryKey("fact_key", .text)
+                t.column("question", .text).notNull()
+                t.column("answer", .text).notNull()
+                t.column("date", .text).notNull() // the dataset's as_of when it was answered
+            }
+        }
         return migrator
     }
 
