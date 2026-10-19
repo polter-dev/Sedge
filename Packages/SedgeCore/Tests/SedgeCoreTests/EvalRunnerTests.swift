@@ -155,7 +155,7 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
     // Pretend the folder was made before #41: only the recorded version differs.
     let url = out.appending(path: "manifest.json")
     var manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
-    #expect(manifest["tool_set_version"] as? String == "v5")
+    #expect(manifest["tool_set_version"] as? String == "v6")
     manifest["tool_set_version"] = "v4"
     try JSONSerialization.data(withJSONObject: manifest).write(to: url)
 
@@ -198,7 +198,7 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
     #expect(await backend.systems.allSatisfy { $0 == SystemPrompt.template(dataTools: true).replacingOccurrences(of: "{as_of}", with: Persona.asOf) })
 
     let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: out.appending(path: "manifest.json"))) as! [String: Any]
-    #expect(manifest["clarify_replies"] as? Bool == true && manifest["tool_set_version"] as? String == "v5")
+    #expect(manifest["clarify_replies"] as? Bool == true && manifest["tool_set_version"] as? String == "v6")
 }
 
 // The context-stuffing baseline: raw data in the prompt, final_answer as the only tool.

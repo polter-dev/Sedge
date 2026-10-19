@@ -103,10 +103,60 @@ func profileRunsForEveryPersona(persona: String) throws {
 
     let tuition = try #require(facts["tuition"])
     #expect(tuition.map(\.rule) == ["large_education_charge", "tuition_payment"])
-    #expect(tuition[0].value.total == 1500 && tuition[0].evidence == ["c1"])
-    #expect(tuition[1].value == Profile.Value(name: "State U Tuition", amount: 4200, schedule: "irregular", total: 8400))
+    #expect(tuition[0].value.paid == 1500 && tuition[0].evidence == ["c1"])
+    #expect(tuition[1].value == Profile.Value(name: "State U Tuition", amount: 4200, schedule: "irregular", paid: 8400, refunded: 0,
+                                              payments: [.init(date: "2026-01-10", amount: 4200), .init(date: "2026-02-10", amount: 4200)],
+                                              refunds: []))
 
     let loan = try #require(facts["loan"]?.first)
     #expect(loan.value == Profile.Value(name: "Affirm Inc", type: "installment", amount: 50, schedule: "monthly", day: 5))
     #expect(loan.rule == "recurring_loan_payment")
+}
+
+/// A school that took two tuition payments and later refunded part of the first, plus a
+/// college whose only large charge is tuition and whose small refund is for a book.
+func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
+    func line(_ id: String, _ date: String, _ name: String, _ amount: Double) -> Transaction {
+        Transaction(transaction_id: id, account_id: "chk", date: date, name: name, amount: amount, pending: false)
+    }
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [Account(account_id: "chk", name: "Checking", type: "depository", balances: Balances())],
+        transactions: [
+            line("p1", "2026-01-10", "STATE U BURSAR", 4250.55), line("r1", "2026-02-15", "REFUND STATE U BURSAR", -1200.30),
+            line("p2", "2026-05-08", "STATE U BURSAR", 3100.10),
+            line("c1", "2026-01-12", "RIVERSIDE COLLEGE", 1500), line("c2", "2026-01-20", "REFUND RIVERSIDE COLLEGE", -40),
+        ],
+        asOf: "2026-06-30")
+    try Organizer.organize(database, useReconciliation: useReconciliation)
+    return database
+}
+
+@Test func tuitionPaidAndRefundedAreKeptApart() throws {
+    let tuition = try #require(try profile(tuitionWithRefund())["tuition"])
+    // A partial refund never equals a payment, so it is found by store, and the payment stays whole.
+    #expect(tuition[1] == Profile.Value(name: "State U Bursar", amount: 4250.55, schedule: "irregular", paid: 7350.65, refunded: 1200.30,
+                                        payments: [.init(date: "2026-01-10", amount: 4250.55), .init(date: "2026-05-08", amount: 3100.10)],
+                                        refunds: [.init(date: "2026-02-15", amount: 1200.30)]))
+    // Under the size rule, a $40 refund is a book or a fee, not tuition.
+    #expect(tuition[0].paid == 1500 && tuition[0].refunded == 0 && tuition[0].refunds == [])
+
+    // With reconciliation off the refund is income, so nothing is refunded and the payments still count.
+    let ablated = try #require(try profile(tuitionWithRefund(useReconciliation: false))["tuition"])
+    #expect(ablated[1].paid == 7350.65 && ablated[1].refunded == 0)
+}
+
+@Test func assistantSeesTuitionPaidAndRefunded() async throws {
+    let answer = #"{"answer": "$1,200.30 was refunded.", "value": 1200.30, "items": null, "yes_no": null, "confidence": 0.9}"#
+    let backend = ScriptedBackend([calling([("get_profile", "{}")]), calling([("final_answer", answer)])])
+    let trace = await Assistant(backend: backend, database: try tuitionWithRefund()).ask("How much tuition was refunded?")
+    #expect(trace.error == nil && trace.finalAnswer?.value == 1200.30)
+
+    // What the model was handed back from get_profile.
+    guard case .toolResults(let results) = await backend.received[1].last else { Issue.record("no tool results"); return }
+    let answerJSON = try #require(try JSONSerialization.jsonObject(with: Data(results[0].content.utf8)) as? [String: Any])
+    let values = (answerJSON["facts"] as? [[String: Any]] ?? []).compactMap { $0["value"] as? [String: Any] }
+    let bursar = try #require(values.first { $0["name"] as? String == "State U Bursar" })
+    #expect(bursar["paid"] as? Double == 7350.65 && bursar["refunded"] as? Double == 1200.30)
+    #expect((bursar["payments"] as? [Any])?.count == 2 && (bursar["refunds"] as? [Any])?.count == 1)
 }
