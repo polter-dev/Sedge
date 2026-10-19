@@ -146,6 +146,25 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
     }
 }
 
+@Test func resumeIntoAV4FolderIsRefusedByToolSetVersion() async throws {
+    let out = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: out) }
+    let answers = { (count: Int) in ScriptedBackend(Array(repeating: calling([("final_answer", answer100)]), count: count)) }
+    let options = Options(questions: questionBank, ids: ["maya-ex-1"], out: out)
+    try await run(options, backend: answers(1), repoRoot: repoRoot) { _ in }
+    // Pretend the folder was made before #41: only the recorded version differs.
+    let url = out.appending(path: "manifest.json")
+    var manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+    #expect(manifest["tool_set_version"] as? String == "v5")
+    manifest["tool_set_version"] = "v4"
+    try JSONSerialization.data(withJSONObject: manifest).write(to: url)
+
+    var resumed = options
+    resumed.ids = ["maya-ex-1", "maya-ex-2"]
+    let error = await #expect(throws: EvalError.self) { try await run(resumed, backend: answers(1), repoRoot: repoRoot) { _ in } }
+    #expect(error?.description.contains("different tool set version.") == true)
+}
+
 @Test func runnerAnswersAskUserWithTheScriptedReply() async throws {
     let dir = FileManager.default.temporaryDirectory.appending(path: "sedge-eval-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -179,7 +198,7 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
     #expect(await backend.systems.allSatisfy { $0 == SystemPrompt.template(dataTools: true).replacingOccurrences(of: "{as_of}", with: Persona.asOf) })
 
     let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: out.appending(path: "manifest.json"))) as! [String: Any]
-    #expect(manifest["clarify_replies"] as? Bool == true && manifest["tool_set_version"] as? String == "v4")
+    #expect(manifest["clarify_replies"] as? Bool == true && manifest["tool_set_version"] as? String == "v5")
 }
 
 // The context-stuffing baseline: raw data in the prompt, final_answer as the only tool.

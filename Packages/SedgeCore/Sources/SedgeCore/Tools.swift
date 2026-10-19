@@ -33,7 +33,8 @@ public struct Tool: Sendable {
     /// Bump whenever a tool's name, inputs, description or output changes, like
     /// `SystemPrompt.version`: every eval run records it next to a hash of the definitions.
     /// v4 added `ask_user` (in AskUser.swift) to the tools Claude is offered.
-    public static let version = "v4"
+    /// v5 = tool inputs sent required-first (#41).
+    public static let version = "v5"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
