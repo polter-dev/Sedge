@@ -11,13 +11,15 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - One database is one person, so every account in it belongs to the same person. — `Organizer.swift` `reconcile`
 - Dates are calendar days with no time zone. — `Organizer.swift` `calendar`
 - A positive amount is money out; a credit card's balance is what is owed. — `Simulator.swift` `simulate`, `Tools.swift` `accountBalances`
+- Plaid data's today is its newest transaction date. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`
+- Plaid data is saved only into the bank database, never a persona's, and is organized again after every sync. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`, `ConnectBankView`
 
 ## Organizer
 
 - Two cleaned store names at least 80% alike are the same store. — `Organizer.swift` `similarityThreshold`, `sameStore`
 - A name that is the first whole words of a longer one is the same store ("shell" and "shell oil"). — `Organizer.swift` `sameStore`
 - "amzn" means amazon and "st" means street. — `Organizer.swift` `aliases`
-- One to three letters before a "*" are a card-processor tag, not the store, so a store with a name that short loses it. — `Organizer.swift` `processorPrefix`
+- One to three letters or "paypal" before a "*", and a leading "pos", "pos debit" or "pos purchase", are a payment-processor tag, not the store, so a store with a name that short loses it. — `Organizer.swift` `processorPrefix`, `clean`
 - Words with a digit in them are store numbers or ids, not part of the store's name. — `Organizer.swift` `clean`
 - A statement name starting with "REFUND " is a refund. — `Organizer.swift` `clean`
 - A store's category is the keyword list most of its names match; ties go to the earlier list, no match is "other". — `Organizer.swift` `category(of:)`
@@ -27,6 +29,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Money in and money out at one store are separate series, and each direction has at most one series. — `Organizer.swift` `organize`
 - A recurring series needs at least three charges. — `Organizer.swift` `recurrence(of:)`
 - Weekly charges are 6 to 8 days apart, biweekly 12 to 16, monthly 26 to 35. — `Organizer.swift` `cadences`
+- Known limit, not decided: pay on the 15th and the last day isn't recurring when a weekend shift makes one gap longer than 16 days (Fri Mar 13 to Tue Mar 31 is 18), so neither recurring_charges nor the simulator sees that income. — `Organizer.swift` `cadences`, `recurrence(of:)`
 - A bill may change price by up to 25% between charges and still be the same bill. — `Organizer.swift` `priceChangeAllowance`
 - A series' typical amount is the middle of its last three charges. — `Organizer.swift` `recurrence(of:)`
 - A series' next date is its latest charge plus a week, two weeks or a month. — `Organizer.swift` `recurrence(of:)`
@@ -58,12 +61,13 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Pending transactions are left out of everyday spending and card statements. — `Simulator.swift` `simulate`
 - An account without a current balance isn't projected. — `Simulator.swift` `simulate`
 - A monthly series is due on its latest charge's day of the month. — `Simulator.swift` `dueDay`
-- A month-end charge in a short month (Feb 28, Apr 30) stays on month end in longer months. — `Simulator.swift` `dueDay`
+- When the latest charge is the last day of a short month (Feb 28, Apr 30), the due day is the later of that day and the day of the latest charge in a 31-day month (Mar 31, Apr 30, May 29, Jun 30 gives the 30th). — `Simulator.swift` `dueDay`
 - A due day past the end of a short month falls on that month's last day. — `Simulator.swift` `monthDay`
 - Weekly and biweekly series repeat every 7 or 14 days from the latest charge. — `Simulator.swift` `simulate`
+- A recurring series is paid from, or into, the account its latest charge used. — `Simulator.swift` `simulate`
 - A charge up to 3 days past due is late, not stopped, and is projected for tomorrow; after that its series has stopped. — `Simulator.swift` `simulate`
-- A paycheck due on a weekend may arrive on the business day before or after; a paycheck within that shift is on time, not late. Monthly pay gets 2 more days before it counts as stopped. — `Simulator.swift` `weekendShiftDays`, `simulate`
-- Projected pay dates are not moved to business days, so a projected payday can be 1 to 2 days off. — `Simulator.swift` `dueDay`, `monthDay`
+- A paycheck due on a weekend may arrive on the business day before or after; a paycheck within that shift is on time, not late. Every monthly series of money in counted as income gets 2 more days before it counts as stopped; with reconciliation off, that includes transfer and card-payment deposits. — `Simulator.swift` `weekendShiftDays`, `simulate`
+- Projected pay dates are not moved to business days, so a projected payday can be up to 2 days after the real one, or for last-business-day pay up to 5 days before it (Fri Feb 26 makes Mar 26 while pay comes Mar 31). — `Simulator.swift` `dueDay`, `monthDay`
 - Every card statement closes on the last day of the month and is paid in full. — `Simulator.swift` `simulate`
 - A card is paid from the account of its latest matched payment, on the day of the month of its latest payment, for what it owed at the last month end less what was paid since. — `Simulator.swift` `simulate`
 
@@ -73,7 +77,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Refunds count against spending, and pending charges don't count until they post. — `Tools.swift` `spendingFilter`
 - A store whose refunds cancel out its spending isn't a top store. — `Tools.swift` `topMerchants`
 - A series that stopped is still listed by recurring_charges, with a next date before today. — `Tools.swift` `recurringCharges`
-- Bills come out of the checking account (or the first bank account if there is no checking). — `Tools.swift` `simulateBalance`
+- simulate_balance reports the checking account (or the first bank account with a balance) and takes the extra purchase from it; bills there are the ones whose series last used it. — `Tools.swift` `simulateBalance`
 - An answer shows at most 10 rows. — `Tools.swift` `maxRows`
 - A question may use at most 6 data-tool calls. — `Assistant.swift` `maxToolCalls`
 - A fact the person answered is never asked again; a skipped question may be asked next time. — `AskUser.swift` `run`
