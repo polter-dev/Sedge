@@ -81,5 +81,6 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - An answer shows at most 10 rows. — `Tools.swift` `maxRows`
 - A question may use at most 6 data-tool calls. — `Assistant.swift` `maxToolCalls`
 - A fact the person answered is never asked again; a skipped question may be asked next time. — `AskUser.swift` `run`
-- A profile correction answers a question about the same kind of fact ("housing" covers "housing_type"). — `AskUser.swift` `remembered`
+- A profile correction answers a question about the same kind of fact ("housing" covers "housing_type"). — `AskUser.swift` `remembered`, `covers`
+- A saved answer or profile correction is used as the answer to related questions without asking; the person can change or remove it in Saved answers, and a removed one is asked again. — `AskUser.swift` `remembered`, `change`, `forget`; `Sedge/SavedAnswersView.swift`
 - The context baseline doesn't mark pending transactions. — `SystemPrompt.swift` `contextData`
