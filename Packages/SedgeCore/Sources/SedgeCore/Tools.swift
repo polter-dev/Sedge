@@ -34,7 +34,8 @@ public struct Tool: Sendable {
     /// `SystemPrompt.version`: every eval run records it next to a hash of the definitions.
     /// v4 added `ask_user` (in AskUser.swift) to the tools Claude is offered.
     /// v5 = tool inputs sent required-first (#41).
-    public static let version = "v5"
+    /// v6 = get_profile's tuition reports paid and refunded apart, with each payment and refund (#46).
+    public static let version = "v6"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,

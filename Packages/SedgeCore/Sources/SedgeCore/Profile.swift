@@ -39,14 +39,28 @@ public enum Profile {
         public var day: Int?
         /// Income only: everything from this source divided by the months in the data.
         public var monthly_average: Double?
-        /// Tuition only: everything paid in the data.
-        public var total: Double?
+        /// Tuition only: everything paid, and everything refunded, in the data. They are kept
+        /// apart because schools refund under their own rules, so a refund never erases a payment.
+        public var paid: Double?
+        public var refunded: Double?
+        /// Tuition only: each payment and each refund, oldest first.
+        public var payments: [Entry]?
+        public var refunds: [Entry]?
 
         public init(name: String, type: String? = nil, amount: Double? = nil, schedule: String? = nil,
-                    day: Int? = nil, monthly_average: Double? = nil, total: Double? = nil) {
+                    day: Int? = nil, monthly_average: Double? = nil, paid: Double? = nil, refunded: Double? = nil,
+                    payments: [Entry]? = nil, refunds: [Entry]? = nil) {
             (self.name, self.type, self.amount, self.schedule) = (name, type, amount, schedule)
-            (self.day, self.monthly_average, self.total) = (day, monthly_average, total)
+            (self.day, self.monthly_average) = (day, monthly_average)
+            (self.paid, self.refunded, self.payments, self.refunds) = (paid, refunded, payments, refunds)
         }
+    }
+
+    /// One payment or refund: its date and its size in dollars (always positive).
+    public struct Entry: Codable, Equatable, Sendable {
+        public var date: String
+        public var amount: Double
+        public init(date: String, amount: Double) { (self.date, self.amount) = (date, amount) }
     }
 
     /// A fact the person set themselves. It replaces the worked-out fact with the same id,
@@ -128,7 +142,7 @@ public enum Profile {
             FROM transactions t JOIN entities m ON m.id = t.merchant_id
             LEFT JOIN edges c ON c.kind = 'in_category' AND c.source = t.merchant_id
             LEFT JOIN edges r ON r.kind = 'recurring' AND r.source = t.transaction_id
-            WHERE t.kind IN ('spending', 'income') AND NOT t.pending
+            WHERE t.kind IN ('spending', 'income', 'refund') AND NOT t.pending
             ORDER BY t.date, t.transaction_id
             """)
         // Months the data covers, for monthly averages. Counted from the data, not the clock.
@@ -141,6 +155,8 @@ public enum Profile {
         let groups = Dictionary(grouping: lines) { $0.kind + "|" + $0.merchant }
         for key in groups.keys.sorted() {
             let group = groups[key]!, first = group[0]
+            // Refunds are no fact of their own; tuition below picks up its store's refunds.
+            if first.kind == "refund" { continue }
             // Every cleaned name at this merchant as padded words, so " rent " matches the whole
             // word only. " | " between names keeps a phrase from spanning two names.
             let text = " " + Set(group.map { Organizer.words(Organizer.clean($0.raw).name).joined(separator: " ") })
@@ -179,9 +195,17 @@ public enum Profile {
                 let named = says(tuitionWords)
                 let paid = named ? group : group.filter { abs($0.amount) >= tuitionMinimum }
                 let paidAmounts = paid.map { abs($0.amount) }
+                // Refunds at the same store, matched by store rather than by `refund_of` because a
+                // partial refund never equals a payment. Under the size rule only refunds that big
+                // count, so a refunded book or fee isn't taken for tuition. With reconciliation off
+                // nothing is a refund (it is income), so refunded is 0.
+                // shortcut: a partial refund under $1,000 of size-rule tuition is missed; revisit if real data has one.
+                let refunds = (groups["refund|" + first.merchant] ?? []).filter { named || abs($0.amount) >= tuitionMinimum }
+                func entries(_ lines: [Line]) -> [Entry] { lines.map { Entry(date: $0.date, amount: cents(abs($0.amount))) } }
                 // Tuition is paid per term, a cadence the organizer doesn't detect, so it is usually irregular.
                 fact("tuition", Value(name: first.store, amount: cents(median(paidAmounts)), schedule: series?.cadence ?? "irregular",
-                                      total: cents(paidAmounts.reduce(0, +))),
+                                      paid: cents(paidAmounts.reduce(0, +)), refunded: cents(refunds.map { abs($0.amount) }.reduce(0, +)),
+                                      payments: entries(paid), refunds: entries(refunds)),
                      named ? keywordConfidence : guessConfidence, paid, named ? "tuition_payment" : "large_education_charge")
             } else if first.category == "category:loans" || says(installmentWords) {
                 let type = loanTypes.first { says($0.words) }?.type ?? "other"
@@ -220,7 +244,8 @@ extension Tool {
     static let getProfile = Tool(
         name: "get_profile",
         description: "What is known about the person: income (source, typical amount, schedule, monthly average), "
-            + "rent or mortgage, tuition, loans, and account types. Each fact has a confidence from 0 to 1.",
+            + "rent or mortgage, tuition (total paid and total refunded, kept apart, with each payment and refund), "
+            + "loans, and account types. Each fact has a confidence from 0 to 1.",
         inputs: [],
         run: { _, db in
             // Evidence ids and fact ids are left out to keep the answer short.

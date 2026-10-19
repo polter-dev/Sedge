@@ -85,7 +85,8 @@ struct ProfileView: View {
         if let schedule = value.schedule { parts.append(schedule) }
         if let day = value.day { parts.append("on day \(day)") }
         if let average = value.monthly_average { parts.append("about \(average.formatted(dollars)) a month") }
-        if let total = value.total { parts.append("\(total.formatted(dollars)) paid in all") }
+        if let paid = value.paid { parts.append("\(paid.formatted(dollars)) paid in all") }
+        if let refunded = value.refunded { parts.append("\(refunded.formatted(dollars)) refunded") }
         return parts.joined(separator: " · ")
     }
 

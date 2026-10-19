@@ -49,6 +49,8 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A charge named tuition or bursar is tuition. — `Profile.swift` `tuitionWords`
 - One education charge of $1,000 or more is tuition, not books or fees. — `Profile.swift` `tuitionMinimum`
 - Tuition is paid per term, so its schedule is usually irregular. — `Profile.swift` `infer`
+- Tuition paid and tuition refunded are kept separately; a refund doesn't erase the payment. — `Profile.swift` `Value.paid`, `Value.refunded`
+- A tuition refund is a refund at the tuition store; under the $1,000 rule only a refund of $1,000 or more counts. With reconciliation off a refund is income, so tuition refunded is 0. — `Profile.swift` `infer`
 - A store in the loans category, or Affirm, Klarna, Afterpay or "installment", is a loan. — `Profile.swift` `installmentWords`, `infer`
 - A loan is installment, auto or student by the words in its name, otherwise "other". — `Profile.swift` `loanTypes`
 - Two or more payments to a lender without a cadence are an irregular loan. — `Profile.swift` `infer`
