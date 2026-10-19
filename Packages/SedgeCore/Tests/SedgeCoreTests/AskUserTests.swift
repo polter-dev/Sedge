@@ -110,3 +110,29 @@ func askThenUseEveryCall(asks: Int) -> ScriptedBackend {
                                 askPerson: Person("Yes, groceries too").ask).ask("?")
     #expect(trace.error == "tool_limit" && trace.turns == Assistant.maxToolCalls + 3)
 }
+
+@Test func changedAnswerIsUsedAndForgottenOneIsAskedAgain() async throws {
+    let database = try organizedPersona("maya")
+    let person = Person("Yes, groceries too")
+    _ = await Assistant(backend: askThenAnswer(), database: database, askPerson: person.ask).ask("?")
+    try AskUser.change("food_includes_groceries", to: "No, eating out only", in: database)
+    let changed = await Assistant(backend: askThenAnswer(), database: database, askPerson: person.ask).ask("?")
+    #expect(changed.clarifications.first?.answer == "No, eating out only")
+    #expect(person.asked.withLock { $0 } == 1)
+
+    try AskUser.forget("food_includes_groceries", in: database)
+    _ = await Assistant(backend: askThenAnswer(), database: database, askPerson: person.ask).ask("?")
+    #expect(person.asked.withLock { $0 } == 2)
+}
+
+@Test func removedCorrectionNoLongerAnswers() async throws {
+    let database = try organizedPersona("maya")
+    try Profile.correct(id: "housing:mine", kind: "housing", value: Profile.Value(name: "Oakwood", type: "rent"), in: database)
+    #expect(AskUser.covers(kind: "housing", id: "housing:mine", key: "housing_type"))
+    #expect(!AskUser.covers(kind: "housing", id: "housing:mine", key: "housingtype"))
+    try Profile.removeCorrection(id: "housing:mine", in: database)
+    let person = Person("Rent")
+    let ask = #"{"question": "Do you rent or own?", "options": ["Rent", "Mortgage"], "fact_key": "housing_type"}"#
+    _ = await Assistant(backend: askThenAnswer(ask), database: database, askPerson: person.ask).ask("?")
+    #expect(person.asked.withLock { $0 } == 1)
+}

@@ -21,7 +21,7 @@ struct ProfileView: View {
     @State private var editing: Profile.Fact?
 
     /// Section titles for the kinds `Profile` knows; anything else shows its raw kind.
-    private static let titles = ["income": "Income", "housing": "Housing", "tuition": "Tuition", "loan": "Loans", "account": "Accounts"]
+    static let titles = ["income": "Income", "housing": "Housing", "tuition": "Tuition", "loan": "Loans", "account": "Accounts"]
 
     /// The kinds in the order `Profile.facts` sorted them.
     private var kinds: [String] {

@@ -18,6 +18,9 @@ struct AskView: View {
     /// The clarifying question the model is waiting on, if any.
     @State private var waiting: Waiting?
     @State private var resetDone = false
+    /// The Saved answers menu as it was when the last answer came back, to say in plain words
+    /// what that answer assumed.
+    @State private var entries: [SavedEntry] = []
 
     /// A question on screen, and the way to hand the tapped reply back to the paused model.
     struct Waiting {
@@ -58,9 +61,22 @@ struct AskView: View {
                 Section {
                     Text(Self.answer(trace))
                     // Only the cloud model exists for now; on-device models come later.
-                    Label("Cloud", systemImage: "cloud")
+                    Label(trace.model == "scripted" ? "Scripted (test)" : "Cloud", systemImage: trace.model == "scripted" ? "hammer" : "cloud")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    // A quick question answered from memory instead of asking can assume wrong,
+                    // so say what was assumed and link to where it can be fixed.
+                    ForEach(Array(trace.clarifications.filter(\.answeredFromMemory).enumerated()), id: \.offset) { _, asked in
+                        let entry = entries.first { $0.covers(asked.factKey) }
+                        NavigationLink {
+                            SavedAnswersView(database: database, opening: entry?.id)
+                                .navigationTitle("Saved answers")
+                        } label: {
+                            Label("Assumed \"\(entry?.assumed ?? asked.answer ?? "")\" for \"\(asked.question)\"", systemImage: "lightbulb")
+                                .font(.caption)
+                        }
+                        .accessibilityIdentifier("assumed-line")
+                    }
                 }
                 Section {
                     DisclosureGroup("Show work") {
@@ -81,6 +97,13 @@ struct AskView: View {
                 }
             }
             Section {
+                NavigationLink {
+                    SavedAnswersView(database: database)
+                        .navigationTitle("Saved answers")
+                } label: {
+                    Label("Saved answers", systemImage: "tray.full")
+                }
+                .disabled(isAsking)
                 Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
                     resetDone = (try? AskUser.reset(database)) != nil
                 }
@@ -100,7 +123,12 @@ struct AskView: View {
     private func ask() {
         let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isAsking else { return }
-        guard let key = ClaudeBackend.apiKey() else {
+        var backend: (any ModelBackend)? = ClaudeBackend.apiKey().map { ClaudeBackend(apiKey: $0) }
+        #if DEBUG
+        // UI tests launch with -scriptedModel YES, so they never call a paid model.
+        if ScriptedModel.isOn { backend = ScriptedModel() }
+        #endif
+        guard let backend else {
             // No key means no answer; say so instead of failing quietly.
             trace = nil
             missingKey = true
@@ -115,7 +143,9 @@ struct AskView: View {
             }
         }
         Task {
-            trace = await Assistant(backend: ClaudeBackend(apiKey: key), database: database, askPerson: askPerson).ask(text)
+            let answered = await Assistant(backend: backend, database: database, askPerson: askPerson).ask(text)
+            entries = (try? SavedEntry.all(in: database)) ?? []
+            trace = answered
             isAsking = false
         }
     }
