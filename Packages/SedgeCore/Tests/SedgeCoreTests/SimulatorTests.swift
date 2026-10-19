@@ -206,6 +206,62 @@ func paydays(_ days: [Simulator.Day], from opening: Double) -> [String] {
     #expect(paydays(stopped, from: 1000).isEmpty)
 }
 
+/// Pay on the last business day of the month. When February ends on a weekend its pay comes
+/// on Friday (Feb 27, 2026; Feb 26, 2027), so March's pay is projected on that day and on
+/// Mar 30 it hasn't come yet. That is a weekend shift, not a late or stopped
+/// paycheck: it is projected tomorrow (Mar 31), the months after are kept, and
+/// `recurring_charges` still lists it as monthly income.
+@Test(arguments: [
+    (asOf: "2026-03-30", pay: ["2025-12-31", "2026-01-30", "2026-02-27"], expected: ["2026-03-31", "2026-04-27"]),
+    (asOf: "2027-03-30", pay: ["2026-12-31", "2027-01-29", "2027-02-26"], expected: ["2027-03-31", "2027-04-26"]),
+])
+func weekendShiftedPaycheckIsOnTime(asOf: String, pay: [String], expected: [String]) throws {
+    let database = try seriesDatabase(asOf: asOf, paydays: pay, paycheck: 800, checking: 1000)
+    // The projected dates stay where `Simulator.dueDay` puts them (the 27th or 26th):
+    // only the late/stopped decision is checked here.
+    #expect(paydays(try simulate(database, days: 30), from: 1000) == expected)
+    let income = rows(try call("recurring_charges", ["kind": "income"], on: database), "series")
+    #expect(income.count == 1)
+    #expect(income.first?["store"] as? String == "Acme Payroll")
+    #expect(income.first?["cadence"] as? String == "monthly")
+    #expect(income.first?["amount"] as? Double == 800)
+}
+
+/// The weekend allowance has a limit: monthly pay projected Mar 26 and still missing on Apr 1
+/// (six days, past the 3-day grace plus 2 weekend days) counts as stopped.
+@Test func monthlyPaycheckPastTheWeekendAllowanceStops() throws {
+    let database = try seriesDatabase(asOf: "2027-04-01", paydays: ["2026-12-31", "2027-01-29", "2027-02-26"],
+                                      paycheck: 800, checking: 1000)
+    #expect(paydays(try simulate(database, days: 30), from: 1000).isEmpty)
+}
+
+/// A month-end series whose latest 31-day-month charge was moved off a weekend (May 29) is
+/// due on the 30th, not the 31st: `dueDay` takes the later of Jun 30 and May 29.
+/// docs/assumptions.md says so; this keeps the two in step.
+@Test func monthEndDueDayFollowsLatestLongMonthCharge() {
+    #expect(Simulator.dueDay(["2026-03-31", "2026-04-30", "2026-05-29", "2026-06-30"]) == 30)
+}
+
+/// Projected pay dates aren't moved to business days, so after a Friday Feb 26 payday March's
+/// pay is projected on the 26th while it really comes on the 31st: 5 days early, the most
+/// docs/assumptions.md allows for last-business-day pay.
+@Test func weekendShiftedPaydayProjectsFiveDaysEarly() throws {
+    let latest = try Simulator.date("2027-02-26")
+    let projected = Simulator.monthDay(Simulator.dueDay(["2026-12-31", "2027-01-29", "2027-02-26"]), monthsAfter: 1, latest)
+    let daysOff = Simulator.calendar.dateComponents([.day], from: projected, to: try Simulator.date("2027-03-31")).day!
+    #expect(daysOff == 5)
+}
+
+/// Pay on the 15th: Sunday Mar 15 is paid Friday Mar 13, so April's pay is projected on the
+/// 13th while it really comes on Wednesday the 15th: 2 days early, the most
+/// docs/assumptions.md allows for fixed-day pay that stays in its month.
+@Test func fixedDayPayShiftedEarlyProjectsTwoDaysBefore() throws {
+    let latest = try Simulator.date("2026-03-13")
+    let projected = Simulator.monthDay(Simulator.dueDay(["2026-01-15", "2026-02-13", "2026-03-13"]), monthsAfter: 1, latest)
+    let daysBefore = Simulator.calendar.dateComponents([.day], from: projected, to: try Simulator.date("2026-04-15")).day!
+    #expect(daysBefore == 2)
+}
+
 /// Rent that moves from the 1st to the 5th keeps the 5th, even though April has only 30 days.
 @Test func movedDayInShortMonthIsKept() throws {
     let database = try seriesDatabase(asOf: "2026-04-20", rent: ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-05"])

@@ -10,6 +10,9 @@ public enum Simulator {
     /// weekday counts the same number of times.
     public static let trailingDays = 28
 
+    /// How far a weekend can move a paycheck: a Sunday payday paid on Friday is two days early.
+    static let weekendShiftDays = 2
+
     /// A one-off purchase to try out, such as "$400 on Friday".
     public struct Purchase: Sendable {
         /// Dollars, positive.
@@ -86,6 +89,11 @@ public enum Simulator {
         // How late a charge can be before its series counts as stopped. It reuses the organizer's
         // transfer matching window (3 days) rather than a separate tuned number; change it here if needed.
         let graceStart = calendar.date(byAdding: .day, value: -Organizer.transferWindowDays, to: start)!
+        // A paycheck due on a weekend may come the business day before, and the next month's pay
+        // is then projected from that earlier day (Fri Feb 26 makes Mar 26 while pay comes Mar 31).
+        // So monthly paychecks get the weekend's two days on top of the grace before they count as
+        // stopped. Weekly and biweekly pay falls on the same weekday each time, so a weekend never moves it.
+        let payGraceStart = calendar.date(byAdding: .day, value: -weekendShiftDays, to: graceStart)!
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: start)!
         let weeks = ["weekly": 1, "biweekly": 2]
         for row in try Row.fetchAll(db, sql: """
@@ -111,7 +119,7 @@ public enum Simulator {
                 if day <= start {
                     // Due on or before today and not charged yet. Past the grace the series has
                     // probably stopped; within it the charge is just late, so it is projected tomorrow.
-                    if day < graceStart { break }
+                    if day < (kind == "income" && cadence == "monthly" ? payGraceStart : graceStart) { break }
                     day = tomorrow
                 }
                 scheduled[text(day), default: []].append(
