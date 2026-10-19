@@ -206,6 +206,35 @@ func paydays(_ days: [Simulator.Day], from opening: Double) -> [String] {
     #expect(paydays(stopped, from: 1000).isEmpty)
 }
 
+/// Pay on the last business day of the month. When February ends on a weekend its pay comes
+/// on Friday (Feb 27, 2026; Feb 26, 2027), so March's pay is projected on that day and on
+/// Mar 30 it hasn't come yet. That is a weekend shift, not a late or stopped
+/// paycheck: it is projected tomorrow (Mar 31), the months after are kept, and
+/// `recurring_charges` still lists it as monthly income.
+@Test(arguments: [
+    (asOf: "2026-03-30", pay: ["2025-12-31", "2026-01-30", "2026-02-27"], expected: ["2026-03-31", "2026-04-27"]),
+    (asOf: "2027-03-30", pay: ["2026-12-31", "2027-01-29", "2027-02-26"], expected: ["2027-03-31", "2027-04-26"]),
+])
+func weekendShiftedPaycheckIsOnTime(asOf: String, pay: [String], expected: [String]) throws {
+    let database = try seriesDatabase(asOf: asOf, paydays: pay, paycheck: 800, checking: 1000)
+    // The projected dates stay where `Simulator.dueDay` puts them (the 27th or 26th):
+    // only the late/stopped decision is checked here.
+    #expect(paydays(try simulate(database, days: 30), from: 1000) == expected)
+    let income = rows(try call("recurring_charges", ["kind": "income"], on: database), "series")
+    #expect(income.count == 1)
+    #expect(income.first?["store"] as? String == "Acme Payroll")
+    #expect(income.first?["cadence"] as? String == "monthly")
+    #expect(income.first?["amount"] as? Double == 800)
+}
+
+/// The weekend allowance has a limit: monthly pay projected Mar 26 and still missing on Apr 1
+/// (six days, past the 3-day grace plus 2 weekend days) counts as stopped.
+@Test func monthlyPaycheckPastTheWeekendAllowanceStops() throws {
+    let database = try seriesDatabase(asOf: "2027-04-01", paydays: ["2026-12-31", "2027-01-29", "2027-02-26"],
+                                      paycheck: 800, checking: 1000)
+    #expect(paydays(try simulate(database, days: 30), from: 1000).isEmpty)
+}
+
 /// Rent that moves from the 1st to the 5th keeps the 5th, even though April has only 30 days.
 @Test func movedDayInShortMonthIsKept() throws {
     let database = try seriesDatabase(asOf: "2026-04-20", rent: ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-05"])
