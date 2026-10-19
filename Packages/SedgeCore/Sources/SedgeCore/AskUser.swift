@@ -101,9 +101,15 @@ public enum AskUser {
             return saved
         }
         let values = try Profile.Correction.order(Column("id")).fetchAll(db)
-            .filter { key == $0.kind || key.hasPrefix($0.kind + "_") || key == factKey($0.id) }
+            .filter { covers(kind: $0.kind, id: $0.id, key: key) }
             .map(\.value)
         return values.isEmpty ? nil : Tool.json(values)
+    }
+
+    /// True when a profile correction with this kind and id answers questions saved under
+    /// `key`. Public so the app's Saved answers menu can say which correction an answer used.
+    public static func covers(kind: String, id: String, key: String) -> Bool {
+        key == kind || key.hasPrefix(kind + "_") || key == factKey(id)
     }
 
     /// Saves (or replaces) the answer for its fact. The date is the dataset's today, never
@@ -119,10 +125,22 @@ public enum AskUser {
     }
 
     /// Every saved answer as (fact_key, question, answer), in key order.
-    static func saved(_ database: SedgeDatabase) throws -> [(key: String, question: String, answer: String)] {
+    public static func saved(_ database: SedgeDatabase) throws -> [(key: String, question: String, answer: String)] {
         try database.dbQueue.read { db in
             try Row.fetchAll(db, sql: "SELECT fact_key, question, answer FROM saved_answers ORDER BY fact_key").map { ($0[0], $0[1], $0[2]) }
         }
+    }
+
+    /// Replaces the saved answer for `key` with the person's own wording (Saved answers menu).
+    public static func change(_ key: String, to answer: String, in database: SedgeDatabase) throws {
+        try database.dbQueue.write { db in
+            try db.execute(sql: "UPDATE saved_answers SET answer = ? WHERE fact_key = ?", arguments: [answer, key])
+        }
+    }
+
+    /// Forgets one saved answer, so its question is asked again next time.
+    public static func forget(_ key: String, in database: SedgeDatabase) throws {
+        try database.dbQueue.write { db in try db.execute(sql: "DELETE FROM saved_answers WHERE fact_key = ?", arguments: [key]) }
     }
 
     /// Forgets every saved answer, so each question may be asked again (the app's

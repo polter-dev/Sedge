@@ -63,6 +63,12 @@ public enum Profile {
         try database.dbQueue.write { db in try Correction(id: id, kind: kind, value: value).upsert(db) }
     }
 
+    /// Drops the person's correction, so the worked-out fact (if any) shows again and the
+    /// questions it was answering are asked again.
+    public static func removeCorrection(id: String, in database: SedgeDatabase) throws {
+        _ = try database.dbQueue.write { db in try Correction.deleteOne(db, key: id) }
+    }
+
     /// Every fact with corrections applied, in the order `kinds` lists them.
     public static func facts(in database: SedgeDatabase) throws -> [Fact] {
         try database.dbQueue.read { db in try facts(db) }

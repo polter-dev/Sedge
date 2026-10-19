@@ -145,6 +145,82 @@ final class SedgeUITests: XCTestCase {
         }
     }
 
+    /// Saved answers with the scripted model (no network, no paid model): an answer made from a
+    /// saved reply says what it assumed; changing that reply in the menu changes the next answer,
+    /// and removing it makes the next question ask again. A profile correction shows in the
+    /// menu too, and is removed at the end so Maya's saved file stays as it was.
+    @MainActor
+    func testSavedAnswersMenuWithScriptedModel() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-scriptedModel", "YES"]
+        app.launch()
+
+        // A correction, so the menu shows both kinds of entry: saving a fact unchanged still makes one.
+        app.tabBars.buttons["About you"].tap()
+        let fact = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+        XCTAssertTrue(fact.waitForExistence(timeout: 10))
+        fact.tap()
+        app.buttons["Save"].tap()
+
+        app.tabBars.buttons["Ask"].tap()
+        app.buttons["Reset saved questions"].tap() // start from nothing remembered
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText("How much do I spend on food?")
+        let ask = app.collectionViews.buttons["Ask"]
+        let card = app.staticTexts["clarify-question"]
+        let assumed = app.buttons["assumed-line"]
+        /// The scripted answer, which repeats the reply ask_user got back.
+        func answer(_ reply: String) -> XCUIElement {
+            app.staticTexts["Groceries count as food: \(reply)."]
+        }
+
+        // First time: the person is asked, so nothing is assumed.
+        ask.tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 10), "The scripted model didn't ask")
+        app.buttons["Yes, groceries too"].tap()
+        XCTAssertTrue(answer("Yes, groceries too").waitForExistence(timeout: 10))
+        XCTAssertFalse(assumed.exists)
+
+        // Second time: answered from the saved reply, and the answer says so.
+        ask.tap()
+        XCTAssertTrue(assumed.waitForExistence(timeout: 10), "No assumed line")
+        XCTAssertFalse(card.exists, "Asked again despite the saved answer")
+        XCTAssertTrue(assumed.label.contains("Yes, groceries too"))
+        attachScreenshot(app, "saved-answers-assumed-line")
+
+        // The line opens that entry in the menu, ready to change.
+        assumed.tap()
+        let alert = app.alerts["Change answer"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "The entry didn't open")
+        let reply = alert.textFields.firstMatch
+        reply.tap()
+        reply.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 40) + "No, eating out only")
+        alert.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["No, eating out only"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Questions about income"].exists, "The correction isn't in the menu")
+        attachScreenshot(app, "saved-answers-menu")
+        app.navigationBars["Saved answers"].buttons.element(boundBy: 0).tap() // back to Ask
+
+        // The next ask uses the changed reply.
+        ask.tap()
+        XCTAssertTrue(answer("No, eating out only").waitForExistence(timeout: 10), "The changed answer wasn't used")
+
+        // Remove both entries; the question is then asked again.
+        app.buttons["Saved answers"].tap()
+        for entry in ["Should food include groceries?", "Questions about income"] {
+            let row = app.staticTexts[entry]
+            XCTAssertTrue(row.waitForExistence(timeout: 5))
+            row.swipeLeft()
+            app.buttons["Remove"].tap()
+            XCTAssertFalse(row.waitForExistence(timeout: 2), "\(entry) wasn't removed")
+        }
+        app.navigationBars["Saved answers"].buttons.element(boundBy: 0).tap()
+        ask.tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 10), "Not asked again after removing the answer")
+        app.buttons["Skip"].tap() // a skipped question isn't saved
+    }
+
     /// Keeps a screenshot in the test results, named for what it shows.
     @MainActor
     private func attachScreenshot(_ app: XCUIApplication, _ name: String) {
