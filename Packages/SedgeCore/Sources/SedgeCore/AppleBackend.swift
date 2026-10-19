@@ -10,7 +10,8 @@ import FoundationModels
 /// next `next` delivers the loop's result back to the waiting tool, so the session carries on
 /// exactly as if it had run the tool itself. Calls the model makes together in one response
 /// (the session runs them at the same time) go out as one turn, the way Claude sends them, so
-/// the loop's reply limit costs both models the same for the same calls.
+/// the loop's reply limit costs both models the same for the same calls. If one of them is more
+/// than a second late, the turn goes without it and is marked split, which the trace counts.
 ///
 /// It is an actor because it remembers the conversation in progress between `next` calls.
 /// One backend answers one question at a time, which is how the runner and the app use it.
@@ -50,6 +51,8 @@ public actor AppleBackend: ModelBackend {
     private var task: Task<Void, Never>?
     /// Tool calls the session is waiting on, by call id.
     private var waiting: [String: CheckedContinuation<String, any Error>] = [:]
+    /// Calls of the latest group that a split turn went out without (see `next`), by `key`.
+    private var leftover: [String] = []
     /// The id the final answer goes out under, so its rejection can be told from a tool result.
     static let finalID = "final"
 
@@ -151,9 +154,16 @@ public actor AppleBackend: ModelBackend {
                 waiting[call.id] = continuation
                 calls.append(call)
                 // The first call's response says how many more calls are on their way. It is
-                // trusted only if it holds that call, in case the transcript is behind.
-                if calls.count == 1, let latest = session?.latestCalls(), latest.count > 1, latest.contains(Self.key(call)) {
-                    together = latest
+                // trusted only if it holds that call, in case the transcript is behind. After a
+                // split turn, only the group's calls still to come are waited for.
+                if calls.count == 1 {
+                    if leftover.contains(Self.key(call)) {
+                        together = leftover
+                    } else if let latest = session?.latestCalls(), latest.contains(Self.key(call)) {
+                        together = latest
+                    }
+                }
+                if calls.count == 1, together.count > 1 {
                     // The calls start at the same moment. If one hasn't come after a second,
                     // the session is running them one at a time (it would wait for this
                     // result first), so the turn goes out with what has arrived.
@@ -170,6 +180,7 @@ public actor AppleBackend: ModelBackend {
                 // final_answer call so the loop checks it exactly like Claude's. The session
                 // stays open in case the loop rejects it.
                 let call = ToolCall(id: Self.finalID, name: FinalAnswer.toolName, input: Data(content.jsonString.utf8))
+                leftover = []
                 return turn(calls: [call], stop: "tool_use")
             case .done(.failure(let error)):
                 stop()
@@ -181,7 +192,13 @@ public actor AppleBackend: ModelBackend {
         // The session runs calls at the same time, so they can arrive in any order; put them
         // back in the model's order so the loop runs (and limits) them the same way every time.
         calls.sort { (together.firstIndex(of: Self.key($0)) ?? .max) < (together.firstIndex(of: Self.key($1)) ?? .max) }
-        return turn(calls: calls, stop: "tool_use")
+        // Calls of the group that didn't make it in time. They will come as one more turn, which
+        // Claude wouldn't take for the same calls, so the turn is marked for the trace to count.
+        leftover = together
+        for call in calls { leftover.firstIndex(of: Self.key(call)).map { leftover.remove(at: $0) } }
+        var result = turn(calls: calls, stop: "tool_use")
+        result.splitTurn = !leftover.isEmpty
+        return result
     }
 
     private static func key(_ call: ToolCall) -> String {
@@ -192,6 +209,7 @@ public actor AppleBackend: ModelBackend {
     /// the same tools as Claude's cloud setup: the data tools and ask_user.
     private func start(system: String, question: String) {
         stop()
+        leftover = []
         let (stream, feed) = AsyncStream<Event>.makeStream()
         events = stream
         self.feed = feed

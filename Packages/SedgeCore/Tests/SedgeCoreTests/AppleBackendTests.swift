@@ -117,7 +117,7 @@ private actor Count {
     }
     let trace = await Assistant(backend: backend, database: try organizedPersona("maya")).ask("?")
     #expect(trace.error == nil && trace.finalAnswer?.value == 100.44, "error=\(trace.error ?? "nil") turns=\(trace.turns)")
-    #expect(trace.turns == 3)
+    #expect(trace.turns == 3 && trace.splitTurns == 0)
     // In the model's order, so the call refused for being over the limit is always the seventh.
     let merchants = trace.toolCalls.prefix(7).map {
         (try? JSONSerialization.jsonObject(with: Data($0.input.utf8)) as? [String: Any])?["merchant"] as? String
@@ -126,7 +126,8 @@ private actor Count {
     #expect(trace.toolCalls.map { $0.error == "No tool calls left." } == Array(repeating: false, count: 6) + [true, false, false])
 }
 
-@Test func callsRunOneAtATimeStillGetAnswered() async throws {
+// A time limit, so a broken fallback fails instead of hanging the suite.
+@Test(.timeLimit(.minutes(1))) func callsRunOneAtATimeStillGetAnswered() async throws {
     // A session that says two calls were made together but runs them one after the other, so
     // the second only comes once the first has its result.
     let two = Array(sevenStores.prefix(2))
@@ -140,6 +141,42 @@ private actor Count {
     let trace = await Assistant(backend: backend, database: try organizedPersona("maya")).ask("?")
     #expect(trace.error == nil && trace.finalAnswer?.value == 100.44)
     #expect(trace.toolCalls.map(\.name) == ["total_spent", "total_spent", FinalAnswer.toolName])
+    // The second call waited out the second once, as an extra turn the trace records.
+    #expect(trace.turns == 3 && trace.splitTurns == 1, "turns=\(trace.turns) split=\(trace.splitTurns)")
+}
+
+/// Two calls the session started together; the second reaches its tool after `delayMs`.
+private func twoCallsWithSecondLate(delayMs: Int) async throws -> Trace {
+    let two = Array(sevenStores.prefix(2))
+    let backend = AppleBackend { _, tools in
+        .init(respond: { _ in
+            let tool = try #require(tools.first { $0.name == "total_spent" } as? AppleTool)
+            try await withThrowingTaskGroup(of: String.self) { group in
+                group.addTask { try await tool.call(arguments: GeneratedContent(json: two[0])) }
+                group.addTask {
+                    try await Task.sleep(for: .milliseconds(delayMs))
+                    return try await tool.call(arguments: GeneratedContent(json: two[1]))
+                }
+                try await group.waitForAll()
+            }
+            return try GeneratedContent(json: #"{"answer": "You spent $100.44.", "value": 100.44, "confidence": 0.9}"#)
+        }, latestCalls: { two.map { AppleBackend.key(name: "total_spent", input: $0) } })
+    }
+    return await Assistant(backend: backend, database: try organizedPersona("maya")).ask("?")
+}
+
+@Test(.timeLimit(.minutes(1))) func callLateWithinASecondStaysInTheTurn() async throws {
+    let trace = try await twoCallsWithSecondLate(delayMs: 900)
+    #expect(trace.error == nil && trace.finalAnswer?.value == 100.44)
+    #expect(trace.turns == 2 && trace.splitTurns == 0, "turns=\(trace.turns) split=\(trace.splitTurns)")
+}
+
+// Past the one-second wait the turn goes out without the late call, which then costs Apple a
+// reply Claude wouldn't use. The split is recorded so eval results can show and filter it.
+@Test(.timeLimit(.minutes(1))) func callLaterThanASecondSplitsTheTurnAndIsRecorded() async throws {
+    let trace = try await twoCallsWithSecondLate(delayMs: 1500)
+    #expect(trace.error == nil && trace.finalAnswer?.value == 100.44)
+    #expect(trace.turns == 3 && trace.splitTurns == 1, "turns=\(trace.turns) split=\(trace.splitTurns)")
 }
 
 @Test func askUserHasAnAppleSchema() {

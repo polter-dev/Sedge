@@ -146,7 +146,7 @@ struct AskView: View {
             "result": "{\"total\":100.44,\"count\":6,\"rows\":[{\"date\":\"2026-06-15\",\"store\":\"Netflix\",\"amount\":17.99,\"kind\":\"spending\"}]}"},
            {"name": "final_answer", "input": "{\"answer\":\"You spent $100.44 at Netflix this year.\"}",
             "valid": true, "resultBytes": 2, "result": "{}"}],
-         "turns": 2, "latencySeconds": 4.2, "inputTokens": 3000, "outputTokens": 200,
+         "turns": 2, "splitTurns": 0, "latencySeconds": 4.2, "inputTokens": 3000, "outputTokens": 200,
          "finalAnswer": {"answer": "You spent $100.44 at Netflix this year.", "value": 100.44},
          "formatError": false, "text": ""}
         """#.utf8))

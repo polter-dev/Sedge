@@ -39,6 +39,9 @@ public struct ModelTurn: Sendable {
     /// The backend's own copy of the reply, sent back unchanged on the next turn.
     /// Claude needs this because its hidden reasoning blocks must come back exactly as given.
     public var raw: Data
+    /// True when this turn holds only some of the calls the model made together, because the
+    /// rest were late (Apple's backend); the rest come as one more turn. Claude's are never split.
+    public var splitTurn = false
 
     public init(text: String, toolCalls: [ToolCall], stopReason: String, refusalCategory: String? = nil,
                 model: String, inputTokens: Int, outputTokens: Int, raw: Data) {

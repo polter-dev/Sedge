@@ -66,6 +66,7 @@ public struct Assistant: Sendable {
             repliesLeft -= 1
             let turn = try await backend.next(system: system, messages: messages)
             trace.turns += 1
+            if turn.splitTurn { trace.splitTurns += 1 }
             trace.inputTokens += turn.inputTokens
             trace.outputTokens += turn.outputTokens
             trace.reportedModel = turn.model
@@ -145,6 +146,10 @@ public struct Trace: Codable, Sendable {
     public var clarifications: [Clarification] = []
     /// How many replies the model gave.
     public var turns = 0
+    /// How many of those replies came from calls made together being split into extra turns
+    /// (see `ModelTurn.splitTurn`). 0 normally, and always 0 for Claude. Each one cost a
+    /// reply the model didn't choose to take, so a run with any can be filtered out.
+    public var splitTurns = 0
     public var latencySeconds = 0.0
     public var inputTokens = 0
     public var outputTokens = 0

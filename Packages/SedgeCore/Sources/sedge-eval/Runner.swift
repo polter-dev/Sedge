@@ -48,6 +48,8 @@ struct ResultLine: Codable {
     var latencySeconds: Double
     var inputTokens: Int
     var outputTokens: Int
+    /// Everything about the answer, e.g. `turns` and `split_turns` (turns Apple's backend
+    /// spent because calls made together arrived too far apart; 0 normally, always 0 for Claude).
     var trace: Trace
 }
 

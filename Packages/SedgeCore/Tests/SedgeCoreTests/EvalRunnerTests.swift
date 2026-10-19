@@ -227,6 +227,8 @@ private func resumeAfterDamagingManifest(_ damage: (URL) throws -> Void) async t
     let traces = try String(contentsOf: out.appending(path: "results.jsonl"), encoding: .utf8).split(separator: "\n")
         .map { (try JSONSerialization.jsonObject(with: Data($0.utf8)) as! [String: Any])["trace"] as! [String: Any] }
     #expect(traces.map { $0["asked_user"] as? Bool } == [true, true, false])
+    // Claude's turns are never split, and the count is written for every answer.
+    #expect(traces.map { $0["split_turns"] as? Int } == [0, 0, 0])
     let asked = traces.map { ($0["clarifications"] as! [[String: Any]]).first }
     #expect(asked[0]?["fact_key"] as? String == "food_includes_groceries" && asked[0]?["answer"] as? String == "Yes, groceries too")
     // b has no scripted reply, and a's saved answer was forgotten, so nobody answered it.
