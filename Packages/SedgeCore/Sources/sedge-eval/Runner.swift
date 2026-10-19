@@ -86,7 +86,7 @@ struct Manifest: Codable {
         [("config", config), ("model", model), ("effort", effort ?? "none"),
          ("use_graph", "\(flags.useGraph)"), ("use_reconciliation", "\(flags.useReconciliation)"),
          ("clarify_replies", "\(clarifyReplies)"),
-         ("system prompt", promptSha256), ("tool set", toolSetSha256), ("question bank", questionsSha256),
+         ("system prompt", promptSha256), ("tool set version", toolSetVersion), ("tool set", toolSetSha256), ("question bank", questionsSha256),
          ("git commit", gitCommit)]
     }
 }
