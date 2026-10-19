@@ -252,6 +252,16 @@ func weekendShiftedPaycheckIsOnTime(asOf: String, pay: [String], expected: [Stri
     #expect(daysOff == 5)
 }
 
+/// Pay on the 15th: Sunday Mar 15 is paid Friday Mar 13, so April's pay is projected on the
+/// 13th while it really comes on Wednesday the 15th: 2 days early, the most
+/// docs/assumptions.md allows for fixed-day pay that stays in its month.
+@Test func fixedDayPayShiftedEarlyProjectsTwoDaysBefore() throws {
+    let latest = try Simulator.date("2026-03-13")
+    let projected = Simulator.monthDay(Simulator.dueDay(["2026-01-15", "2026-02-13", "2026-03-13"]), monthsAfter: 1, latest)
+    let daysBefore = Simulator.calendar.dateComponents([.day], from: projected, to: try Simulator.date("2026-04-15")).day!
+    #expect(daysBefore == 2)
+}
+
 /// Rent that moves from the 1st to the 5th keeps the 5th, even though April has only 30 days.
 @Test func movedDayInShortMonthIsKept() throws {
     let database = try seriesDatabase(asOf: "2026-04-20", rent: ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-05"])
