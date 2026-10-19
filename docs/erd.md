@@ -67,7 +67,7 @@ erDiagram
     profile_facts {
         text id PK "kind plus subject, e.g. income:merchant:northpoint services payroll"
         text kind "not null: income, housing, tuition, loan or account"
-        text value "not null, JSON: name, type, amount, schedule, day, monthly_average, total"
+        text value "not null, JSON: name, type, amount, schedule, day, monthly_average, paid, refunded, payments, refunds"
         double confidence "not null, 0 to 1"
         text evidence "not null, JSON list of transaction ids"
         text rule "not null, which rule found it"
