@@ -166,6 +166,8 @@ public enum Profile {
             let series = group.first { $0.cadence != nil }
             let inSeries = group.filter { $0.cadence != nil }
             let amounts = group.map { abs($0.amount) }
+            // Different calendar months with a charge or deposit here ("2026-03" from "2026-03-15").
+            let monthsSeen = Set(group.map { $0.date.prefix(7) }).count
             func fact(_ kind: String, _ value: Value, _ confidence: Double, _ evidence: [Line], _ rule: String) {
                 facts.append(Fact(id: kind + ":" + first.merchant, kind: kind, value: value,
                                   confidence: confidence, evidence: evidence.map(\.id), rule: rule))
@@ -176,7 +178,7 @@ public enum Profile {
                 if let series {
                     fact("income", Value(name: first.store, amount: cents(series.typical!), schedule: series.cadence,
                                          monthly_average: average), seriesConfidence, inSeries, "recurring_deposit")
-                } else if Set(group.map { $0.date.prefix(7) }).count >= 3 {
+                } else if monthsSeen >= 3 {
                     // Deposits from one payer in three or more months, but not on a cadence or not
                     // a steady amount: gig or commission pay.
                     fact("income", Value(name: first.store, amount: cents(median(amounts)), schedule: "irregular",
@@ -185,12 +187,19 @@ public enum Profile {
                 continue
             }
 
-            if first.category == "category:housing", let series {
+            if first.category == "category:housing" {
                 // HOA dues are housing too but are neither rent nor a mortgage, so they are skipped.
                 guard let type = says(["mortgage"]) ? "mortgage" : says(rentWords) ? "rent" : nil else { continue }
-                fact("housing", Value(name: first.store, type: type, amount: cents(series.typical!), schedule: series.cadence,
-                                      day: series.cadence == "monthly" ? usualDay(inSeries) : nil),
-                     keywordConfidence, inSeries, "recurring_housing_bill")
+                if let series {
+                    fact("housing", Value(name: first.store, type: type, amount: cents(series.typical!), schedule: series.cadence,
+                                          day: series.cadence == "monthly" ? usualDay(inSeries) : nil),
+                         keywordConfidence, inSeries, "recurring_housing_bill")
+                } else if monthsSeen >= 3 {
+                    // Rent or a mortgage paid in three or more months but not steadily (utilities
+                    // included, partial or split payments) is still housing, like irregular income.
+                    fact("housing", Value(name: first.store, type: type, amount: cents(median(amounts)), schedule: "irregular"),
+                         guessConfidence, group, "repeated_housing_bill")
+                }
             } else if says(tuitionWords) || first.category == "category:education" && amounts.max()! >= tuitionMinimum {
                 let named = says(tuitionWords)
                 let paid = named ? group : group.filter { abs($0.amount) >= tuitionMinimum }

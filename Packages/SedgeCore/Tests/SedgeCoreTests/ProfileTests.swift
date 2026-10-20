@@ -160,3 +160,55 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(bursar["paid"] as? Double == 7350.65 && bursar["refunded"] as? Double == 1200.30)
     #expect((bursar["payments"] as? [Any])?.count == 2 && (bursar["refunds"] as? [Any])?.count == 1)
 }
+
+/// A checking account with only the given (id, date, name, amount) charges, organized.
+func housingData(_ charges: [(String, String, String, Double)]) throws -> SedgeDatabase {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [Account(account_id: "chk", name: "Checking", type: "depository", balances: Balances())],
+        transactions: charges.map { Transaction(transaction_id: $0.0, account_id: "chk", date: $0.1, name: $0.2, amount: $0.3, pending: false) },
+        asOf: "2026-06-30")
+    try Organizer.organize(database)
+    return database
+}
+
+/// Rent with utilities folded in: one landlord, four months, amounts too far apart for a steady series.
+func irregularRent() throws -> SedgeDatabase {
+    try housingData([("r1", "2026-02-01", "MAPLE COURT RENT", 812.40), ("r2", "2026-03-01", "MAPLE COURT RENT", 1210.15),
+                     ("r3", "2026-04-01", "MAPLE COURT RENT", 640.00), ("r4", "2026-05-01", "MAPLE COURT RENT", 990.75)])
+}
+
+@Test func rentThatChangesAmountIsStillHousing() throws {
+    let housing = try Profile.facts(in: irregularRent()).filter { $0.kind == "housing" }
+    // The median (upper middle of 640.00, 812.40, 990.75, 1210.15), in cents.
+    #expect(housing.map(\.value) == [Profile.Value(name: "Maple Court Rent", type: "rent", amount: 990.75, schedule: "irregular")])
+    #expect(housing.first?.rule == "repeated_housing_bill" && housing.first?.confidence == Profile.guessConfidence)
+    #expect(housing.first?.evidence.sorted() == ["r1", "r2", "r3", "r4"])
+}
+
+@Test func rentInOnlyOneOrTwoMonthsIsNotHousing() throws {
+    // Three payments, but only two months; and one month at another landlord.
+    let database = try housingData([("a1", "2026-03-01", "MAPLE COURT RENT", 900), ("a2", "2026-03-15", "MAPLE COURT RENT", 300),
+                                    ("a3", "2026-04-01", "MAPLE COURT RENT", 1400), ("b1", "2026-05-01", "BIRCH LANE APARTMENTS", 1100)])
+    #expect(try profile(database)["housing"] == nil)
+}
+
+@Test func steadyRentKeepsTheRecurringRule() throws {
+    let database = try housingData((1...4).map { ("s\($0)", "2026-0\($0 + 1)-03", "MAPLE COURT RENT", 1500) })
+    let housing = try Profile.facts(in: database).filter { $0.kind == "housing" }
+    #expect(housing.map(\.value) == [Profile.Value(name: "Maple Court Rent", type: "rent", amount: 1500, schedule: "monthly", day: 3)])
+    #expect(housing.first?.rule == "recurring_housing_bill" && housing.first?.confidence == Profile.keywordConfidence)
+    #expect(housing.first?.evidence.sorted() == ["s1", "s2", "s3", "s4"])
+}
+
+@Test func personsHousingCorrectionReplacesIrregularRent() throws {
+    let database = try irregularRent()
+    let id = try #require(try Profile.facts(in: database).first { $0.kind == "housing" }).id
+    let mine = Profile.Value(name: "Maple Court Rent", type: "rent", amount: 950, schedule: "monthly", day: 1)
+    try Profile.correct(id: id, kind: "housing", value: mine, in: database)
+    try Organizer.organize(database)
+
+    let housing = try Profile.facts(in: database).filter { $0.kind == "housing" }
+    #expect(housing.map(\.value) == [mine])
+    #expect(housing.first?.rule == "user_correction" && housing.first?.confidence == 1)
+}
