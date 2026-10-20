@@ -44,7 +44,8 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A recurring series of deposits from one payer is income. — `Profile.swift` `infer`
 - Deposits from one payer in three or more months, but not on a cadence or not steady, are irregular income. — `Profile.swift` `infer`
 - Monthly income is everything from that payer divided by the months in the data; a partial month counts as a whole one. — `Profile.swift` `infer`
-- A recurring housing bill is a mortgage if its name says "mortgage", rent if it says rent, apartment, property management, lease or leasing. — `Profile.swift` `rentWords`, `infer`
+- A housing bill is a mortgage if its name says "mortgage", rent if it says rent, apartment, property management, lease or leasing. — `Profile.swift` `rentWords`, `infer`
+- A rent or mortgage bill with no steady series, paid in three or more different months, is still housing: schedule irregular, amount the middle payment. In one or two months it is not housing. — `Profile.swift` `infer`
 - HOA dues are not counted as housing (neither rent nor mortgage). — `Profile.swift` `infer`
 - A charge named tuition or bursar is tuition. — `Profile.swift` `tuitionWords`
 - One education charge of $1,000 or more is tuition, not books or fees. — `Profile.swift` `tuitionMinimum`
