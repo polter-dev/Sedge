@@ -16,8 +16,7 @@ public struct Clarification: Codable, Sendable, Equatable {
 }
 
 /// How the person is reached: shown the question, and their reply handed back (nil if they
-/// skip it). The app shows a card and waits for a tap; the eval runner replies from the
-/// question bank's `clarify_reply`.
+/// skip it). Whatever runs `ask_user` supplies it, e.g. a card in the app that waits for a tap.
 public typealias AskPerson = @Sendable (Clarification) async -> String?
 
 /// The `ask_user` tool. It isn't one of the read-only `Tool`s: it waits for the person, and
@@ -52,7 +51,7 @@ public enum AskUser {
 
     /// Answers one `ask_user` call: from memory if the fact is already known, otherwise by
     /// asking the person and saving what they say. Returns the tool's JSON result and, for a
-    /// good call, what happened, for the trace.
+    /// good call, what happened.
     static func run(_ input: Data, database: SedgeDatabase, askPerson: AskPerson?) async -> (content: String, clarification: Clarification?) {
         struct Input: Decodable { let question: String; let options: [String]; let fact_key: String }
         // A nil field is left out of the JSON, so a fresh answer is just {"answer": ...}.
@@ -144,7 +143,7 @@ public enum AskUser {
     }
 
     /// Forgets every saved answer, so each question may be asked again (the app's
-    /// "Reset saved questions", and the eval runner before each question).
+    /// "Reset saved questions").
     public static func reset(_ database: SedgeDatabase) throws {
         try database.dbQueue.write { db in try db.execute(sql: "DELETE FROM saved_answers") }
     }

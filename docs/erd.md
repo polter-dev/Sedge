@@ -125,9 +125,8 @@ erDiagram
 - **saved_answers** holds the person's replies to `ask_user`, one per `fact_key`, so a
   clarifying question is asked only once. Before asking, `ask_user` checks this table and
   then profile_corrections (a correction whose kind starts the key, e.g. `housing` for
-  `housing_type`). Saved answers are also listed in the system prompt. Nothing rebuilds the
-  table; the Ask screen's "Reset saved questions" clears it, and the eval runner clears it
-  before each question so one question's answer can't reach another.
+  `housing_type`). Nothing rebuilds the table; the Ask screen's "Reset saved questions"
+  clears it.
 
 ## Database files
 

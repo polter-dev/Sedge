@@ -46,6 +46,13 @@ func loadsEachPersona(persona: String, expectedTransactions: Int) throws {
     #expect(try counts(database).accounts == 2)
 }
 
+@Test func asOfLeavesOutLaterTransactions() throws {
+    let database = try SedgeDatabase()
+    try loadPersona("maya", into: database, asOf: "2026-03-31")
+    #expect(try database.asOf() == "2026-03-31")
+    #expect(try database.allTransactions().allSatisfy { $0.date <= "2026-03-31" })
+}
+
 /// A Plaid-shaped sync: a pending charge, then its posted copy, plus Plaid's
 /// extra fields (which must be kept) and fields we don't store (which are ignored).
 @Test func postedTransactionReplacesItsPendingCopy() throws {

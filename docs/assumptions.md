@@ -6,7 +6,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 
 ## Data
 
-- "Today" is the dataset's `as_of` date, never the device clock. — `SystemPrompt.swift` `text(asOf:)`, `Simulator.swift` `simulate`
+- "Today" is the dataset's `as_of` date, never the device clock. — `Simulator.swift` `simulate`
 - The fake personas' today is 2026-06-30. — `Persona.swift` `asOf`
 - One database is one person, so every account in it belongs to the same person. — `Organizer.swift` `reconcile`
 - Dates are calendar days with no time zone. — `Organizer.swift` `calendar`
@@ -82,8 +82,6 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A series that stopped is still listed by recurring_charges, with a next date before today. — `Tools.swift` `recurringCharges`
 - simulate_balance reports the checking account (or the first bank account with a balance) and takes the extra purchase from it; bills there are the ones whose series last used it. — `Tools.swift` `simulateBalance`
 - An answer shows at most 10 rows. — `Tools.swift` `maxRows`
-- A question may use at most 6 data-tool calls. — `Assistant.swift` `maxToolCalls`
 - A fact the person answered is never asked again; a skipped question may be asked next time. — `AskUser.swift` `run`
 - A profile correction answers a question about the same kind of fact ("housing" covers "housing_type"). — `AskUser.swift` `remembered`, `covers`
 - A saved answer or profile correction is used as the answer to related questions without asking; the person can change or remove it in Saved answers, and a removed one is asked again. — `AskUser.swift` `remembered`, `change`, `forget`; `Sedge/SavedAnswersView.swift`
-- The context baseline doesn't mark pending transactions. — `SystemPrompt.swift` `contextData`
