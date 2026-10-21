@@ -121,27 +121,6 @@ func simulate(_ database: SedgeDatabase, days: Int, purchases: [Simulator.Purcha
     #expect(tooMuch["room_left"] as? Double == -156.55)
 }
 
-// MARK: - Backtest
-
-/// Maya's checking only has bills, paychecks and card payments, so from Jun 16 it is projected
-/// to the cent; every account gets one row per day.
-@Test func mayaBacktest() throws {
-    let rows = try Simulator.backtest(persona: "maya", folder: dataDirectory.appending(path: "maya"),
-                                      cutoff: "2026-06-16", days: 14, useReconciliation: true)
-    #expect(rows.count == 14 * 2)
-    #expect(rows.first?.date == "2026-06-17")
-    #expect(rows.filter { $0.account == "maya-checking" }.allSatisfy { $0.projected == $0.actual })
-    // The last day's actual balances are the data's own (as of Jun 30).
-    #expect(rows.filter { $0.date == "2026-06-30" }.map(\.actual) == [1993.45, 138.01])
-}
-
-@Test func backtestStopsAtTheEndOfTheData() {
-    #expect(throws: (any Error).self) {
-        try Simulator.backtest(persona: "maya", folder: dataDirectory.appending(path: "maya"),
-                               cutoff: "2026-06-20", days: 14, useReconciliation: true)
-    }
-}
-
 // MARK: - Month-end series and late charges
 
 /// Checking and a card, today `asOf`: rent of 500 on each of `rent`, a paycheck of `paycheck`

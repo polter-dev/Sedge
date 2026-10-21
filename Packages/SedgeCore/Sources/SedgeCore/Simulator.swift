@@ -191,37 +191,6 @@ public enum Simulator {
         return result
     }
 
-    /// One account on one day of a backtest: what the simulator projected and what really happened.
-    public struct BacktestRow: Sendable {
-        public let persona, cutoff, account, date: String
-        public let projected, actual: Double
-    }
-
-    /// Pretends today is `cutoff`: loads only what was known then, organizes it, projects `days`
-    /// days, and puts each projected balance next to the real one from the full data.
-    /// `folder` holds the persona's `accounts.json` and `transactions.json`.
-    public static func backtest(persona: String, folder: URL, cutoff: String, days: Int,
-                                useReconciliation: Bool) throws -> [BacktestRow] {
-        let last = text(calendar.date(byAdding: .day, value: days, to: try date(cutoff))!)
-        guard last <= Persona.asOf else {
-            throw ToolError("\(cutoff) plus \(days) days ends after the data does (\(Persona.asOf)).")
-        }
-        let accountsURL = folder.appending(path: "accounts.json"), transactionsURL = folder.appending(path: "transactions.json")
-        let database = try SedgeDatabase()
-        try Persona.load(accounts: accountsURL, transactions: transactionsURL, into: database, asOf: cutoff)
-        try Organizer.organize(database, useReconciliation: useReconciliation)
-        let projection = try database.dbQueue.read { db in try simulate(db, days: days) }
-
-        let (accounts, transactions) = try Persona.read(accounts: accountsURL, transactions: transactionsURL)
-        return projection.flatMap { day in
-            Persona.balances(accounts, transactions, on: day.date).compactMap { account in
-                guard let projected = day.balances[account.account_id], let actual = account.balances.current else { return nil }
-                return BacktestRow(persona: persona, cutoff: cutoff, account: account.account_id, date: day.date,
-                                   projected: projected, actual: actual)
-            }
-        }
-    }
-
     /// Dates are calendar days with no time zone, so all date math happens in UTC.
     static let calendar = Organizer.calendar
 
