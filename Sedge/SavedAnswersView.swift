@@ -22,6 +22,14 @@ struct SavedEntry: Identifiable {
     let assumed: String
     let source: Source
 
+    /// The SF Symbol for the row: a speech bubble for a saved reply, the About you icon for a correction.
+    var symbol: String {
+        switch source {
+        case .saved: "text.bubble"
+        case .correction: "person.text.rectangle"
+        }
+    }
+
     /// True when this entry answers questions saved under `key`, by the same rule `ask_user` uses.
     func covers(_ key: String) -> Bool {
         switch source {
@@ -57,21 +65,34 @@ struct SavedAnswersView: View {
     @State private var changing: SavedEntry?
     @State private var draft = ""
     @State private var correcting: Profile.Fact?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         List {
             Section {
                 ForEach(entries) { entry in
                     Button { open(entry) } label: {
-                        VStack(alignment: .leading, spacing: 2) {
+                        let text = VStack(alignment: .leading, spacing: 2) {
                             Text(entry.question)
                             Text(entry.assumed)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+                        // At the largest text sizes the icon squeezes the words, so it is left out.
+                        if dynamicTypeSize.isAccessibilitySize {
+                            text
+                        } else {
+                            Label { text } icon: {
+                                Image(systemName: entry.symbol)
+                                    .foregroundStyle(.tint)
+                            }
+                        }
                     }
                     .foregroundStyle(.primary)
-                    .swipeActions { Button("Remove", role: .destructive) { remove(entry) } }
+                    .accessibilityHint("Change this answer")
+                    .swipeActions {
+                        Button("Remove", systemImage: "trash", role: .destructive) { remove(entry) }
+                    }
                 }
             } footer: {
                 if !entries.isEmpty {
