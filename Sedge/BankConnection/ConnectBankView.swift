@@ -31,6 +31,8 @@ func fetchLinkToken() async throws -> String {
     //make and return the request
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
+    // Give up after 10 seconds instead of the default 60, so the bank screen never just spins.
+    request.timeoutInterval = 10
     let (data, _) = try await URLSession.shared.data(for: request)
     return try JSONDecoder().decode(LinkTokenResponse.self, from: data).link_token
 }
@@ -63,25 +65,39 @@ func syncTransactions(into database: SedgeDatabase) async throws {
     try Organizer.organize(database)
 }
 
-/// Gets a link token from the quickstart server, then shows the Connect button.
+/// Gets a link token from the quickstart server, then shows the Connect button. If the server
+/// can't be reached, says so in one plain line and offers the sample people instead.
 struct ConnectBankScreen: View {
     let database: SedgeDatabase
     let onSynced: () -> Void
+    /// Opens the data picker, so a demo can carry on with a sample person.
+    let useSample: () -> Void
     @State private var linkToken: String?
-    @State private var error: String?
+    @State private var failed = false
 
     var body: some View {
         if let linkToken {
             ConnectBankView(linkToken: linkToken, database: database, onSynced: onSynced)
-        } else if let error {
-            ContentUnavailableView("Can't reach the bank server", systemImage: "network.slash", description: Text(error))
+        } else if failed {
+            ContentUnavailableView {
+                Label("Bank server not running", systemImage: "network.slash")
+            } description: {
+                Text("The Plaid quickstart server isn't running, so a bank can't be connected.")
+            } actions: {
+                Button("Use a sample person", action: useSample)
+                    .buttonStyle(.borderedProminent)
+                // Showing the spinner again runs its .task, which asks the server again.
+                Button("Try again") { failed = false }
+            }
         } else {
             ProgressView()
                 .task {
                     do {
                         linkToken = try await fetchLinkToken()
                     } catch {
-                        self.error = error.localizedDescription
+                        // Only logged: the plain message above covers every way this can fail.
+                        print("Link token error:", error)
+                        failed = true
                     }
                 }
         }

@@ -8,43 +8,63 @@
 import SedgeCore
 import SwiftUI
 
-/// The app's root: the data picker until something is chosen, then the main tabs.
+/// The app's root: the main tabs for the chosen data, with the data picker one tap away.
 struct ContentView: View {
-    /// A persona's name, "bank", or "" before anything is chosen. It is remembered between
-    /// launches, so the chosen database opens at launch. The key is "persona" so launching
-    /// with `-persona maya` (Xcode: Edit Scheme > Arguments) picks Maya too.
-    @AppStorage("persona") private var choice = ""
-    @State private var database: SedgeDatabase?
+    /// A persona's name or "bank". It is remembered between launches, so the app opens straight
+    /// onto the last chosen data, and Maya's until something else is chosen. The key is "persona"
+    /// so launching with `-persona daniel` (Xcode: Edit Scheme > Arguments) picks Daniel too.
+    @AppStorage("persona") private var choice = "maya"
+    /// The open database and the choice it was opened for, so the tabs never pair one
+    /// person's database with another's name while switching.
+    @State private var opened: (choice: String, database: SedgeDatabase)?
     @State private var error: String?
+    /// True while the data picker is shown over the main tabs.
+    @State private var picking = false
 
     var body: some View {
         Group {
-            if choice.isEmpty {
-                DataPickerView { choice = $0 }
-            } else if let database {
-                MainView(database: database, isBank: choice == SedgeDatabase.bankChoice) { choice = "" }
+            // A choice with no file (e.g. "" saved by an older version, or a mistyped launch
+            // argument) shows the picker itself, since there is nothing to go back to.
+            if SedgeDatabase.fileName(for: choice) == nil {
+                DataPickerView(choose: { choice = $0 })
+            } else if let opened, opened.choice == choice {
+                // A new identity per choice: without it SwiftUI reuses the old tabs, and they
+                // keep showing the previous data's transactions under the new name.
+                MainView(database: opened.database, choice: choice) { picking = true }
+                    .id(choice)
             } else if let error {
-                ContentUnavailableView("Couldn't open the data", systemImage: "exclamationmark.triangle", description: Text(error))
+                ContentUnavailableView {
+                    Label("Couldn't open the data", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(error)
+                } actions: {
+                    Button("Choose other data") { picking = true }
+                }
             } else {
                 ProgressView()
             }
         }
         // Runs at launch and again whenever the choice changes.
         .task(id: choice) {
-            database = nil
+            opened = nil
             error = nil
-            guard !choice.isEmpty else { return }
+            guard SedgeDatabase.fileName(for: choice) != nil else { return }
             do {
-                database = try SedgeDatabase.open(choice)
+                opened = (choice, try SedgeDatabase.open(choice))
             } catch {
-                self.error = "\(error)"
+                self.error = error.localizedDescription
             }
+        }
+        .sheet(isPresented: $picking) {
+            DataPickerView(cancel: { picking = false }) { choice = $0; picking = false }
         }
     }
 }
 
 /// Picks which data the app shows: one of the fake people, or a real (Sandbox) bank.
 struct DataPickerView: View {
+    /// Closes the picker without changing anything; nil when there is no data to go back to.
+    var cancel: (() -> Void)?
     let choose: (String) -> Void
 
     var body: some View {
@@ -64,18 +84,30 @@ struct DataPickerView: View {
                 } footer: {
                     Text("Bank data is kept in its own file, apart from the sample people.")
                 }
+                Section("About") {
+                    Text("Not financial advice. Demo data is made up.")
+                }
             }
             .navigationTitle("Choose data")
+            .toolbar {
+                if let cancel {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: cancel) }
+                }
+            }
         }
     }
 }
 
-/// The two main screens for one database.
+/// The main screens for one database.
 struct MainView: View {
     let database: SedgeDatabase
-    let isBank: Bool
+    /// A persona's name or "bank", shown under each screen's title so it's clear whose data this is.
+    let choice: String
     let changeData: () -> Void
     @State private var rows: [ListedTransaction] = []
+
+    private var isBank: Bool { choice == SedgeDatabase.bankChoice }
+    private var dataName: String { isBank ? "Bank" : choice.capitalized }
 
     var body: some View {
         TabView {
@@ -85,7 +117,7 @@ struct MainView: View {
                         if isBank && rows.isEmpty {
                             // Only the bank file is ever handed to the Plaid flow, so a sync
                             // can't write into a persona's file.
-                            ConnectBankScreen(database: database, onSynced: reload)
+                            ConnectBankScreen(database: database, onSynced: reload, useSample: changeData)
                         } else {
                             TransactionsView(rows: rows)
                                 .refreshable {
@@ -96,6 +128,7 @@ struct MainView: View {
                         }
                     }
                     .navigationTitle("Transactions")
+                    .navigationSubtitle(dataName)
                     .toolbar { changeDataButton }
                 }
             }
@@ -103,6 +136,7 @@ struct MainView: View {
                 NavigationStack {
                     AskView(database: database)
                         .navigationTitle("Ask")
+                        .navigationSubtitle(dataName)
                         .toolbar { changeDataButton }
                 }
             }
@@ -110,6 +144,7 @@ struct MainView: View {
                 NavigationStack {
                     SpendingView(database: database)
                         .navigationTitle("Spending")
+                        .navigationSubtitle(dataName)
                         .toolbar { changeDataButton }
                 }
             }
@@ -117,6 +152,7 @@ struct MainView: View {
                 NavigationStack {
                     WhatIfView(database: database)
                         .navigationTitle("What if")
+                        .navigationSubtitle(dataName)
                         .toolbar { changeDataButton }
                 }
             }
@@ -124,6 +160,7 @@ struct MainView: View {
                 NavigationStack {
                     ProfileView(database: database)
                         .navigationTitle("What Sedge learned")
+                        .navigationSubtitle(dataName)
                         .toolbar { changeDataButton }
                 }
             }

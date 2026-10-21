@@ -110,6 +110,10 @@ struct WhatIfView: View {
                             Text(day.balances[result.account] ?? 0, format: .currency(code: "USD"))
                         }
                     }
+                    if result.billDays.isEmpty {
+                        Text("No recurring bills are due from \(result.accountName) in the next \(WhatIf.days) days.")
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
