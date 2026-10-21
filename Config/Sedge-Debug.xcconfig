@@ -1,5 +1,4 @@
 // Debug build settings for the Sedge app target.
-// Pulls in the local, gitignored Secrets.xcconfig so a Debug build can read
-// ANTHROPIC_API_KEY. The "?" makes the include optional: a fresh clone without
-// Secrets.xcconfig still builds, and the Ask screen just says no key is set.
+// Pulls in the local, gitignored Secrets.xcconfig for any local-only settings.
+// The "?" makes the include optional: a fresh clone without Secrets.xcconfig still builds.
 #include? "../Secrets.xcconfig"

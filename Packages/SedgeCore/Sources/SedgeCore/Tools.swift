@@ -30,8 +30,8 @@ public struct Tool: Sendable {
     /// read-only connection, so a tool cannot change the data.
     let run: @Sendable (_ input: ToolArguments, _ db: Database) throws -> any Encodable
 
-    /// Bump whenever a tool's name, inputs, description or output changes, like
-    /// `SystemPrompt.version`: every eval run records it next to a hash of the definitions.
+    /// Bump whenever a tool's name, inputs, description or output changes, so results from
+    /// different tool versions are never mixed.
     /// v4 added `ask_user` (in AskUser.swift) to the tools Claude is offered.
     /// v5 = tool inputs sent required-first (#41).
     /// v6 = get_profile's tuition reports paid and refunded apart, with each payment and refund (#46).

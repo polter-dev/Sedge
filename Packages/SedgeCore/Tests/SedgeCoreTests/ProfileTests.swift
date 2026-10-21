@@ -146,15 +146,9 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(ablated[1].paid == 7350.65 && ablated[1].refunded == 0)
 }
 
-@Test func assistantSeesTuitionPaidAndRefunded() async throws {
-    let answer = #"{"answer": "$1,200.30 was refunded.", "value": 1200.30, "items": null, "yes_no": null, "confidence": 0.9}"#
-    let backend = ScriptedBackend([calling([("get_profile", "{}")]), calling([("final_answer", answer)])])
-    let trace = await Assistant(backend: backend, database: try tuitionWithRefund()).ask("How much tuition was refunded?")
-    #expect(trace.error == nil && trace.finalAnswer?.value == 1200.30)
-
-    // What the model was handed back from get_profile.
-    guard case .toolResults(let results) = await backend.received[1].last else { Issue.record("no tool results"); return }
-    let answerJSON = try #require(try JSONSerialization.jsonObject(with: Data(results[0].content.utf8)) as? [String: Any])
+@Test func getProfileShowsTuitionPaidAndRefunded() throws {
+    // What a model is handed back from get_profile.
+    let answerJSON = try call("get_profile", [:], on: tuitionWithRefund())
     let values = (answerJSON["facts"] as? [[String: Any]] ?? []).compactMap { $0["value"] as? [String: Any] }
     let bursar = try #require(values.first { $0["name"] as? String == "State U Bursar" })
     #expect(bursar["paid"] as? Double == 7350.65 && bursar["refunded"] as? Double == 1200.30)
