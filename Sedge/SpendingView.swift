@@ -99,7 +99,7 @@ struct SpendingView: View {
             }
         }
         .overlay {
-            if totals.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar") }
+            if totals.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
         }
         // Runs when the screen opens and again whenever the toggle changes.
         .task(id: includeMoved) {

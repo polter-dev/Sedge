@@ -105,6 +105,44 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The correction wasn't removed")
     }
 
+    /// The app reopens on the last chosen person, and with no quickstart server the bank
+    /// screen says so and leads back to a sample person. Launched without `-persona`, because
+    /// a launch argument would win over the saved choice. Needs the quickstart server off and
+    /// an empty bank file (a simulator that never synced a bank). Ends on Maya.
+    @MainActor
+    func testOpensLastChoiceAndBankServerMessage() throws {
+        let app = XCUIApplication()
+        app.launch()
+        let changeData = app.navigationBars.buttons["Change data"]
+        XCTAssertTrue(changeData.waitForExistence(timeout: 10))
+        changeData.tap()
+        XCTAssertTrue(app.staticTexts["Not financial advice. Demo data is made up."].waitForExistence(timeout: 5))
+        attachScreenshot(app, "demo-picker")
+        app.buttons["Daniel"].tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10))
+
+        // Quitting and opening again lands straight on Daniel, with no picker in between.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10), "Didn't reopen on Daniel")
+        XCTAssertFalse(app.staticTexts["Sample people"].exists)
+
+        app.navigationBars.buttons["Change data"].tap()
+        app.buttons["Connect bank"].tap()
+        XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
+        attachScreenshot(app, "demo-bank-server-not-running")
+        app.buttons["Use a sample person"].tap()
+        app.buttons["Maya"].tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
+
+        // One screenshot of each main screen, for the demo notes.
+        for tab in ["Transactions", "Ask", "Spending", "What if", "About you"] {
+            app.tabBars.buttons[tab].tap()
+            XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
+            attachScreenshot(app, "demo-\(tab.lowercased().replacingOccurrences(of: " ", with: "-"))")
+        }
+    }
+
     /// Keeps a screenshot in the test results, named for what it shows.
     @MainActor
     private func attachScreenshot(_ app: XCUIApplication, _ name: String) {

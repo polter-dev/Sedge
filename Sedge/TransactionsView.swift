@@ -68,7 +68,7 @@ struct TransactionsView: View {
             }
         }
         .overlay {
-            if rows.isEmpty { ContentUnavailableView("No transactions", systemImage: "tray") }
+            if rows.isEmpty { ContentUnavailableView("No transactions", systemImage: "tray", description: Text("This data has no transactions yet.")) }
         }
     }
 }

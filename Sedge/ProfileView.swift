@@ -49,7 +49,7 @@ struct ProfileView: View {
             }
         }
         .overlay {
-            if facts.isEmpty { ContentUnavailableView("Nothing learned yet", systemImage: "person.text.rectangle") }
+            if facts.isEmpty { ContentUnavailableView("Nothing learned yet", systemImage: "person.text.rectangle", description: Text("No paychecks, rent, tuition, loans or accounts were found in this data.")) }
         }
         .sheet(item: $editing) { fact in
             CorrectFactView(fact: fact) { value in
