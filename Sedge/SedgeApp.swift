@@ -25,7 +25,14 @@ extension SedgeDatabase {
     /// The file for one choice: each persona has its own file, and Plaid data has its own
     /// file that no persona ever uses. Nil for anything else (e.g. a mistyped launch argument).
     static func fileName(for choice: String) -> String? {
-        if choice == bankChoice { return "sedge.sqlite" }
+        if choice == bankChoice {
+            #if DEBUG
+            // UI tests launch with `-emptyBank YES` to get a bank file that never syncs, so they
+            // see the connect screen whatever this simulator synced before. Debug builds only.
+            if UserDefaults.standard.bool(forKey: "emptyBank") { return "sedge-empty-bank.sqlite" }
+            #endif
+            return "sedge.sqlite"
+        }
         return Persona.all.contains(choice) ? "sedge-\(choice).sqlite" : nil
     }
 
