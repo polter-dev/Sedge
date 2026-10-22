@@ -70,7 +70,10 @@ final class SedgeUITests: XCTestCase {
             field.tap()
             field.typeText("400")
             XCTAssertTrue(app.staticTexts["With the purchase"].waitForExistence(timeout: 5))
-            app.collectionViews.firstMatch.swipeDown() // hides the keyboard
+            // Scrolling hides the number pad, which would otherwise cover the tab bar. A simulator
+            // with a hardware keyboard shows no pad at all, so this holds either way.
+            app.collectionViews.firstMatch.swipeDown()
+            XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5), "The number pad is still covering the tabs")
             attachScreenshot(app, "\(persona) what if")
 
             app.tabBars.buttons["About you"].tap()
@@ -107,11 +110,13 @@ final class SedgeUITests: XCTestCase {
 
     /// The app reopens on the last chosen person, and with no quickstart server the bank
     /// screen says so and leads back to a sample person. Launched without `-persona`, because
-    /// a launch argument would win over the saved choice. Needs the quickstart server off and
-    /// an empty bank file (a simulator that never synced a bank). Ends on Maya.
+    /// a launch argument would win over the saved choice. Needs the quickstart server off.
+    /// `-emptyBank` uses a bank file that is never synced, so a bank synced earlier on this
+    /// simulator doesn't hide the connect screen. Ends on Maya.
     @MainActor
     func testOpensLastChoiceAndBankServerMessage() throws {
         let app = XCUIApplication()
+        app.launchArguments = ["-emptyBank", "YES"]
         app.launch()
         let changeData = app.navigationBars.buttons["Change data"]
         XCTAssertTrue(changeData.waitForExistence(timeout: 10))
