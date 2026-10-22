@@ -43,8 +43,8 @@ func exchangePublicToken(_ publicToken: String) async throws {
     request.httpMethod = "POST"
     request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
     request.httpBody = "public_token=\(publicToken)".data(using: .utf8)
-    let (data, _) = try await URLSession.shared.data(for: request)
-    print("Exchange response:", String(data: data, encoding: .utf8) ?? "")
+    // The reply holds the access token, so it is ignored here and never printed.
+    _ = try await URLSession.shared.data(for: request)
 }
 
 /// Downloads every transaction and account from the quickstart server, saves them into
@@ -63,6 +63,30 @@ func syncTransactions(into database: SedgeDatabase) async throws {
     }
     try database.save(accounts: response.accounts, transactions: response.transactions, asOf: asOf)
     try Organizer.organize(database)
+}
+
+/// The line the bank screen shows when Plaid connected but the transactions didn't arrive.
+let bankSyncFailedMessage = "Your bank connected, but its transactions couldn't be downloaded. Try connecting again."
+
+/// Runs after Plaid Link succeeds: swaps the public token on the server, then downloads.
+/// Returns nil when it worked, or the line to show on screen when it didn't. The two steps
+/// are parameters so a test can make one fail without the quickstart server.
+func finishConnecting(
+    publicToken: String,
+    database: SedgeDatabase,
+    exchange: (String) async throws -> Void = exchangePublicToken,
+    sync: (SedgeDatabase) async throws -> Void = syncTransactions(into:)
+) async -> String? {
+    do {
+        try await exchange(publicToken)
+        try await sync(database)
+        return nil
+    } catch {
+        // localizedDescription is a fixed sentence like "Could not connect to the server.",
+        // never the server's reply, so no token can end up in the console.
+        print("Bank sync error:", error.localizedDescription)
+        return bankSyncFailedMessage
+    }
 }
 
 /// Gets a link token from the quickstart server, then shows the Connect button. If the server
@@ -96,7 +120,8 @@ struct ConnectBankScreen: View {
                         linkToken = try await fetchLinkToken()
                     } catch {
                         // Only logged: the plain message above covers every way this can fail.
-                        print("Link token error:", error)
+                        // localizedDescription is a fixed sentence, never the server's reply.
+                        print("Link token error:", error.localizedDescription)
                         failed = true
                     }
                 }
@@ -116,14 +141,25 @@ struct ConnectBankView: View
     @State private var linkSession: PlaidLinkSession?
     @State private var isPresentingLink = false
     @State private var isReady = false
-    
+    /// The plain line shown under the button when the download after connecting failed.
+    @State private var syncFailure: String?
+
     var body: some View
     {
-        Button("Connect Account")
-        {
-            isPresentingLink = true
+        VStack(spacing: 12) {
+            Button("Connect Account")
+            {
+                isPresentingLink = true
+            }
+            .disabled(!isReady)
+            if let syncFailure {
+                Text(syncFailure)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
         }
-        .disabled(!isReady)
         .onAppear(perform: createSession)
         .sheet(isPresented: $isPresentingLink)
         {
@@ -131,29 +167,15 @@ struct ConnectBankView: View
         }
     }
 
-    /// Saves everything from Plaid, then lets the screen show it.
-    private func sync() async {
-        do {
-            try await syncTransactions(into: database)
-            onSynced()
-        } catch {
-            print("Sync error:", error)
-        }
-    }
     //code from docs
     private func createSession() {
             let configuration = LinkTokenConfiguration(
                 token: linkToken,
                 onSuccess: { success in
-                    // Send success.publicToken to your app server.
-                    print("Public token:", success.publicToken)
+                    // Send success.publicToken to the server. It is never printed.
                     Task {
-                        do {
-                            try await exchangePublicToken(success.publicToken)
-                            await sync()
-                        } catch {
-                            print("Exchange error:", error)
-                        }
+                        syncFailure = await finishConnecting(publicToken: success.publicToken, database: database)
+                        if syncFailure == nil { onSynced() }
                     }
                     isPresentingLink = false
                 },
@@ -171,8 +193,9 @@ struct ConnectBankView: View
             do {
                 linkSession = try Plaid.createPlaidLinkSession(configuration: configuration)
             } catch {
-                // Handle the error.
-                print("Link session error:", error)
+                // Only the error's type: LinkKit's invalid-token error carries a message
+                // that may quote the link token.
+                print("Link session error:", type(of: error))
             }
         }
     }

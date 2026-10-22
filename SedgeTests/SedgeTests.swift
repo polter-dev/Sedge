@@ -66,4 +66,17 @@ struct SedgeTests {
         let facts = try Profile.facts(in: database)
         #expect(facts.contains { $0.kind == "income" && !$0.evidence.isEmpty })
     }
+
+    /// When Plaid connects but the download fails, the bank screen gets its plain line. The
+    /// failure is made up here, so the test never needs the quickstart server.
+    @Test func syncFailureAfterConnectingShowsMessage() async throws {
+        struct DownloadFailed: Error {}
+        let database = try SedgeDatabase()
+        let failed = await finishConnecting(publicToken: "public-test", database: database,
+                                            exchange: { _ in }, sync: { _ in throw DownloadFailed() })
+        #expect(failed == bankSyncFailedMessage)
+        let worked = await finishConnecting(publicToken: "public-test", database: database,
+                                            exchange: { _ in }, sync: { _ in })
+        #expect(worked == nil)
+    }
 }
