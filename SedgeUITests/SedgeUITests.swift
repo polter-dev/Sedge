@@ -71,9 +71,17 @@ final class SedgeUITests: XCTestCase {
             field.typeText("400")
             XCTAssertTrue(app.staticTexts["With the purchase"].waitForExistence(timeout: 5))
             // Scrolling hides the number pad, which would otherwise cover the tab bar. A simulator
-            // with a hardware keyboard shows no pad at all, so this holds either way.
+            // with keyboard minimizing on (a used simulator that has seen a hardware keyboard) never
+            // shows the pad: it waits just below the screen, still in the element tree. So the check
+            // is that no pad overlaps the tabs, not that no keyboard exists.
             app.collectionViews.firstMatch.swipeDown()
-            XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5), "The number pad is still covering the tabs")
+            let tabs = app.tabBars.firstMatch.frame
+            let tabsClear = NSPredicate { _, _ in
+                let pad = app.keyboards.firstMatch
+                return !pad.exists || !pad.frame.intersects(tabs)
+            }
+            let waited = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: tabsClear, object: nil)], timeout: 5)
+            XCTAssertEqual(waited, .completed, "The number pad is still covering the tabs")
             attachScreenshot(app, "\(persona) what if")
 
             app.tabBars.buttons["About you"].tap()
