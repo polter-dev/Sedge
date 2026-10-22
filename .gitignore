@@ -1,7 +1,7 @@
 # Personal planning (not part of the submission)
 milestones/
 
-# Secrets: API keys for Plaid and the cloud AI
+# Secrets: keys that are never committed
 Secrets.xcconfig
 .env
 .env.*
@@ -21,11 +21,11 @@ build/
 # macOS
 .DS_Store
 
-# Local editor/agent settings
+# Local editor settings
 .claude/
 *.log
 
-# Python (fake data generator / scorecard scripts)
+# Python (fake data generator)
 __pycache__/
 .venv/
 
@@ -33,7 +33,7 @@ __pycache__/
 quickstart/
 skills-lock.json
 
-# Local agent setup (keep out of the repo)
+# Local setup notes (keep out of the repo)
 CLAUDE.md
 .worktreeinclude
 

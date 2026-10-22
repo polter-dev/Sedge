@@ -1,2 +1,2 @@
-// Release build settings for the Sedge app target (TestFlight / App Store).
+// Build settings for Release builds of the Sedge app target. App Store use comes in Phase 2.
 // Release never includes Secrets.xcconfig, so nothing local can leak into a shipped app.
