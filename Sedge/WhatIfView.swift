@@ -117,6 +117,8 @@ struct WhatIfView: View {
                 }
             }
         }
+        // The number pad has no return key, so scrolling is the way to put it away and reach the tabs.
+        .scrollDismissesKeyboard(.immediately)
         .overlay {
             if loaded && result == nil {
                 ContentUnavailableView("No bank account", systemImage: "banknote", description: Text("A checking or savings balance is needed to project."))
