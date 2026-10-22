@@ -74,7 +74,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Every card statement closes on the last day of the month and is paid in full. — `Simulator.swift` `simulate`
 - A card is paid from the account of its latest matched payment, on the day of the month of its latest payment, for what it owed at the last month end less what was paid since. — `Simulator.swift` `simulate`
 
-## Assistant and tools
+## Tools and saved answers
 
 - Transfers and card payments are never spending, bills or income. — `Tools.swift` `spendingFilter`, `recurringCharges`
 - Refunds count against spending, and pending charges don't count until they post. — `Tools.swift` `spendingFilter`
