@@ -185,7 +185,8 @@ struct MainView: View {
             try await syncTransactions(into: database)
             reload()
         } catch {
-            print("Sync error:", error)
+            // localizedDescription is a fixed sentence, never the server's reply.
+            print("Sync error:", error.localizedDescription)
         }
     }
 }
