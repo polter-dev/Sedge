@@ -56,7 +56,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $picking) {
-            DataPickerView(cancel: { picking = false }) { choice = $0; picking = false }
+            DataPickerView(cancel: { picking = false }, current: choice) { choice = $0; picking = false }
         }
     }
 }
@@ -65,6 +65,8 @@ struct ContentView: View {
 struct DataPickerView: View {
     /// Closes the picker without changing anything; nil when there is no data to go back to.
     var cancel: (() -> Void)?
+    /// The data shown now, marked with a checkmark; nil when nothing is open yet.
+    var current: String?
     let choose: (String) -> Void
 
     var body: some View {
@@ -72,20 +74,20 @@ struct DataPickerView: View {
             List {
                 Section {
                     ForEach(Persona.all, id: \.self) { persona in
-                        Button(persona.capitalized, systemImage: "person.crop.circle") { choose(persona) }
+                        row(persona.capitalized, systemImage: "person.crop.circle", choice: persona)
                     }
                 } header: {
                     Text("Sample people")
                 } footer: {
-                    Text("Fake data, with today as \(Persona.asOf).")
+                    Text("Fake data, with today as \(Persona.asOf.displayDate()).")
                 }
                 Section {
-                    Button("Connect bank", systemImage: "building.columns") { choose(SedgeDatabase.bankChoice) }
+                    row("Connect bank", systemImage: "building.columns", choice: SedgeDatabase.bankChoice)
                 } footer: {
                     Text("Bank data is kept in its own file, apart from the sample people.")
                 }
                 Section("About") {
-                    Text("Not financial advice. Demo data is made up.")
+                    Label("Not financial advice. Demo data is made up.", systemImage: "info.circle")
                 }
             }
             .navigationTitle("Choose data")
@@ -95,6 +97,21 @@ struct DataPickerView: View {
                 }
             }
         }
+    }
+
+    /// One choice, with a checkmark when it is the data shown now (as in Settings lists).
+    private func row(_ title: String, systemImage: String, choice: String) -> some View {
+        Button { choose(choice) } label: {
+            HStack {
+                Label(title, systemImage: systemImage)
+                Spacer()
+                if choice == current {
+                    // VoiceOver hears "Selected" from the trait below instead of "checkmark".
+                    Image(systemName: "checkmark").fontWeight(.semibold).accessibilityHidden(true)
+                }
+            }
+        }
+        .accessibilityAddTraits(choice == current ? .isSelected : [])
     }
 }
 

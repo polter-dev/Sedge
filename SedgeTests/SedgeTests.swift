@@ -5,6 +5,7 @@
 //  Created by Marcus Ruth on 9/28/26.
 //
 
+import Foundation
 import SedgeCore
 import Testing
 @testable import Sedge
@@ -33,6 +34,15 @@ struct SedgeTests {
         #expect(netflix.count == 6)
         #expect(netflix.allSatisfy { $0.store == "Netflix" && $0.kind == "spending" })
         #expect(rows.contains { $0.kind == "income" })
+    }
+
+    /// Stored dates are shown for people on the same day in any time zone, and other text is left alone.
+    @Test func datesAreShownForPeople() {
+        let shown = "2026-06-30".displayDate()
+        #expect(shown.contains("30") && shown.contains("2026") && !shown.contains("-"))
+        // A month name, not a number: the style asks for an abbreviated month.
+        #expect("2026-01-01".displayDate(.dateTime.month(.abbreviated)) != "1")
+        #expect("not a date".displayDate() == "not a date")
     }
 
     /// The spending, what-if and profile screens each have something to show for every sample person.
