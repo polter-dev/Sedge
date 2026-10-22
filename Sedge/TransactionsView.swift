@@ -35,40 +35,75 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
     }
 }
 
-/// The list of transactions from the chosen database.
+/// The list of transactions from the chosen database, grouped by day like a bank statement.
 struct TransactionsView: View {
     let rows: [ListedTransaction]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The rows split into days, keeping their newest-first order.
+    private var days: [(date: String, rows: [ListedTransaction])] {
+        rows.reduce(into: []) { days, row in
+            if days.last?.date == row.date {
+                days[days.count - 1].rows.append(row)
+            } else {
+                days.append((row.date, [row]))
+            }
+        }
+    }
 
     var body: some View {
-        List(rows) { row in
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(row.store)
-                    Text(row.name)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(row.date)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing) {
-                    // Flip Plaid's sign so money in shows as positive, like a bank statement.
-                    Text(-row.amount, format: .currency(code: "USD"))
-                    switch row.kind {
-                    case "income":
-                        Label("Income", systemImage: "arrow.down.circle").font(.caption).foregroundStyle(.green)
-                    // A card payment is also money moving between the person's own accounts.
-                    case "transfer", "card_payment":
-                        Label("Transfer", systemImage: "arrow.left.arrow.right").font(.caption).foregroundStyle(.blue)
-                    default:
-                        EmptyView()
+        // Side by side normally; stacked at the largest text sizes, so neither the name
+        // nor the amount is squeezed to a few letters per line.
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        List {
+            ForEach(days, id: \.date) { day in
+                Section(day.date.displayDate()) {
+                    ForEach(day.rows) { row in
+                        layout {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(row.store)
+                                Text(row.name)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
+                                // Flip Plaid's sign so money in shows as positive, like a bank statement.
+                                Text(-row.amount, format: .currency(code: "USD"))
+                                    .monospacedDigit()
+                                kindTag(row.kind)
+                            }
+                        }
+                        // VoiceOver reads the whole row as one item: store, statement name, amount, tag.
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }
         }
         .overlay {
             if rows.isEmpty { ContentUnavailableView("No transactions", systemImage: "tray", description: Text("This data has no transactions yet.")) }
+        }
+    }
+
+    /// A small tag for money that isn't everyday spending. The icon is drawn inside the text,
+    /// because a list lines up every Label's icon in one column, which left a wide gap here.
+    @ViewBuilder
+    private func kindTag(_ kind: String?) -> some View {
+        switch kind {
+        case "income":
+            Text("\(Image(systemName: "arrow.down.circle")) Income")
+                .font(.caption)
+                .foregroundStyle(.green)
+                .accessibilityLabel("Income")
+        // A card payment is also money moving between the person's own accounts.
+        case "transfer", "card_payment":
+            Text("\(Image(systemName: "arrow.left.arrow.right")) Transfer")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Transfer")
+        default:
+            EmptyView()
         }
     }
 }

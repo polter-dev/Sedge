@@ -31,20 +31,27 @@ struct ProfileView: View {
     var body: some View {
         List {
             ForEach(kinds, id: \.self) { kind in
-                Section(Self.titles[kind] ?? kind) {
+                Section {
                     ForEach(facts.filter { $0.kind == kind }) { fact in
                         Button { editing = fact } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(fact.value.name)
                                 Text(Self.details(fact.value))
                                     .font(.subheadline)
+                                    .foregroundStyle(.secondary)
                                 Text(evidence(fact))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
                         .foregroundStyle(.primary)
+                        .accessibilityHint("Correct this fact")
                     }
+                } header: {
+                    Text(Self.titles[kind] ?? kind)
+                } footer: {
+                    // The rows don't look like buttons, so the first section says they are.
+                    if kind == kinds.first { Text("Tap a fact to correct it.") }
                 }
             }
         }
@@ -90,7 +97,7 @@ struct ProfileView: View {
         return parts.joined(separator: " · ")
     }
 
-    /// Where the fact came from, e.g. "Based on 6 deposits from 2026-01-02 to 2026-06-26."
+    /// Where the fact came from, e.g. "Based on 6 deposits from Jan 2, 2026 to Jun 26, 2026."
     private func evidence(_ fact: Profile.Fact) -> String {
         switch fact.rule {
         case "user_correction": return "You set this."
@@ -99,7 +106,7 @@ struct ProfileView: View {
             let found = fact.evidence.compactMap { dates[$0] }.sorted()
             guard let first = found.first, let last = found.last else { return "" }
             let noun = fact.kind == "income" ? "deposit" : "payment"
-            return "Based on \(found.count) \(noun)\(found.count == 1 ? "" : "s") from \(first) to \(last)."
+            return "Based on \(found.count) \(noun)\(found.count == 1 ? "" : "s") from \(first.displayDate()) to \(last.displayDate())."
         }
     }
 }
