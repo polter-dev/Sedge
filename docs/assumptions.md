@@ -85,6 +85,11 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - The range reruns the projection with each account's highest and with its lowest four-week everyday spending among the three four-week windows ending today; an account with no spending in a window spent 0 there. — `Simulator.swift` `range`
 - A four-week window counts toward the range only when the earliest transaction is on or before its first day; today's window always counts, so with only that one the range equals the projection. — `Simulator.swift` `range`
 
+## Cash-flow screen
+
+- The screen projects the same checking account as simulate_balance; its lowest balance is the first day of the minimum, labeled "Before payday" when the next day's balance is higher, else with a checking bill paid that day. — `Sedge/CashFlowView.swift` `CashFlow.lowest`, `CashFlow.lowReason`
+- Scenarios offer only recurring bills the projection charges; subscriptions are those whose store is in the subscriptions category, cancelled from tomorrow, and the saving shown is the simulator's end-balance difference. — `Sedge/CashFlowView.swift` `CashFlow.load`, `CashFlowView.load`
+
 ## Tools and saved answers
 
 - Transfers and card payments are never spending, bills or income. — `Tools.swift` `spendingFilter`, `recurringCharges`
