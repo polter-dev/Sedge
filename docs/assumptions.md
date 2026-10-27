@@ -109,6 +109,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 ## Spending screen
 
 - Months are compared over the same first days: the day of the month of `as_of` (a shorter month just ends sooner), for `as_of`'s month and the three before it. — `Sedge/SpendingView.swift` `SpendingTotal.all`, `SpendingView.months`
+- The All months screen counts whole months, and money moved between the person's own accounts (transfers and card payments) counts only when its switch is on, as its own category bar, using only the side leaving an account so the arriving side doesn't cancel it. — `Sedge/SpendingView.swift` `SpendingTotal.all`; `Sedge/AllMonthsView.swift` `byMonth`, `byCategory`
 - The spending graph shows a category's three biggest stores this month and adds the rest up as "Other stores", or every store when there are four or fewer. — `Sedge/SpendingView.swift` `SpendingView.stores`
 
 ## Transaction screen

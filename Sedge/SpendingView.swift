@@ -148,6 +148,13 @@ struct SpendingView: View {
             if let asOf, !categories.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
                     patterns(asOf)
+                    // The longer view drills down from the short one it widens.
+                    NavigationLink("All months & categories →") {
+                        AllMonthsView(database: database).navigationTitle("All months")
+                    }
+                    .font(.link)
+                    .multilineTextAlignment(.leading)
+                    .frame(minHeight: 44)
                     connected
                     Button("Ask about a tradeoff →", action: ask)
                         .font(.link)
