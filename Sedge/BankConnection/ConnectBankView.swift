@@ -179,7 +179,11 @@ struct ConnectBankView: View
                     // Send success.publicToken to the server. It is never printed.
                     Task {
                         syncFailure = await finishConnecting(publicToken: success.publicToken, database: database)
-                        if syncFailure == nil { onSynced() }
+                        if syncFailure == nil {
+                            // The main tabs then ask "Is this account yours?" for each new account.
+                            UserDefaults.standard.set(true, forKey: AccountChecksAfterConnecting.pendingKey)
+                            onSynced()
+                        }
                     }
                     isPresentingLink = false
                 },
