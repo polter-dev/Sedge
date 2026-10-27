@@ -88,6 +88,45 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The saved answer wasn't removed")
     }
 
+    /// The sample shows the same quick check on every launch, so a later tap must replace the
+    /// answer saved earlier. The saved answer is removed before asserting, so Maya's file stays as it was.
+    @MainActor
+    func testSecondLaunchTapNoIsSaved() throws {
+        continueAfterFailure = true
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        var shown = "(none)", firstSaved = false, savedAnswersHasNo = false
+
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["Yes, mine"].tap()
+        firstSaved = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5)
+        app.terminate()
+
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["No"].tap()
+        let any = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved:' OR label BEGINSWITH 'Not saved'")).firstMatch
+        _ = any.waitForExistence(timeout: 5)
+        shown = any.exists ? any.label : "(none)"
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Saved answers"].tap()
+        let row = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        if row.waitForExistence(timeout: 5) {
+            savedAnswersHasNo = app.staticTexts["No"].exists
+            row.swipeLeft()
+            app.buttons["Remove"].tap()
+        }
+        XCTAssertTrue(firstSaved, "first launch didn't save Yes, mine")
+        XCTAssertTrue(shown.hasPrefix("Saved: No"), "Label after tapping No was: \(shown)")
+        XCTAssertTrue(savedAnswersHasNo, "Saved answers does not show No")
+    }
+
     /// Opens the spending, what-if and profile screens for every sample person and checks each
     /// shows its data, with a screenshot of each. Nothing is corrected, so the saved files stay as they were.
     @MainActor

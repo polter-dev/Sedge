@@ -4,6 +4,7 @@
 //
 
 import Charts
+import GRDB
 import SedgeCore
 import SwiftUI
 
@@ -338,7 +339,13 @@ private struct TurnView: View {
         let input = try? JSONSerialization.data(withJSONObject: [
             "question": check.question, "options": check.options, "fact_key": check.factKey,
         ])
-        let result = await AskUser.run(input ?? Data(), database: database) { _ in option }
+        var result = await AskUser.run(input ?? Data(), database: database) { _ in option }
+        // `ask_user` hands back a saved answer without asking. A tap is the person answering
+        // again, so forget the old answer and save the tapped one. "Later" keeps the old one.
+        if option != nil, let old = result.clarification, old.answeredFromMemory {
+            try? AskUser.forget(old.factKey, in: database)
+            result = await AskUser.run(input ?? Data(), database: database) { _ in option }
+        }
         if let saved = result.clarification?.answer {
             reply = "Saved: \(saved). Change it in Accounts › Saved answers."
         } else if result.clarification != nil {
@@ -403,15 +410,20 @@ extension ChatTurn {
 
     /// A quick check about this month's largest money move between accounts, or nil if none.
     private static func transferCheck(from start: String, to end: String, _ database: SedgeDatabase) throws -> QuickCheck? {
-        struct Row: Decodable { let date, store, kind: String; let amount: Double }
-        struct Found: Decodable { let rows: [Row] }
-        // shortcut: only the newest 10 rows of $100 or more are looked at, which holds a transfer
-        // or card payment for the sample people; page through `find_transactions` if one is missed.
-        let found: Found = try call("find_transactions", ["start_date": start, "end_date": end, "min_amount": 100.0], database)
-        guard let move = found.rows.filter({ ["transfer", "card_payment"].contains($0.kind) && $0.amount > 0 })
-            .max(by: { $0.amount < $1.amount }) else { return nil }
+        struct Move: Decodable, FetchableRecord { let date, store, kind: String; let amount: Double }
+        // Read the table itself: `find_transactions` gives only the newest 10 rows, which can miss
+        // the largest (Jordan has 18 June rows of $100 or more). Same store name as the tool shows.
+        guard let move = try database.dbQueue.read({ db in
+            try Move.fetchOne(db, sql: """
+                SELECT t.date, COALESCE(m.name, t.name) AS store, t.kind, ROUND(t.amount, 2) AS amount
+                FROM transactions t LEFT JOIN entities m ON m.id = t.merchant_id
+                WHERE t.date BETWEEN ? AND ? AND t.kind IN ('transfer', 'card_payment') AND t.amount > 0
+                ORDER BY t.amount DESC, t.date DESC LIMIT 1
+                """, arguments: [start, end])
+        }) else { return nil }
+        let what = move.kind == "card_payment" ? "card payment" : "transfer"
         return QuickCheck(
-            question: "Was this \(move.amount.formatted(.currency(code: "USD"))) transfer between your accounts?",
+            question: "Was this \(move.amount.formatted(.currency(code: "USD"))) \(what) between your accounts?",
             details: ["\(move.store) · \(move.date.displayDate(.dateTime.month(.abbreviated).day()))",
                       "It may be excluded from spending."],
             options: ["Yes, mine", "No"],

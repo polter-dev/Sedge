@@ -103,4 +103,5 @@ To add a rule, add one line under its area in the same shape as the others: the 
 ## Ask screen demo
 
 - The Debug sample conversation counts food as groceries, dining and coffee, and its "usual pace" is the average of the same days (1st through today's day, or the month's end) of the last three months. — `Sedge/AskView.swift` `ChatTurn.sample`, `monthToDate`
-- A quick-check tap is saved through `ask_user`; "Later" saves nothing, so it may be asked again. — `Sedge/AskView.swift` `TurnView.answer`
+- The sample's quick check asks about the month's largest transfer or card payment with a positive amount, the latest one on a tie. — `Sedge/AskView.swift` `ChatTurn.transferCheck`
+- A quick-check tap is saved through `ask_user` and replaces an answer already saved for that fact; "Later" saves nothing and keeps any earlier answer, so it may be asked again. — `Sedge/AskView.swift` `TurnView.answer`
