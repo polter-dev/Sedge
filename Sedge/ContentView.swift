@@ -14,6 +14,8 @@ struct ContentView: View {
     /// onto the last chosen data, and Maya's until something else is chosen. The key is "persona"
     /// so launching with `-persona daniel` (Xcode: Edit Scheme > Arguments) picks Daniel too.
     @AppStorage("persona") private var choice = "maya"
+    /// The same saved choice, but nil until data has been chosen once, so a fresh install shows Welcome.
+    @AppStorage("persona") private var saved: String?
     /// The open database and the choice it was opened for, so the tabs never pair one
     /// person's database with another's name while switching.
     @State private var opened: (choice: String, database: SedgeDatabase)?
@@ -24,9 +26,12 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            // A choice with no file (e.g. "" saved by an older version, or a mistyped launch
-            // argument) shows the picker itself, since there is nothing to go back to.
-            if SedgeDatabase.fileName(for: choice) == nil {
+            if saved == nil {
+                // Nothing chosen yet, so `choice` is still Maya and the database opening below is hers.
+                WelcomeView(maya: opened?.database) { choice = $0 }
+            } else if SedgeDatabase.fileName(for: choice) == nil {
+                // A choice with no file (e.g. "" saved by an older version, or a mistyped launch
+                // argument) shows the picker itself, since there is nothing to go back to.
                 DataPickerView(choose: { choice = $0 })
             } else if let opened, opened.choice == choice {
                 // A new identity per choice: without it SwiftUI reuses the old tabs, and they
@@ -150,7 +155,7 @@ struct MainView: View {
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
-                    SpendingView(database: database)
+                    SpendingView(database: database) { tab = .ask }
                         .navigationTitle("Spending")
                         .navigationSubtitle(dataName)
                         .toolbar {

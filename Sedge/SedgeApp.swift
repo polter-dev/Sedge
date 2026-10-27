@@ -11,6 +11,14 @@ import SwiftUI
 
 @main
 struct SedgeApp: App {
+    init() {
+        #if DEBUG
+        // UI tests and screenshots launch with `-firstLaunch YES` to see Welcome as on a fresh
+        // install: forgetting the saved data choice is what makes a launch the first one.
+        if UserDefaults.standard.bool(forKey: "firstLaunch") { UserDefaults.standard.removeObject(forKey: "persona") }
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

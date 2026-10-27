@@ -137,8 +137,7 @@ final class SedgeUITests: XCTestCase {
             app.launch()
 
             app.tabBars.buttons["Trends"].tap()
-            XCTAssertTrue(app.switches["Include money moved between my accounts"].waitForExistence(timeout: 10))
-            XCTAssertTrue(app.staticTexts["By category"].exists)
+            XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
             XCTAssertFalse(app.staticTexts["No spending yet"].exists)
             attachScreenshot(app, "\(persona) spending")
 
@@ -222,32 +221,36 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(cleared.waitForExistence(timeout: 5), "Delete didn't clear the saved answers")
     }
 
-    /// The app reopens on the last chosen person, and with no quickstart server the bank
-    /// screen says so and leads back to a sample person. Launched without `-persona`, because
-    /// a launch argument would win over the saved choice. Needs the quickstart server off.
-    /// `-emptyBank` uses a bank file that is never synced, so a bank synced earlier on this
-    /// simulator doesn't hide the connect screen. Ends on Maya.
+    /// A fresh install shows Welcome, Explore sample data opens the picker, and after picking the
+    /// app reopens on that person with no Welcome. With no quickstart server the bank screen says
+    /// so and leads back to a sample person. `-firstLaunch` forgets the saved choice, as on a fresh
+    /// install; the relaunch leaves it off, and never passes `-persona`, because a launch argument
+    /// would win over the saved choice. Needs the quickstart server off. `-emptyBank` uses a bank
+    /// file that is never synced, so a bank synced earlier on this simulator doesn't hide the
+    /// connect screen. Ends on Maya.
     @MainActor
-    func testOpensLastChoiceAndBankServerMessage() throws {
+    func testFirstLaunchThenOpensLastChoiceAndBankServerMessage() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-emptyBank", "YES"]
+        app.launchArguments = ["-emptyBank", "YES", "-firstLaunch", "YES"]
         app.launch()
-        // The data picker opens from the Accounts tab.
-        let accounts = app.tabBars.buttons["Accounts"]
-        XCTAssertTrue(accounts.waitForExistence(timeout: 10))
-        accounts.tap()
-        let changeData = app.navigationBars.buttons["Change data"]
-        XCTAssertTrue(changeData.waitForExistence(timeout: 10))
-        changeData.tap()
+        // The headline has a line break in it, so it is found by its start.
+        let welcome = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'A clearer view'")).firstMatch
+        XCTAssertTrue(welcome.waitForExistence(timeout: 10), "No Welcome on first launch")
+        XCTAssertTrue(app.staticTexts["A preview of what you can explore"].exists)
+        XCTAssertFalse(app.tabBars.firstMatch.exists)
+        attachScreenshot(app, "welcome")
+        app.buttons["Explore sample data"].tap()
         XCTAssertTrue(app.staticTexts["Not financial advice. Demo data is made up."].waitForExistence(timeout: 5))
         attachScreenshot(app, "demo-picker")
         app.buttons["Daniel"].tap()
         XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10))
 
-        // Quitting and opening again lands straight on Daniel, with no picker in between.
+        // Quitting and opening again lands straight on Daniel, with no Welcome or picker in between.
         app.terminate()
+        app.launchArguments = ["-emptyBank", "YES"]
         app.launch()
         XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10), "Didn't reopen on Daniel")
+        XCTAssertFalse(welcome.exists)
         XCTAssertFalse(app.staticTexts["Sample people"].exists)
 
         // Picking other data keeps the Accounts tab open, so the bank's transactions are one tap away.
@@ -257,6 +260,23 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Transactions"].tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
         attachScreenshot(app, "demo-bank-server-not-running")
+        app.buttons["Use a sample person"].tap()
+        app.buttons["Maya"].tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
+    }
+
+    /// On Welcome, Connect with Plaid opens the bank screen, which with no quickstart server says
+    /// so and leads to the sample people. Needs the quickstart server off. Ends on Maya.
+    @MainActor
+    func testWelcomeConnectWithPlaidOpensBankFlow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-emptyBank", "YES", "-firstLaunch", "YES"]
+        app.launch()
+        let connect = app.buttons["Connect with Plaid"]
+        XCTAssertTrue(connect.waitForExistence(timeout: 10))
+        connect.tap()
+        XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
+        attachScreenshot(app, "welcome-bank-server-not-running")
         app.buttons["Use a sample person"].tap()
         app.buttons["Maya"].tap()
         XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
@@ -280,7 +300,7 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "tab-ask")
 
         app.tabBars.buttons["Trends"].tap()
-        XCTAssertTrue(app.staticTexts["By category"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
         attachScreenshot(app, "tab-trends-spending")
         app.navigationBars.buttons["What if"].tap()
         XCTAssertTrue(app.textFields["Extra purchase in dollars"].waitForExistence(timeout: 10))
@@ -312,6 +332,36 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Sample people"].waitForExistence(timeout: 5))
         attachScreenshot(app, "accounts-change-data")
         app.buttons["Cancel"].tap()
+    }
+
+    /// Tapping a store in Maya's spending graph shows its latest transaction, which opens the
+    /// transaction; "Ask about a tradeoff" goes to the Ask tab. The screenshot is the screen
+    /// in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testTappingAStoreShowsItsLatestTransaction() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let store = app.buttons.matching(identifier: "store").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 10))
+        // The node reads "Store name, $123"; the latest transaction's row starts with the same name.
+        let name = String(store.label.split(separator: ",")[0])
+        let latest = app.buttons["latest"]
+        XCTAssertFalse(latest.exists)
+        store.tap()
+        XCTAssertTrue(latest.waitForExistence(timeout: 5))
+        XCTAssertTrue(latest.label.hasPrefix(name), "\(latest.label) isn't from \(name)")
+        XCTAssertTrue(latest.label.contains("Latest transaction"))
+        attachScreenshot(app, "spending-graph")
+
+        latest.tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Transaction"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+
+        app.buttons["Ask about a tradeoff →"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Ask"].isSelected)
     }
 
     /// Keeps a screenshot in the test results, named for what it shows.
