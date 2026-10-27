@@ -240,6 +240,10 @@ public enum Simulator {
             paid[card] = since[card]?.paid ?? 0
         }
 
+        // A Swift dictionary's order changes from run to run, so the cards are walked sorted by
+        // name, then id: two payments on one day then always come out in the same order.
+        let cards = plans.sorted { (accountName[$0.key] ?? "", $0.key) < (accountName[$1.key] ?? "", $1.key) }
+
         var result: [Day] = []
         for offset in 1...days {
             let day = calendar.date(byAdding: .day, value: offset, to: start)!
@@ -254,7 +258,7 @@ public enum Simulator {
             // A payment day past the end of a short month (the 31st in April) falls on its last day.
             let monthLength = calendar.range(of: .day, in: .month, for: day)!.count
             let dayOfMonth = calendar.component(.day, from: day)
-            for (card, plan) in plans where statement[card] != nil && min(plan.day, monthLength) == dayOfMonth {
+            for (card, plan) in cards where statement[card] != nil && min(plan.day, monthLength) == dayOfMonth {
                 let due = cents(statement[card]! - paid[card]!)
                 guard due > 0 else { continue }
                 apply(-due, to: card)

@@ -405,3 +405,18 @@ func spendingDatabase(_ purchases: [(String, Double)]) throws -> SedgeDatabase {
     }
     #expect(range.low.last!.balances["maya-checking"]! < range.high.last!.balances["maya-checking"]!)
 }
+
+// MARK: - Same answer every run
+
+/// Daniel pays Card A and Card B on the same day (Jul 25 and Aug 25). A Swift dictionary's
+/// order changes from run to run, so same-day bills must come out in a fixed order: a benchmark
+/// needs the same tool output every time. Within one test process the order often repeats, so
+/// the test also checks the order itself (it was Card B first in about half of all processes).
+@Test func simulateBalanceIsTheSameEveryRun() throws {
+    func run() throws -> String {
+        Tool.simulateBalance.call(try JSONSerialization.data(withJSONObject: ["days": 60]), database: try organizedPersona("daniel"))
+    }
+    let first = try run()
+    #expect(first.contains("\"bills\":[\"Card A payment\",\"Card B payment\"]"))
+    for _ in 1..<10 { #expect(try run() == first) }
+}
