@@ -34,7 +34,7 @@ struct ChatAnswer {
     var breakdown: Breakdown?
     /// A small bar chart, e.g. one bar per month.
     var chart: [ChatBar]?
-    /// The words of a link to the what-if screen, e.g. "Compare a small change →".
+    /// The words of a link to the cash-flow screen, e.g. "Compare a small change →".
     var whatIfLink: String?
     /// A question back to the person, answered with a tap.
     var quickCheck: QuickCheck?
@@ -235,7 +235,7 @@ private struct TurnView: View {
                 }
                 if let link = answer.whatIfLink {
                     NavigationLink {
-                        WhatIfView(database: database).navigationTitle("What if")
+                        CashFlowView(database: database).navigationTitle("Cash flow")
                     } label: {
                         Text(link).font(.link).frame(minHeight: 44)
                     }

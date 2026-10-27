@@ -4,7 +4,6 @@
 //
 
 import Charts
-import GRDB
 import SedgeCore
 import SwiftUI
 
@@ -15,7 +14,7 @@ struct WelcomeView: View {
     let maya: SedgeDatabase?
     /// Saves the chosen data, which also ends the first launch.
     let choose: (String) -> Void
-    @State private var preview: (projection: WhatIf, range: (low: [Simulator.Day], high: [Simulator.Day]))?
+    @State private var preview: CashFlow?
     /// True while the sample-people picker is shown.
     @State private var exploring = false
     /// The bank file, opened when Connect with Plaid is tapped, and whether its screen is shown.
@@ -91,11 +90,8 @@ struct WelcomeView: View {
         .task(id: maya == nil) {
             guard let maya else { return }
             do {
-                // The same 30-day projection and range the What if screen and the simulator tool use.
-                if let projection = try WhatIf.load(maya, extra: nil, on: nil) {
-                    let range = try maya.dbQueue.read { try Simulator.range($0, days: WhatIf.days) }
-                    preview = (projection, range)
-                }
+                // The same 30-day projection and range the Cash flow screen and the simulator tool use.
+                preview = try CashFlow.load(maya)
             } catch {
                 print("Could not project the preview:", error)
             }
@@ -116,8 +112,8 @@ struct WelcomeView: View {
     /// The card with Maya's projected checking balance: the line, its likely range shaded, and the lowest day marked.
     private var chartCard: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if let (projection, range) = preview {
-                chart(projection, range)
+            if let preview {
+                chart(preview)
                     .frame(height: 130)
                     // Axis labels past this size overlap in a 130 pt chart; VoiceOver reads the summary instead.
                     .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
@@ -134,8 +130,9 @@ struct WelcomeView: View {
         .background(Color.surface, in: .rect(cornerRadius: 15))
     }
 
-    private func chart(_ projection: WhatIf, _ range: (low: [Simulator.Day], high: [Simulator.Day])) -> some View {
+    private func chart(_ projection: CashFlow) -> some View {
         let account = projection.account
+        let range = projection.range
         let days = projection.without
         let dates = days.map(\.date)
         let lowest = projection.lowest(days)
@@ -180,7 +177,7 @@ struct WelcomeView: View {
     }
 
     /// E.g. "Sample checking balance forecast, Jul 1 to Jul 30. Lowest $1,234.00 on Jul 15."
-    private func accessibilitySummary(_ projection: WhatIf, _ lowest: (date: String, balance: Double)?) -> String {
+    private func accessibilitySummary(_ projection: CashFlow, _ lowest: (date: String, balance: Double)?) -> String {
         let format = Date.FormatStyle.dateTime.month(.wide).day()
         let span = "\(projection.without.first?.date.displayDate(format) ?? "") to \(projection.without.last?.date.displayDate(format) ?? "")"
         guard let lowest else { return "Sample checking balance forecast, \(span)." }
