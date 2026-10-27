@@ -209,6 +209,19 @@ func irregularRent() throws -> SedgeDatabase {
     #expect(try profile(pay)["income"] == [Profile.Value(name: "Acme Payroll", amount: 800, schedule: "twice_monthly", monthly_average: 1600)])
 }
 
+/// Rent paid in two unequal halves, 1000 on the 1st and 900 on the 16th, March to June 2026:
+/// it costs 1900 a month, and each day is projected at its own amount.
+@Test func twiceMonthlyUnequalHalvesKeepTheirOwnAmounts() throws {
+    let charges = (3...6).flatMap { m in [("a\(m)", "2026-0\(m)-01", "MAPLE COURT RENT", 1000.0),
+                                          ("b\(m)", "2026-0\(m)-16", "MAPLE COURT RENT", 900.0)] }
+    let database = try housingData(charges)
+    let housing = try #require(try Profile.facts(in: database).first { $0.kind == "housing" })
+    #expect(housing.value.schedule == "twice_monthly")
+    #expect(housing.value.monthly_average == 1900)
+    let rent = try simulate(database, days: 47).flatMap { day in day.bills.map { "\(day.date) \($0.amount)" } }
+    #expect(rent == ["2026-07-01 1000.0", "2026-07-16 900.0", "2026-08-01 1000.0", "2026-08-16 900.0"])
+}
+
 @Test func personsHousingCorrectionReplacesIrregularRent() throws {
     let database = try irregularRent()
     let id = try #require(try Profile.facts(in: database).first { $0.kind == "housing" }).id

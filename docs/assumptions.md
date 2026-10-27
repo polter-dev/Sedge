@@ -30,8 +30,9 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A recurring series needs at least three charges. — `Organizer.swift` `recurrence(of:)`
 - Weekly charges are 6 to 8 days apart, biweekly 12 to 16, monthly 26 to 35. — `Organizer.swift` `cadences`
 - A series is twice-monthly when every other charge falls on one day of the month and the rest on another, and each day on its own is monthly (three or more charges, 26 to 35 days apart). — `Organizer.swift` `recurrence(of:)`, `everyOther`
-- Each of a twice-monthly series' two days may be off by up to 2 days for a weekend, into the month before or after; the last day of the month counts as one day (Feb 28, Apr 30, Mar 31). — `Organizer.swift` `fixedDay(of:)`
-- Twice-monthly is checked before biweekly: biweekly pay drifts through the month, so it never stays on two days. The one exception is exactly six biweekly paychecks across February (Jan 2 to Mar 13), which stay near the 1st and 15th and are taken for twice-monthly. — `Organizer.swift` `recurrence(of:)`
+- Each charge of a twice-monthly series is on its day, or on the Friday before or Monday after when that day is a Saturday or Sunday, which may be in the month before or after; the last day of the month counts as one day (Feb 28, Apr 30, Mar 31). — `Organizer.swift` `fixedDay(of:)`
+- A holiday shift (Thu Jan 1 paid Fri Jan 2) is not a weekend shift, so it breaks a twice-monthly series, which is then biweekly or not recurring. — `Organizer.swift` `fixedDay(of:)`
+- Twice-monthly is checked before biweekly: biweekly pay drifts through the month, so it never stays on two days or their weekend shifts. — `Organizer.swift` `recurrence(of:)`
 - A missed or extra charge breaks a twice-monthly series' every-other split, so it is then biweekly or not recurring. — `Organizer.swift` `recurrence(of:)`
 - A bill may change price by up to 25% between charges and still be the same bill. — `Organizer.swift` `priceChangeAllowance`
 - A series' typical amount is the middle of its last three charges. — `Organizer.swift` `recurrence(of:)`
@@ -59,7 +60,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A loan is installment, auto or student by the words in its name, otherwise "other". — `Profile.swift` `loanTypes`
 - Two or more payments to a lender without a cadence are an irregular loan. — `Profile.swift` `infer`
 - A monthly bill's usual day is its most common day of the month; a tie goes to the earlier day. — `Profile.swift` `usualDay`
-- Twice-monthly rent or mortgage is housing like a monthly one, costing two payments a month. — `Profile.swift` `infer`
+- Twice-monthly rent or mortgage is housing like a monthly one, costing its two days' typical amounts a month (1000 on the 1st and 900 on the 16th is 1900). — `Profile.swift` `infer`
 - A correction the person makes always wins over a worked-out fact. — `Profile.swift` `facts`
 
 ## Simulator
@@ -71,7 +72,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - When the latest charge is the last day of a short month (Feb 28, Apr 30), the due day is the later of that day and the day of the latest charge in a 31-day month (Mar 31, Apr 30, May 29, Jun 30 gives the 30th). — `Simulator.swift` `dueDay`
 - A due day past the end of a short month falls on that month's last day. — `Simulator.swift` `monthDay`
 - Weekly and biweekly series repeat every 7 or 14 days from the latest charge. — `Simulator.swift` `simulate`
-- A twice-monthly series is projected as two monthly series, every other charge each, each due on its own `dueDay`. — `Simulator.swift` `simulate`
+- A twice-monthly series is projected as two monthly series, every other charge each, each due on its own `dueDay` at its own typical amount. — `Simulator.swift` `simulate`
 - A recurring series is paid from, or into, the account its latest charge used. — `Simulator.swift` `simulate`
 - A charge up to 3 days past due is late, not stopped, and is projected for tomorrow; after that its series has stopped. — `Simulator.swift` `simulate`
 - A paycheck due on a weekend may arrive on the business day before or after; a paycheck within that shift is on time, not late. Every monthly or twice-monthly series of money in counted as income gets 2 more days before it counts as stopped; with reconciliation off, that includes transfer and card-payment deposits and refunds. — `Simulator.swift` `weekendShiftDays`, `simulate`

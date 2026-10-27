@@ -192,10 +192,13 @@ public enum Profile {
                 // HOA dues are housing too but are neither rent nor a mortgage, so they are skipped.
                 guard let type = says(["mortgage"]) ? "mortgage" : says(rentWords) ? "rent" : nil else { continue }
                 if let series {
-                    // Rent paid in two halves a month costs two payments a month.
+                    // Rent paid in two halves a month costs both halves, each at its own amount
+                    // (1000 on the 1st and 900 on the 16th is 1900), split every other charge as the organizer did.
+                    let halves = series.cadence == "twice_monthly"
+                        ? Organizer.everyOther(inSeries.map { abs($0.amount) }).map(Organizer.typical).reduce(0, +) : nil
                     fact("housing", Value(name: first.store, type: type, amount: cents(series.typical!), schedule: series.cadence,
                                           day: series.cadence == "monthly" ? usualDay(inSeries) : nil,
-                                          monthly_average: series.cadence == "twice_monthly" ? cents(2 * series.typical!) : nil),
+                                          monthly_average: halves.map(cents)),
                          keywordConfidence, inSeries, "recurring_housing_bill")
                 } else if monthsSeen >= 3 {
                     // Rent or a mortgage paid in three or more months but not steadily (utilities

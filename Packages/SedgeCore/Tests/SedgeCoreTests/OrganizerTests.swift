@@ -198,6 +198,23 @@ func inSeries(_ database: SedgeDatabase) throws -> Int {
     #expect(try seriesFound(database, "income") == ["biweekly 800 2027-01-01"])
 }
 
+/// Six paychecks every 14 days across February stay near the 1st and 15th, but Jan 2 is no
+/// weekend shift of Thu Jan 1, so they stay biweekly and project four paydays in 60 days.
+@Test func sixBiweeklyPaychecksAcrossFebruaryStayBiweekly() throws {
+    let pay = ["2026-01-02", "2026-01-16", "2026-01-30", "2026-02-13", "2026-02-27", "2026-03-13"]
+    let database = try seriesDatabase(asOf: "2026-03-13", paydays: pay, paycheck: 800)
+    #expect(try seriesFound(database, "income") == ["biweekly 800 2026-03-27"])
+    #expect(paydays(try simulate(database, days: 60), from: 5000) == ["2026-03-27", "2026-04-10", "2026-04-24", "2026-05-08"])
+}
+
+/// The middle of the last three amounts, and no crash when the simulator has fewer.
+@Test func typicalAmountIsTheMiddleOfTheLastThree() {
+    #expect(Organizer.typical([1, 9, 4, 7]) == 7)
+    #expect(Organizer.typical([4, 9]) == 9)
+    #expect(Organizer.typical([4]) == 4)
+    #expect(Organizer.typical([]) == 0)
+}
+
 /// A bill on one day of the month stays monthly: every other charge is two months apart.
 @Test func monthlyBillOnOneDayStaysMonthly() throws {
     let database = try seriesDatabase(asOf: "2026-06-30", rent: (1...6).map { "2026-0\($0)-03" })

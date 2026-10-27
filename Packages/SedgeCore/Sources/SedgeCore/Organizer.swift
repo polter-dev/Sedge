@@ -338,8 +338,6 @@ public enum Organizer {
         // month, so they never stay on one day each.
         // shortcut: one missed or extra charge breaks the every-other split, so the series falls back
         // to biweekly or none; match charges to the nearer day instead if real data shows it.
-        // shortcut: exactly six biweekly paychecks across February (Jan 2 to Mar 13) stay near the 1st
-        // and 15th and look twice-monthly; four charges per half never do, so require four if it shows up.
         let monthly = cadences.first { $0.name == "monthly" }!.days
         let halves = everyOther(dates)
         let days = halves.map { $0.count >= 3 && gaps($0).allSatisfy(monthly.contains) ? fixedDay(of: $0) : nil }
@@ -349,8 +347,7 @@ public enum Organizer {
         let amounts = series.map { abs($0.amount) }
         let steady = zip(amounts, amounts.dropFirst()).allSatisfy { abs($0 - $1) <= priceChangeAllowance * max($0, $1) }
         guard steady else { return nil }
-        // The middle of the last three charges: after a price change it is the new price.
-        let typical = amounts.suffix(3).sorted()[1]
+        let typical = Self.typical(amounts)
         let next = switch cadence {
         case "monthly": calendar.date(byAdding: .month, value: 1, to: dates.last!)!
         // The next charge is the other day's: the one before the latest, a month on.
@@ -360,21 +357,37 @@ public enum Organizer {
         return (cadence, typical, next.formatted(.iso8601.year().month().day()))
     }
 
+    /// The middle of the last three amounts: after a price change it is the new price. With fewer
+    /// (a series the simulator sees cut short by reconciliation) it is the later of two, or the one.
+    static func typical(_ amounts: [Double]) -> Double {
+        let last = amounts.suffix(3).sorted()
+        return last.isEmpty ? 0 : last[last.count / 2]
+    }
+
     /// The two halves of a list, every other item each: [a, b, c, d, e] gives [a, c, e] and [b, d].
     static func everyOther<T>(_ items: [T]) -> [[T]] {
         [0, 1].map { start in stride(from: start, to: items.count, by: 2).map { items[$0] } }
     }
 
-    /// The day of the month that every date is on or within a weekend shift of, the closest fit
-    /// first; nil if the dates drift further. A day past a month's end means its last day, as in
-    /// `Simulator.monthDay`, so the 31st covers Feb 28, Apr 30 and Mar 31. The nearest such day
-    /// may be in the month before or after (the 1st paid on Fri Feb 27).
+    /// The day of the month that every date is on, or paid the Friday before or Monday after when
+    /// that day is a Saturday or Sunday; nil if none fits. Only weekends move a date, so biweekly pay
+    /// that drifts past a weekday never fits (Fri Jan 2 is no shift of Thu Jan 1). A day past a month's
+    /// end means its last day, as in `Simulator.monthDay`, so the 31st covers Feb 28, Apr 30 and Mar 31.
+    /// The day may be in the month before or after (the 1st, a Sunday, paid on Fri Feb 27).
     static func fixedDay(of dates: [Date]) -> Int? {
-        func distance(_ date: Date, _ day: Int) -> Int {
-            (-1...1).map { abs(calendar.dateComponents([.day], from: Simulator.monthDay(day, monthsAfter: $0, date), to: date).day!) }.min()!
+        func fits(_ date: Date, _ day: Int) -> Bool {
+            (-1...1).contains { months in
+                let due = Simulator.monthDay(day, monthsAfter: months, date)
+                let shift = calendar.dateComponents([.day], from: due, to: date).day!
+                // Weekday 7 is Saturday and 1 is Sunday: both move to Friday or Monday.
+                return switch calendar.component(.weekday, from: due) {
+                case 7: [0, -1, 2].contains(shift)
+                case 1: [0, -2, 1].contains(shift)
+                default: shift == 0
+                }
+            }
         }
-        let best = (1...31).map { day in (day: day, worst: dates.map { distance($0, day) }.max()!) }.min { $0.worst < $1.worst }!
-        return best.worst <= Simulator.weekendShiftDays ? best.day : nil
+        return (1...31).first { day in dates.allSatisfy { fits($0, day) } }
     }
 
     /// Dates are calendar days with no time zone, so all date math happens in UTC.
