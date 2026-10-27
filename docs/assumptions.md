@@ -31,7 +31,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Weekly charges are 6 to 8 days apart, biweekly 12 to 16, monthly 26 to 35. — `Organizer.swift` `cadences`
 - A series is twice-monthly when every other charge falls on one day of the month and the rest on another, and each day on its own is monthly (three or more charges, 26 to 35 days apart). — `Organizer.swift` `recurrence(of:)`, `everyOther`
 - Each of a twice-monthly series' two days may be off by up to 2 days for a weekend, into the month before or after; the last day of the month counts as one day (Feb 28, Apr 30, Mar 31). — `Organizer.swift` `fixedDay(of:)`
-- Twice-monthly is checked before biweekly: biweekly pay drifts through the month, so it never stays on two days. — `Organizer.swift` `recurrence(of:)`
+- Twice-monthly is checked before biweekly: biweekly pay drifts through the month, so it never stays on two days. The one exception is exactly six biweekly paychecks across February (Jan 2 to Mar 13), which stay near the 1st and 15th and are taken for twice-monthly. — `Organizer.swift` `recurrence(of:)`
 - A missed or extra charge breaks a twice-monthly series' every-other split, so it is then biweekly or not recurring. — `Organizer.swift` `recurrence(of:)`
 - A bill may change price by up to 25% between charges and still be the same bill. — `Organizer.swift` `priceChangeAllowance`
 - A series' typical amount is the middle of its last three charges. — `Organizer.swift` `recurrence(of:)`

@@ -338,6 +338,8 @@ public enum Organizer {
         // month, so they never stay on one day each.
         // shortcut: one missed or extra charge breaks the every-other split, so the series falls back
         // to biweekly or none; match charges to the nearer day instead if real data shows it.
+        // shortcut: exactly six biweekly paychecks across February (Jan 2 to Mar 13) stay near the 1st
+        // and 15th and look twice-monthly; four charges per half never do, so require four if it shows up.
         let monthly = cadences.first { $0.name == "monthly" }!.days
         let halves = everyOther(dates)
         let days = halves.map { $0.count >= 3 && gaps($0).allSatisfy(monthly.contains) ? fixedDay(of: $0) : nil }
