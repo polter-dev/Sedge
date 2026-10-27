@@ -12,7 +12,7 @@ import SwiftUI
 struct SpendingTotal: Decodable, FetchableRecord {
     /// "YYYY-MM".
     let month: String
-    /// The organizer's category for the store, or `movedCategory`.
+    /// The category the person moved the transaction to, else the organizer's category for the store, or `movedCategory`.
     let category: String
     let total: Double
 
@@ -27,7 +27,7 @@ struct SpendingTotal: Decodable, FetchableRecord {
         try database.dbQueue.read { db in
             try SpendingTotal.fetchAll(db, sql: """
                 SELECT substr(t.date, 1, 7) AS month,
-                       CASE WHEN t.kind IN ('transfer', 'card_payment') THEN ? ELSE COALESCE(c.name, 'other') END AS category,
+                       CASE WHEN t.kind IN ('transfer', 'card_payment') THEN ? ELSE COALESCE(t.category_override, c.name, 'other') END AS category,
                        SUM(ROUND(t.amount * 100)) / 100.0 AS total
                 FROM transactions t
                 LEFT JOIN edges e ON e.kind = 'in_category' AND e.source = t.merchant_id
