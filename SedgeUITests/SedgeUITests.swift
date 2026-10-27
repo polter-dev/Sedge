@@ -116,6 +116,31 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The correction wasn't removed")
     }
 
+    /// Reset asks first: Cancel leaves the saved answers alone, and only Delete clears them.
+    @MainActor
+    func testResetAsksBeforeDeleting() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let reset = app.buttons["Reset saved questions"]
+        let cleared = app.staticTexts["Saved answers cleared."]
+
+        reset.tap()
+        let question = app.alerts["Delete all saved answers?"]
+        XCTAssertTrue(question.waitForExistence(timeout: 5), "Reset didn't ask first")
+        XCTAssertTrue(question.staticTexts["This can't be undone."].exists)
+        attachScreenshot(app, "reset-confirm")
+        question.buttons["Cancel"].tap()
+        XCTAssertFalse(cleared.waitForExistence(timeout: 2), "Cancel cleared the saved answers")
+
+        reset.tap()
+        XCTAssertTrue(question.waitForExistence(timeout: 5))
+        question.buttons["Delete"].tap()
+        XCTAssertTrue(cleared.waitForExistence(timeout: 5), "Delete didn't clear the saved answers")
+    }
+
     /// The app reopens on the last chosen person, and with no quickstart server the bank
     /// screen says so and leads back to a sample person. Launched without `-persona`, because
     /// a launch argument would win over the saved choice. Needs the quickstart server off.
