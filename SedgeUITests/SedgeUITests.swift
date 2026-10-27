@@ -59,8 +59,7 @@ final class SedgeUITests: XCTestCase {
             app.launch()
 
             app.tabBars.buttons["Trends"].tap()
-            XCTAssertTrue(app.switches["Include money moved between my accounts"].waitForExistence(timeout: 10))
-            XCTAssertTrue(app.staticTexts["By category"].exists)
+            XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
             XCTAssertFalse(app.staticTexts["No spending yet"].exists)
             attachScreenshot(app, "\(persona) spending")
 
@@ -202,7 +201,7 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "tab-ask")
 
         app.tabBars.buttons["Trends"].tap()
-        XCTAssertTrue(app.staticTexts["By category"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
         attachScreenshot(app, "tab-trends-spending")
         app.navigationBars.buttons["What if"].tap()
         XCTAssertTrue(app.textFields["Extra purchase in dollars"].waitForExistence(timeout: 10))
@@ -234,6 +233,36 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Sample people"].waitForExistence(timeout: 5))
         attachScreenshot(app, "accounts-change-data")
         app.buttons["Cancel"].tap()
+    }
+
+    /// Tapping a store in Maya's spending graph shows its latest transaction, which opens the
+    /// transaction; "Ask about a tradeoff" goes to the Ask tab. The screenshot is the screen
+    /// in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testTappingAStoreShowsItsLatestTransaction() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let store = app.buttons.matching(identifier: "store").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 10))
+        // The node reads "Store name, $123"; the latest transaction's row starts with the same name.
+        let name = String(store.label.split(separator: ",")[0])
+        let latest = app.buttons["latest"]
+        XCTAssertFalse(latest.exists)
+        store.tap()
+        XCTAssertTrue(latest.waitForExistence(timeout: 5))
+        XCTAssertTrue(latest.label.hasPrefix(name), "\(latest.label) isn't from \(name)")
+        XCTAssertTrue(latest.label.contains("Latest transaction"))
+        attachScreenshot(app, "spending-graph")
+
+        latest.tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Transaction"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+
+        app.buttons["Ask about a tradeoff →"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Ask"].isSelected)
     }
 
     /// Keeps a screenshot in the test results, named for what it shows.

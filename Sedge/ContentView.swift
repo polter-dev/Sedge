@@ -149,7 +149,7 @@ struct MainView: View {
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
-                    SpendingView(database: database)
+                    SpendingView(database: database) { tab = .ask }
                         .navigationTitle("Spending")
                         .navigationSubtitle(dataName)
                         .toolbar {
