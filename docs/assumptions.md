@@ -105,7 +105,19 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - An account's owner (mine or shared) and a transaction's familiar answer (yes or not_sure) are only reported to the model; they don't change any total. — `Answers.swift`; `Tools.swift` `accountBalances`, `findTransactions`
 - An answer about a pending charge is lost when the charge posts under a new id. — `SedgeDatabase.swift` `save`
 
+## Ask screen demo
+
+- The Debug sample conversation counts food as groceries, dining and coffee, and its "usual pace" is the average of the same days (1st through today's day, or the month's end) of the last three months. — `Sedge/AskView.swift` `ChatTurn.sample`, `monthToDate`
+- The sample's quick check asks about the month's largest transfer or card payment with a positive amount, the latest one on a tie. — `Sedge/AskView.swift` `ChatTurn.transferCheck`
+- A quick-check tap is saved through `ask_user` and replaces an answer already saved for that fact; "Later" saves nothing and keeps any earlier answer, so it may be asked again. — `Sedge/AskView.swift` `TurnView.answer`
+
 ## Spending screen
 
 - Months are compared over the same first days: the day of the month of `as_of` (a shorter month just ends sooner), for `as_of`'s month and the three before it. — `Sedge/SpendingView.swift` `SpendingTotal.all`, `SpendingView.months`
 - The spending graph shows a category's three biggest stores this month and adds the rest up as "Other stores", or every store when there are four or fewer. — `Sedge/SpendingView.swift` `SpendingView.stores`
+
+## Transaction screen
+
+- Sedge's context compares a purchase with the same store's three posted purchases just before it (same-day ones by id; refunds, transfers and pending charges left out): above all three is higher, below all three is lower, anything else is in line. With fewer than three earlier purchases there is no comparison. — `Sedge/TransactionDetailView.swift` `StoreContext.compare`, `TransactionDetail.earlierCharges`
+- Choosing a transaction's store category again clears the person's category answer instead of saving it. — `Sedge/TransactionDetailView.swift` `setCategory`
+- After a bank connection, each account with no owner answer is asked about once; Later saves nothing, so it is asked again after the next connection. — `Sedge/AccountCheckView.swift` `AccountChecksAfterConnecting`

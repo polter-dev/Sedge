@@ -44,9 +44,87 @@ final class SedgeUITests: XCTestCase {
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
         field.tap()
         field.typeText("How much did I spend at Netflix this year?")
-        app.collectionViews.buttons["Ask"].tap()
+        app.buttons["Send"].tap()
         XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
+        // Without the sample, nothing on screen is demo content.
+        XCTAssertTrue(app.staticTexts["Local analysis"].exists)
         attachScreenshot(app, "ask-not-connected")
+    }
+
+    /// The Debug sample conversation shows the breakdown card, the answer and the quick check,
+    /// and a quick-check tap is saved like any other answer. It is removed again at the end,
+    /// so Maya's saved file stays as it was.
+    @MainActor
+    func testSampleChatSavesTheQuickCheck() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["Food & dining"].waitForExistence(timeout: 10), "No breakdown card")
+        XCTAssertTrue(app.staticTexts["You · Have I been overspending on food?"].exists)
+        let answer = app.staticTexts.containing(NSPredicate(format: "label ENDSWITH 'accounts for most of the difference.'")).firstMatch
+        XCTAssertTrue(answer.exists, "No answer")
+        XCTAssertTrue(app.staticTexts["A quick check"].exists, "No quick check")
+        XCTAssertTrue(app.staticTexts["Local analysis · demo state"].exists)
+        attachScreenshot(app, "ask-sample")
+        // The quick check's buttons sit below the fold on a phone, so scroll to show them too.
+        app.scrollViews.firstMatch.swipeUp()
+        attachScreenshot(app, "ask-sample-quick-check")
+
+        app.buttons["Yes, mine"].tap()
+        let saved = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 5), "The tap wasn't saved")
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Saved answers"].tap()
+        let row = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "The quick check isn't in Saved answers")
+        XCTAssertTrue(app.staticTexts["Yes, mine"].exists)
+        attachScreenshot(app, "ask-sample-saved")
+        row.swipeLeft()
+        app.buttons["Remove"].tap()
+        XCTAssertFalse(row.waitForExistence(timeout: 2), "The saved answer wasn't removed")
+    }
+
+    /// The sample shows the same quick check on every launch, so a later tap must replace the
+    /// answer saved earlier. The saved answer is removed before asserting, so Maya's file stays as it was.
+    @MainActor
+    func testSecondLaunchTapNoIsSaved() throws {
+        continueAfterFailure = true
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        var shown = "(none)", firstSaved = false, savedAnswersHasNo = false
+
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["Yes, mine"].tap()
+        firstSaved = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5)
+        app.terminate()
+
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["No"].tap()
+        let any = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved:' OR label BEGINSWITH 'Not saved'")).firstMatch
+        _ = any.waitForExistence(timeout: 5)
+        shown = any.exists ? any.label : "(none)"
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Saved answers"].tap()
+        let row = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        if row.waitForExistence(timeout: 5) {
+            savedAnswersHasNo = app.staticTexts["No"].exists
+            row.swipeLeft()
+            app.buttons["Remove"].tap()
+        }
+        XCTAssertTrue(firstSaved, "first launch didn't save Yes, mine")
+        XCTAssertTrue(shown.hasPrefix("Saved: No"), "Label after tapping No was: \(shown)")
+        XCTAssertTrue(savedAnswersHasNo, "Saved answers does not show No")
     }
 
     /// Opens the spending, cash-flow and profile screens for every sample person and checks each
@@ -362,6 +440,134 @@ final class SedgeUITests: XCTestCase {
         }
         let waited = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: shown, object: nil)], timeout: 5)
         XCTAssertEqual(waited, .completed, "Projected shows \(element.label), expected \(expected)")
+    }
+
+    /// Moving Maya's Jun 18 Corner Cafe charge ($10.40) from Dining to Groceries moves its amount
+    /// between those categories' June bars on the Spending screen, and moving it back restores
+    /// them, so Maya's saved file ends as it was. Also checks Sedge's context for that charge: her
+    /// three visits before it (Corner Cafe, TST* Corner Cafe and Corner Cafe Restaurant are one
+    /// store) were $9.11, $8.81 and $9.29.
+    @MainActor
+    func testChangingCategoryMovesSpending() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        let before = (dining: try spent(app, "Dining"), groceries: try spent(app, "Groceries"))
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        XCTAssertTrue(app.staticTexts["Higher than your last three visits."].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Those were $8.81–$9.29."].exists)
+        XCTAssertTrue(app.staticTexts["This is a spending observation, not a fraud determination."].exists)
+        attachScreenshot(app, "transaction-detail")
+
+        try pickCategory(app, "Groceries")
+        attachScreenshot(app, "transaction-detail-groceries")
+        let moved = (dining: try spent(app, "Dining"), groceries: try spent(app, "Groceries"))
+        // The bars show whole dollars, so $10.40 moves by 10 or 11 after rounding.
+        XCTAssertTrue((10...11).contains(before.dining - moved.dining), "Dining went from \(before.dining) to \(moved.dining)")
+        XCTAssertTrue((10...11).contains(moved.groceries - before.groceries), "Groceries went from \(before.groceries) to \(moved.groceries)")
+
+        // Back to the store's own category, which clears the answer.
+        app.tabBars.buttons["Accounts"].tap()
+        try pickCategory(app, "Dining")
+        XCTAssertEqual(try spent(app, "Dining"), before.dining)
+        XCTAssertEqual(try spent(app, "Groceries"), before.groceries)
+    }
+
+    /// Answering "Is this account yours?" from the Accounts tab shows the answer on that account,
+    /// and Later leaves it unanswered. Clears the answers at the end, so Maya's saved file ends as it was.
+    @MainActor
+    func testAccountQuickCheckShowsTheAnswer() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+
+        // Shared, then Yes, mine, so each answer is seen to change what the account shows.
+        let checking = app.buttons["Checking"]
+        XCTAssertTrue(checking.waitForExistence(timeout: 10))
+        checking.tap()
+        XCTAssertTrue(app.staticTexts["Is this account yours?"].waitForExistence(timeout: 5))
+        attachScreenshot(app, "account-quick-check")
+        app.buttons["Shared"].tap()
+        XCTAssertTrue(checking.waitForExistence(timeout: 5))
+        XCTAssertEqual(checking.value as? String, "Shared")
+        checking.tap()
+        app.buttons["Yes, mine"].tap()
+        XCTAssertTrue(checking.waitForExistence(timeout: 5))
+        XCTAssertEqual(checking.value as? String, "Yours")
+
+        let card = app.buttons["Credit Card"]
+        card.tap()
+        app.buttons["Later"].tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertEqual(card.value as? String, "Not answered")
+        attachScreenshot(app, "accounts-with-answers")
+
+        // The app has no way to take an owner answer back, so a debug launch argument clears them.
+        app.terminate()
+        app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        XCTAssertTrue(checking.waitForExistence(timeout: 10))
+        XCTAssertEqual(checking.value as? String, "Not answered")
+    }
+
+    /// After a bank connection, each unanswered account is asked about once, one after another.
+    /// The launch argument stands in for a finished Plaid sync, so no quickstart server is needed.
+    /// Later answers nothing, so Maya's saved file stays as it was.
+    @MainActor
+    func testQuickCheckAfterConnectingAsksEachUnansweredAccountOnce() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-checkAccountsAfterConnecting", "YES"]
+        app.launch()
+
+        let question = app.staticTexts["Is this account yours?"]
+        var asked: [String] = []
+        while question.waitForExistence(timeout: 5) {
+            let name = app.staticTexts.matching(NSPredicate(format: "label IN %@", ["Checking", "Credit Card"])).firstMatch.label
+            asked.append(name)
+            app.buttons["Later"].tap()
+            // Wait for this sheet to go before looking for the next one.
+            XCTAssertTrue(app.staticTexts[name].waitForNonExistence(timeout: 5))
+            if asked.count > 2 { break }
+        }
+        // Maya has two accounts; one may already be answered by another test on this simulator.
+        XCTAssertFalse(asked.isEmpty)
+        XCTAssertEqual(asked.count, Set(asked).count, "An account was asked about twice")
+        XCTAssertTrue(app.tabBars.buttons["Ask"].isHittable)
+    }
+
+    /// Picks a category on the open transaction screen and checks the screen shows it.
+    @MainActor
+    private func pickCategory(_ app: XCUIApplication, _ category: String) throws {
+        let menu = app.buttons["Category"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        menu.tap()
+        app.buttons[category].tap()
+        XCTAssertTrue(app.buttons["Category"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["Category"].value as? String, category)
+    }
+
+    /// One category's June bar on the Spending screen, in whole dollars (Maya's today is Jun 30).
+    @MainActor
+    private func spent(_ app: XCUIApplication, _ category: String) throws -> Int {
+        app.tabBars.buttons["Trends"].tap()
+        let menu = app.buttons["Category"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        if menu.value as? String != category {
+            menu.tap()
+            app.buttons[category].tap()
+        }
+        let june = app.otherElements["June"]
+        XCTAssertTrue(june.waitForExistence(timeout: 5))
+        let value = try XCTUnwrap(june.value as? String).filter(\.isNumber)
+        return try XCTUnwrap(Int(value), "Not a number: \(value)")
     }
 
     /// Keeps a screenshot in the test results, named for what it shows.

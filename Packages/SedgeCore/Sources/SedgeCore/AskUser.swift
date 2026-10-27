@@ -51,8 +51,8 @@ public enum AskUser {
 
     /// Answers one `ask_user` call: from memory if the fact is already known, otherwise by
     /// asking the person and saving what they say. Returns the tool's JSON result and, for a
-    /// good call, what happened.
-    static func run(_ input: Data, database: SedgeDatabase, askPerson: AskPerson?) async -> (content: String, clarification: Clarification?) {
+    /// good call, what happened. Public so the app's quick-check buttons save the same way.
+    public static func run(_ input: Data, database: SedgeDatabase, askPerson: AskPerson?) async -> (content: String, clarification: Clarification?) {
         struct Input: Decodable { let question: String; let options: [String]; let fact_key: String }
         // A nil field is left out of the JSON, so a fresh answer is just {"answer": ...}.
         struct Answer: Encodable { let answer: String; let answered_from_memory: Bool? }

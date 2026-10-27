@@ -108,8 +108,12 @@ struct ConnectBankScreen: View {
             } description: {
                 Text("The Plaid quickstart server isn't running, so a bank can't be connected.")
             } actions: {
-                Button("Use a sample person", action: useSample)
-                    .buttonStyle(.borderedProminent)
+                Button(action: useSample) {
+                    // The button's fill is the accent, so its text takes the color made to sit on it.
+                    // Left alone it would take the app-wide ink color, which is as dark as the fill in light mode.
+                    Text("Use a sample person").foregroundStyle(Color.contrast)
+                }
+                .buttonStyle(.borderedProminent)
                 // Showing the spinner again runs its .task, which asks the server again.
                 Button("Try again") { failed = false }
             }
@@ -175,7 +179,11 @@ struct ConnectBankView: View
                     // Send success.publicToken to the server. It is never printed.
                     Task {
                         syncFailure = await finishConnecting(publicToken: success.publicToken, database: database)
-                        if syncFailure == nil { onSynced() }
+                        if syncFailure == nil {
+                            // The main tabs then ask "Is this account yours?" for each new account.
+                            UserDefaults.standard.set(true, forKey: AccountChecksAfterConnecting.pendingKey)
+                            onSynced()
+                        }
                     }
                     isPresentingLink = false
                 },
