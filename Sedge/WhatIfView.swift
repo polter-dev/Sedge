@@ -99,13 +99,16 @@ struct WhatIfView: View {
                     Text("Extra purchase")
                 } footer: {
                     Text("\(result.accountName), projected from paychecks, bills, card payments and typical daily spending.")
+                        .foregroundStyle(.secondary)
                 }
+                .listRowBackground(Color.group)
                 Section("Next \(WhatIf.days) days") {
                     chart(result)
                         .frame(height: 240)
                     summary("Without the purchase", result.lowest(result.without))
                     if let with = result.with { summary("With the purchase", result.lowest(with)) }
                 }
+                .listRowBackground(Color.group)
                 Section("Bill days") {
                     ForEach(result.billDays, id: \.date) { day in
                         // Stacked at the largest text sizes, so the bill names keep the full width.
@@ -121,7 +124,7 @@ struct WhatIfView: View {
                             Spacer(minLength: 8)
                             if let label = result.housingLabel(day) {
                                 // The icon sits inside the text, since a list lines up Label icons in their own column.
-                                Text("\(Image(systemName: "house")) \(label)").font(.caption).foregroundStyle(.red)
+                                Text("\(Image(systemName: "house")) \(label)").font(.caption).foregroundStyle(Color.ink)
                                     .accessibilityLabel(label)
                             }
                             Text(day.balances[result.account] ?? 0, format: .currency(code: "USD"))
@@ -134,8 +137,10 @@ struct WhatIfView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .listRowBackground(Color.group)
             }
         }
+        .themedBackground()
         // The number pad has no return key, so scrolling is the way to put it away and reach the tabs.
         .scrollDismissesKeyboard(.immediately)
         .overlay {
@@ -168,21 +173,20 @@ struct WhatIfView: View {
                         .foregroundStyle(by: .value("Projection", "With purchase"))
                 }
             }
-            // A thin line on every bill day, and a labeled red one on the rent or mortgage day.
+            // A faint line on every bill day, and a labeled dark one on the rent or mortgage day.
             ForEach(result.billDays, id: \.date) { day in
                 if let label = result.housingLabel(day) {
                     RuleMark(x: .value("Day", day.date))
-                        .foregroundStyle(.red)
-                        .annotation(position: .top, alignment: .leading) { Text(label).font(.caption2).foregroundStyle(.red) }
+                        .foregroundStyle(Color.ink)
+                        .annotation(position: .top, alignment: .leading) { Text(label).font(.caption2).foregroundStyle(Color.ink) }
                 } else {
                     RuleMark(x: .value("Day", day.date))
-                        .foregroundStyle(.orange.opacity(0.4))
+                        .foregroundStyle(Color.line)
                 }
             }
         }
-        // The app's green for the balance as it is; blue for the purchase, apart from the
-        // orange bill days and the red rent day.
-        .chartForegroundStyleScale(["Without purchase": Color.accentColor, "With purchase": Color.blue])
+        // The theme's accent for the balance as it is, and its lighter gray for the purchase.
+        .chartForegroundStyleScale(["Without purchase": Color.accent, "With purchase": Color.second])
         // With no purchase typed, a one-item legend says nothing.
         .chartLegend(result.with == nil ? .hidden : .visible)
         // 30 day labels don't fit, so only every 7th day is labeled ("Jul 8").

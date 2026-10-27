@@ -58,13 +58,13 @@ final class SedgeUITests: XCTestCase {
             app.launchArguments = ["-persona", persona]
             app.launch()
 
-            app.tabBars.buttons["Spending"].tap()
+            app.tabBars.buttons["Trends"].tap()
             XCTAssertTrue(app.switches["Include money moved between my accounts"].waitForExistence(timeout: 10))
             XCTAssertTrue(app.staticTexts["By category"].exists)
             XCTAssertFalse(app.staticTexts["No spending yet"].exists)
             attachScreenshot(app, "\(persona) spending")
 
-            app.tabBars.buttons["What if"].tap()
+            app.navigationBars.buttons["What if"].tap()
             let field = app.textFields["Extra purchase in dollars"]
             XCTAssertTrue(field.waitForExistence(timeout: 10))
             field.tap()
@@ -84,7 +84,8 @@ final class SedgeUITests: XCTestCase {
             XCTAssertEqual(waited, .completed, "The number pad is still covering the tabs")
             attachScreenshot(app, "\(persona) what if")
 
-            app.tabBars.buttons["About you"].tap()
+            app.tabBars.buttons["Accounts"].tap()
+            app.buttons["About you"].tap()
             let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
             XCTAssertTrue(evidence.waitForExistence(timeout: 10))
             attachScreenshot(app, "\(persona) profile")
@@ -100,13 +101,15 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         // Saving a fact unchanged still makes a correction.
-        app.tabBars.buttons["About you"].tap()
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["About you"].tap()
         let fact = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
         XCTAssertTrue(fact.waitForExistence(timeout: 10))
         fact.tap()
         app.buttons["Save"].tap()
 
-        app.tabBars.buttons["Ask"].tap()
+        // Back to the Accounts list, where the menu is.
+        app.navigationBars.buttons.firstMatch.tap()
         app.buttons["Saved answers"].tap()
         let row = app.staticTexts["Questions about income"]
         XCTAssertTrue(row.waitForExistence(timeout: 5), "The correction isn't in the menu")
@@ -123,7 +126,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
 
-        app.tabBars.buttons["Ask"].tap()
+        app.tabBars.buttons["Accounts"].tap()
         let reset = app.buttons["Reset saved questions"]
         let cleared = app.staticTexts["Saved answers cleared."]
 
@@ -151,6 +154,10 @@ final class SedgeUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-emptyBank", "YES"]
         app.launch()
+        // The data picker opens from the Accounts tab.
+        let accounts = app.tabBars.buttons["Accounts"]
+        XCTAssertTrue(accounts.waitForExistence(timeout: 10))
+        accounts.tap()
         let changeData = app.navigationBars.buttons["Change data"]
         XCTAssertTrue(changeData.waitForExistence(timeout: 10))
         changeData.tap()
@@ -165,20 +172,68 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10), "Didn't reopen on Daniel")
         XCTAssertFalse(app.staticTexts["Sample people"].exists)
 
+        // Picking other data keeps the Accounts tab open, so the bank's transactions are one tap away.
+        app.tabBars.buttons["Accounts"].tap()
         app.navigationBars.buttons["Change data"].tap()
         app.buttons["Connect bank"].tap()
+        app.buttons["Transactions"].tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
         attachScreenshot(app, "demo-bank-server-not-running")
         app.buttons["Use a sample person"].tap()
         app.buttons["Maya"].tap()
         XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
+    }
 
-        // One screenshot of each main screen, for the demo notes.
-        for tab in ["Transactions", "Ask", "Spending", "What if", "About you"] {
-            app.tabBars.buttons[tab].tap()
-            XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
-            attachScreenshot(app, "demo-\(tab.lowercased().replacingOccurrences(of: " ", with: "-"))")
-        }
+    /// The app has exactly three tabs, Ask, Trends and Accounts, and every screen from before
+    /// the tabs were folded together is still reached through them, with a screenshot of each
+    /// screen. For dark screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    /// Nothing is changed, so Maya's saved file stays as it was.
+    @MainActor
+    func testThreeTabsReachEveryScreen() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        XCTAssertTrue(app.tabBars.buttons["Ask"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.tabBars.buttons.allElementsBoundByIndex.map(\.label), ["Ask", "Trends", "Accounts"])
+
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.textViews.firstMatch.waitForExistence(timeout: 10) || app.textFields.firstMatch.exists)
+        attachScreenshot(app, "tab-ask")
+
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(app.staticTexts["By category"].waitForExistence(timeout: 10))
+        attachScreenshot(app, "tab-trends-spending")
+        app.navigationBars.buttons["What if"].tap()
+        XCTAssertTrue(app.textFields["Extra purchase in dollars"].waitForExistence(timeout: 10))
+        attachScreenshot(app, "trends-what-if")
+
+        app.tabBars.buttons["Accounts"].tap()
+        XCTAssertTrue(app.buttons["Transactions"].waitForExistence(timeout: 10))
+        attachScreenshot(app, "tab-accounts")
+
+        // Each screen below opens from the Accounts list; the first nav bar button goes back to it.
+        app.buttons["Transactions"].tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Transactions"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["No transactions"].exists)
+        attachScreenshot(app, "accounts-transactions")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        app.buttons["About you"].tap()
+        let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+        XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+        attachScreenshot(app, "accounts-about-you")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        app.buttons["Saved answers"].tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Saved answers"].waitForExistence(timeout: 10))
+        attachScreenshot(app, "accounts-saved-answers")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        app.navigationBars.buttons["Change data"].tap()
+        XCTAssertTrue(app.staticTexts["Sample people"].waitForExistence(timeout: 5))
+        attachScreenshot(app, "accounts-change-data")
+        app.buttons["Cancel"].tap()
     }
 
     /// Keeps a screenshot in the test results, named for what it shows.
