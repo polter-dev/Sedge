@@ -71,6 +71,13 @@ extension SedgeDatabase {
             try Persona.load(accounts: accounts, transactions: transactions, into: database)
         }
         try Organizer.organize(database)
+        #if DEBUG
+        // UI tests launch with `-clearOwnerAnswers YES` to take back their "Is this account yours?"
+        // answers, which the app itself never clears. Debug builds only.
+        if UserDefaults.standard.bool(forKey: "clearOwnerAnswers") {
+            for account in try ListedAccount.all(in: database) { try Answers.setOwner(nil, account: account.id, in: database) }
+        }
+        #endif
         return database
     }
 }
