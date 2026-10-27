@@ -195,6 +195,20 @@ func irregularRent() throws -> SedgeDatabase {
     #expect(housing.first?.evidence.sorted() == ["s1", "s2", "s3", "s4"])
 }
 
+/// Rent split into two halves on the 1st and 16th, March to June: twice-monthly housing that
+/// costs two halves a month. Pay twice a month averages two paychecks a month.
+@Test func twiceMonthlyRentAndPayCountTwoPaymentsAMonth() throws {
+    let days = (3...6).flatMap { ["2026-0\($0)-01", "2026-0\($0)-16"] }
+    let database = try housingData(days.enumerated().map { ("h\($0.offset)", $0.element, "MAPLE COURT RENT", 750) })
+    let housing = try Profile.facts(in: database).filter { $0.kind == "housing" }
+    #expect(housing.map(\.value) == [Profile.Value(name: "Maple Court Rent", type: "rent", amount: 750, schedule: "twice_monthly",
+                                                   monthly_average: 1500)])
+    #expect(housing.first?.rule == "recurring_housing_bill" && housing.first?.evidence.count == 8)
+
+    let pay = try seriesDatabase(asOf: "2026-06-30", paydays: days, paycheck: 800)
+    #expect(try profile(pay)["income"] == [Profile.Value(name: "Acme Payroll", amount: 800, schedule: "twice_monthly", monthly_average: 1600)])
+}
+
 @Test func personsHousingCorrectionReplacesIrregularRent() throws {
     let database = try irregularRent()
     let id = try #require(try Profile.facts(in: database).first { $0.kind == "housing" }).id

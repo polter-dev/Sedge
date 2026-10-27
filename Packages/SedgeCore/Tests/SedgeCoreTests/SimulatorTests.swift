@@ -254,3 +254,19 @@ func weekendShiftedPaycheckIsOnTime(asOf: String, pay: [String], expected: [Stri
     let payments = try simulate(database, days: 30).filter { $0.bills.contains { $0.name == "Credit Card payment" } }.map(\.date)
     #expect(payments == ["2026-05-05"])
 }
+
+/// Pay on the 15th and the last day, moved to Friday by weekends (Nov 14, Nov 28, Jan 30), is
+/// projected on both days: the last day is Feb 28 in February, and Jan 30 makes the 30th after
+/// that (pay dates aren't moved to business days). When the 15th is due today and not paid yet it
+/// is projected tomorrow, once. The end balance shows each payday was added exactly once.
+@Test(arguments: [
+    (asOf: "2026-01-31", expected: ["2026-02-15", "2026-02-28", "2026-03-15"]),
+    (asOf: "2026-02-15", expected: ["2026-02-16", "2026-02-28", "2026-03-15", "2026-03-30"]),
+])
+func twiceMonthlyPayIsProjectedOnBothDays(asOf: String, expected: [String]) throws {
+    let pay = ["2025-10-15", "2025-10-31", "2025-11-14", "2025-11-28", "2025-12-15", "2025-12-31", "2026-01-15", "2026-01-30"]
+    let database = try seriesDatabase(asOf: asOf, paydays: pay, paycheck: 800, checking: 1000)
+    let days = try simulate(database, days: 45)
+    #expect(paydays(days, from: 1000) == expected)
+    #expect(days.last?.balances["checking"] == 1000 + 800 * Double(expected.count))
+}

@@ -46,6 +46,7 @@ public enum Organizer {
 
     /// Allowed gaps in days between charges for each cadence. Monthly is wide
     /// because months are 28 to 31 days and "last business day" pay moves around.
+    /// Twice-monthly is not a gap: `recurrence(of:)` finds it from two monthly halves.
     static let cadences: [(name: String, days: ClosedRange<Int>)] = [
         ("weekly", 6...8), ("biweekly", 12...16), ("monthly", 26...35),
     ]
@@ -330,17 +331,48 @@ public enum Organizer {
     static func recurrence(of series: [Line]) throws -> (cadence: String, typicalAmount: Double, nextDate: String)? {
         guard series.count >= 3 else { return nil }
         let dates = try series.map { try Date($0.date + "T00:00:00Z", strategy: .iso8601) }
-        let gaps = zip(dates, dates.dropFirst()).map { calendar.dateComponents([.day], from: $0, to: $1).day! }
-        guard let cadence = cadences.first(where: { c in gaps.allSatisfy { c.days.contains($0) } }) else { return nil }
+        func gaps(_ dates: [Date]) -> [Int] { zip(dates, dates.dropFirst()).map { calendar.dateComponents([.day], from: $0, to: $1).day! } }
+        // Twice a month on two fixed days (the 1st and 15th, the 15th and the last day): every other
+        // charge is one day's, and each day on its own passes the monthly rule. It is checked before
+        // biweekly because biweekly pay also splits into 28-day halves, but they drift through the
+        // month, so they never stay on one day each.
+        // shortcut: one missed or extra charge breaks the every-other split, so the series falls back
+        // to biweekly or none; match charges to the nearer day instead if real data shows it.
+        let monthly = cadences.first { $0.name == "monthly" }!.days
+        let halves = everyOther(dates)
+        let days = halves.map { $0.count >= 3 && gaps($0).allSatisfy(monthly.contains) ? fixedDay(of: $0) : nil }
+        let twiceMonthly = days[0] != nil && days[1] != nil && days[0] != days[1]
+        guard let cadence = twiceMonthly ? "twice_monthly"
+                : cadences.first(where: { c in gaps(dates).allSatisfy { c.days.contains($0) } })?.name else { return nil }
         let amounts = series.map { abs($0.amount) }
         let steady = zip(amounts, amounts.dropFirst()).allSatisfy { abs($0 - $1) <= priceChangeAllowance * max($0, $1) }
         guard steady else { return nil }
         // The middle of the last three charges: after a price change it is the new price.
         let typical = amounts.suffix(3).sorted()[1]
-        let next = cadence.name == "monthly"
-            ? calendar.date(byAdding: .month, value: 1, to: dates.last!)!
-            : calendar.date(byAdding: .day, value: cadence.name == "weekly" ? 7 : 14, to: dates.last!)!
-        return (cadence.name, typical, next.formatted(.iso8601.year().month().day()))
+        let next = switch cadence {
+        case "monthly": calendar.date(byAdding: .month, value: 1, to: dates.last!)!
+        // The next charge is the other day's: the one before the latest, a month on.
+        case "twice_monthly": calendar.date(byAdding: .month, value: 1, to: dates[dates.count - 2])!
+        default: calendar.date(byAdding: .day, value: cadence == "weekly" ? 7 : 14, to: dates.last!)!
+        }
+        return (cadence, typical, next.formatted(.iso8601.year().month().day()))
+    }
+
+    /// The two halves of a list, every other item each: [a, b, c, d, e] gives [a, c, e] and [b, d].
+    static func everyOther<T>(_ items: [T]) -> [[T]] {
+        [0, 1].map { start in stride(from: start, to: items.count, by: 2).map { items[$0] } }
+    }
+
+    /// The day of the month that every date is on or within a weekend shift of, the closest fit
+    /// first; nil if the dates drift further. A day past a month's end means its last day, as in
+    /// `Simulator.monthDay`, so the 31st covers Feb 28, Apr 30 and Mar 31. The nearest such day
+    /// may be in the month before or after (the 1st paid on Fri Feb 27).
+    static func fixedDay(of dates: [Date]) -> Int? {
+        func distance(_ date: Date, _ day: Int) -> Int {
+            (-1...1).map { abs(calendar.dateComponents([.day], from: Simulator.monthDay(day, monthsAfter: $0, date), to: date).day!) }.min()!
+        }
+        let best = (1...31).map { day in (day: day, worst: dates.map { distance($0, day) }.max()!) }.min { $0.worst < $1.worst }!
+        return best.worst <= Simulator.weekendShiftDays ? best.day : nil
     }
 
     /// Dates are calendar days with no time zone, so all date math happens in UTC.

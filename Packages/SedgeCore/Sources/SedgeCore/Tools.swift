@@ -35,7 +35,8 @@ public struct Tool: Sendable {
     /// v4 added `ask_user` (in AskUser.swift) to the tools Claude is offered.
     /// v5 = tool inputs sent required-first (#41).
     /// v6 = get_profile's tuition reports paid and refunded apart, with each payment and refund (#46).
-    public static let version = "v6"
+    /// v7 = recurring_charges and get_profile can report the twice_monthly cadence, with housing's monthly cost (#53).
+    public static let version = "v7"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,

@@ -91,7 +91,7 @@ public enum Simulator {
         let graceStart = calendar.date(byAdding: .day, value: -Organizer.transferWindowDays, to: start)!
         // A paycheck due on a weekend may come the business day before, and the next month's pay
         // is then projected from that earlier day (Fri Feb 26 makes Mar 26 while pay comes Mar 31).
-        // So monthly paychecks get the weekend's two days on top of the grace before they count as
+        // So monthly and twice-monthly paychecks get the weekend's two days on top of the grace before they count as
         // stopped. Weekly and biweekly pay falls on the same weekday each time, so a weekend never moves it.
         let payGraceStart = calendar.date(byAdding: .day, value: -weekendShiftDays, to: graceStart)!
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: start)!
@@ -104,26 +104,31 @@ public enum Simulator {
             GROUP BY e.target, t.kind, outflow
             """) {
             let cadence: String = row[3], outflow: Bool = row[2], kind: String = row[1], typical: Double = row[4]
-            guard cadence == "monthly" || weeks[cadence] != nil else { continue }
-            let latest = try date(row[5])
-            // A monthly series is due on `dueDay`, so a bill on the 31st stays on month end (Feb 28,
-            // then Mar 31) even when the latest charge was the Feb 28 one. That's why the dates are
-            // worked out here rather than taken from the organizer's next_expected_date, which is
-            // the latest charge plus a month.
-            let anchorDay = dueDay((row[7] as String).split(separator: ",").map(String.init))
-            for k in 1... {
-                // Counted from the latest charge each time (not from the previous projected date).
-                var day = weeks[cadence].map { calendar.date(byAdding: .day, value: 7 * $0 * k, to: latest)! }
-                    ?? monthDay(anchorDay, monthsAfter: k, latest)
-                if day > end { break }
-                if day <= start {
-                    // Due on or before today and not charged yet. Past the grace the series has
-                    // probably stopped; within it the charge is just late, so it is projected tomorrow.
-                    if day < (kind == "income" && cadence == "monthly" ? payGraceStart : graceStart) { break }
-                    day = tomorrow
+            guard ["monthly", "twice_monthly"].contains(cadence) || weeks[cadence] != nil else { continue }
+            let dates = (row[7] as String).split(separator: ",").map(String.init).sorted()
+            // A twice-monthly series is two monthly ones, every other charge each (as the organizer
+            // found it), so each of its two days is projected on its own below.
+            for charges in cadence == "twice_monthly" ? Organizer.everyOther(dates) : [dates] {
+                let latest = try date(charges.last!)
+                // A monthly series is due on `dueDay`, so a bill on the 31st stays on month end (Feb 28,
+                // then Mar 31) even when the latest charge was the Feb 28 one. That's why the dates are
+                // worked out here rather than taken from the organizer's next_expected_date, which is
+                // the latest charge plus a month.
+                let anchorDay = dueDay(charges)
+                for k in 1... {
+                    // Counted from the latest charge each time (not from the previous projected date).
+                    var day = weeks[cadence].map { calendar.date(byAdding: .day, value: 7 * $0 * k, to: latest)! }
+                        ?? monthDay(anchorDay, monthsAfter: k, latest)
+                    if day > end { break }
+                    if day <= start {
+                        // Due on or before today and not charged yet. Past the grace the series has
+                        // probably stopped; within it the charge is just late, so it is projected tomorrow.
+                        if day < (kind == "income" && weeks[cadence] == nil ? payGraceStart : graceStart) { break }
+                        day = tomorrow
+                    }
+                    scheduled[text(day), default: []].append(
+                        (row[0], row[6], outflow ? typical : -typical, outflow && kind == "spending"))
                 }
-                scheduled[text(day), default: []].append(
-                    (row[0], row[6], outflow ? typical : -typical, outflow && kind == "spending"))
             }
         }
 
