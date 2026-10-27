@@ -634,4 +634,97 @@ final class SedgeUITests: XCTestCase {
             XCUIApplication().launch()
         }
     }
+
+    /// The All months screen opens from Trends with its month chart, its category chart and the
+    /// money-moved switch. The switch adds a "Moved between accounts" bar and turning it off
+    /// restores the totals. The screenshot is the screen in light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`. Nothing is changed in Maya's saved file.
+    @MainActor
+    func testAllMonthsShowsEveryMonthCategoryAndMoneyMoved() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let link = app.buttons["All months & categories →"]
+        XCTAssertTrue(link.waitForExistence(timeout: 10))
+        link.tap()
+        XCTAssertTrue(app.staticTexts["By month"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["By category"].exists)
+        let june = app.otherElements["June 2026"]
+        XCTAssertTrue(june.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["January 2026"].exists)
+        let dining = app.otherElements["Dining"]
+        XCTAssertTrue(dining.exists)
+        let before = (june: june.value as? String, dining: dining.value as? String)
+        let moved = app.otherElements["Moved between accounts"]
+        XCTAssertFalse(moved.exists)
+        attachScreenshot(app, "all-months")
+
+        let toggle = app.switches["Include money moved between my accounts"]
+        // The inner switch, so the tap lands on the control and not on its label.
+        toggle.switches.firstMatch.tap()
+        XCTAssertTrue(moved.waitForExistence(timeout: 5))
+        // Money moved is its own bar, so the spending ones stay the same.
+        XCTAssertEqual(june.value as? String, before.june)
+        XCTAssertEqual(dining.value as? String, before.dining)
+        attachScreenshot(app, "all-months-with-money-moved")
+
+        toggle.switches.firstMatch.tap()
+        XCTAssertTrue(moved.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(june.value as? String, before.june)
+        XCTAssertEqual(dining.value as? String, before.dining)
+    }
+
+    /// Both Trends screens read the data again each time they show: moving Maya's Jun 18 Corner
+    /// Cafe charge ($10.40) out of Dining, with the app open and the category picker untouched,
+    /// lowers Dining on the All months screen and the June bar on the Spending screen. Moving it
+    /// back restores them, so Maya's saved file ends as it was.
+    @MainActor
+    func testTrendsScreensReloadWhenShown() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let menu = app.buttons["Category"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        XCTAssertEqual(menu.value as? String, "Dining")
+        let june = app.otherElements["June"]
+        let before = try dollars(june)
+        app.buttons["All months & categories →"].tap()
+        let dining = app.otherElements["Dining"]
+        let beforeAll = try dollars(dining)
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        try pickCategory(app, "Groceries")
+
+        // The Trends tab comes back on All months, which was left open.
+        app.tabBars.buttons["Trends"].tap()
+        let afterAll = try dollars(dining)
+        XCTAssertTrue((10...11).contains(beforeAll - afterAll), "All months Dining went from \(beforeAll) to \(afterAll)")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertEqual(menu.value as? String, "Dining")
+        let after = try dollars(june)
+        XCTAssertTrue((10...11).contains(before - after), "June Dining went from \(before) to \(after)")
+
+        // Back to the store's own category, which clears the answer.
+        app.tabBars.buttons["Accounts"].tap()
+        try pickCategory(app, "Dining")
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertEqual(try dollars(june), before)
+    }
+
+    /// A chart bar's value, such as "$1,234", in whole dollars.
+    @MainActor
+    private func dollars(_ bar: XCUIElement) throws -> Int {
+        XCTAssertTrue(bar.waitForExistence(timeout: 5))
+        let value = try XCTUnwrap(bar.value as? String).filter(\.isNumber)
+        return try XCTUnwrap(Int(value), "Not a number: \(value)")
+    }
 }

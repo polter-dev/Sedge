@@ -9,9 +9,12 @@ import Testing
 @testable import Sedge
 
 /// What `total_spent` says for one category between two dates.
-private func totalSpent(_ category: String, _ start: String, _ end: String, in database: SedgeDatabase) throws -> Double {
+/// With no category, every category together.
+private func totalSpent(_ category: String?, _ start: String, _ end: String, in database: SedgeDatabase) throws -> Double {
     struct Result: Decodable { let total: Double }
-    let input = try JSONSerialization.data(withJSONObject: ["category": category, "start_date": start, "end_date": end])
+    var arguments = ["start_date": start, "end_date": end]
+    arguments["category"] = category
+    let input = try JSONSerialization.data(withJSONObject: arguments)
     let output = try #require(Tool.named("total_spent")).call(input, database: database)
     return try JSONDecoder().decode(Result.self, from: Data(output.utf8)).total
 }
@@ -66,4 +69,37 @@ private func totalSpent(_ category: String, _ start: String, _ end: String, in d
 /// Stepping back from January lands in the year before.
 @Test func patternMonthsCrossTheYear() {
     #expect(SpendingView.months(endingAt: "2026-02-14") == ["2025-11", "2025-12", "2026-01", "2026-02"])
+}
+
+/// For Maya, each month's bar on the All months screen equals `total_spent` over that whole
+/// month, each category's bar equals `total_spent` over all the data, and the money-moved
+/// switch adds its own category bar without changing any other bar.
+@Test func allMonthsBarsMatchTotalSpent() throws {
+    let database = try SedgeDatabase.open("maya")
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false)
+    let months = AllMonthsView.byMonth(totals)
+    #expect(months.count >= 6)
+    for bar in months {
+        // The month's last day: the day before the first of the next month.
+        let first = try Date(bar.label + "-01T12:00:00Z", strategy: .iso8601)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let days = try #require(calendar.range(of: .day, in: .month, for: first)).count
+        let tool = try totalSpent(nil, bar.label + "-01", bar.label + String(format: "-%02d", days), in: database)
+        #expect(abs(bar.total - tool) < 0.005, "\(bar.label): bar \(bar.total), total_spent \(tool)")
+    }
+
+    let categories = Set(totals.map(\.category))
+    for bar in AllMonthsView.byCategory(totals) {
+        let category = try #require(categories.first { SpendingView.title($0) == bar.label })
+        let tool = try totalSpent(category, "2000-01-01", asOf, in: database)
+        #expect(abs(bar.total - tool) < 0.005, "\(category): bar \(bar.total), total_spent \(tool)")
+    }
+
+    let withMoved = try SpendingTotal.all(in: database, includeMoved: true)
+    #expect(AllMonthsView.byMonth(withMoved).map(\.total) == months.map(\.total))
+    let movedBars = AllMonthsView.byCategory(withMoved)
+    #expect(movedBars.contains { $0.label == "Moved between accounts" && $0.total > 0 })
+    #expect(movedBars.filter { $0.label != "Moved between accounts" }.map(\.total) == AllMonthsView.byCategory(totals).map(\.total))
 }
