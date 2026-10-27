@@ -30,7 +30,7 @@ func transferCheckPicksLargestJuneMove(persona: String) throws {
         try Row.fetchOne(db, sql: """
             SELECT date, amount FROM transactions
             WHERE date BETWEEN '2026-06-01' AND '2026-06-30' AND kind IN ('transfer','card_payment') AND amount > 0
-            ORDER BY amount DESC LIMIT 1
+            ORDER BY amount DESC, date DESC LIMIT 1
             """)
     }
     let quick = try ChatTurn.sample(in: database).answer.quickCheck
