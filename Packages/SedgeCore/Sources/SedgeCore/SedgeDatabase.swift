@@ -114,6 +114,16 @@ public struct SedgeDatabase: Sendable {
                 t.column("date", .text).notNull() // the dataset's as_of when it was answered
             }
         }
+        // The person's answers about one account or one transaction (`Answers`). NULL means
+        // not answered. Like merchant_id they aren't part of `Account` or `Transaction`, so
+        // reloading the data or organizing again leaves them alone.
+        migrator.registerMigration("v6") { db in
+            try db.alter(table: "accounts") { t in t.add(column: "owner", .text) } // mine or shared
+            try db.alter(table: "transactions") { t in
+                t.add(column: "familiar", .text) // yes or not_sure
+                t.add(column: "category_override", .text) // a category name, e.g. groceries
+            }
+        }
         return migrator
     }
 

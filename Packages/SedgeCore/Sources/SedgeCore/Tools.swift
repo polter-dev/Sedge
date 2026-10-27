@@ -36,7 +36,8 @@ public struct Tool: Sendable {
     /// v5 = tool inputs sent required-first (#41).
     /// v6 = get_profile's tuition reports paid and refunded apart, with each payment and refund (#46).
     /// v7 = recurring_charges and get_profile can report the twice_monthly cadence, with housing's monthly cost (#53).
-    public static let version = "v7"
+    /// v8 = account_balances reports each account's owner, and transaction rows the person's familiar and category answers (#76).
+    public static let version = "v8"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
@@ -187,6 +188,10 @@ struct TransactionRow: Codable, FetchableRecord {
     let kind: String
     /// Present only when true, to keep rows short.
     let pending: Bool?
+    /// The person's answers (`Answers`), present only when they gave one: "yes" or "not_sure",
+    /// and the category they moved this transaction to.
+    let familiar: String?
+    let category: String?
 }
 
 /// At most this many rows in any answer, so results stay short for small models.
@@ -201,7 +206,7 @@ let categoryNames = Organizer.categoryKeywords.map(\.category) + ["other"]
 /// Every transaction column a tool shows, with its store's display name.
 let rowSelect = """
     SELECT t.date, COALESCE(m.name, t.name) AS store, ROUND(t.amount, 2) AS amount, t.kind,
-           CASE WHEN t.pending THEN 1 END AS pending
+           CASE WHEN t.pending THEN 1 END AS pending, t.familiar, t.category_override AS category
     FROM transactions t LEFT JOIN entities m ON m.id = t.merchant_id
     """
 
@@ -231,14 +236,18 @@ func addMerchant(_ name: String, to filter: inout Filter, _ db: Database) throws
 
 /// Spending (refunds count against it) between two dates, optionally at one store or in one
 /// category. Transfers and card payments are left out: that money was already counted at
-/// the store. Pending charges are left out until they post.
+/// the store. Pending charges are left out until they post. A transaction the person moved to
+/// another category counts in that category instead of its store's.
 func spendingFilter(_ input: ToolArguments, from start: String, to end: String, _ db: Database) throws -> Filter {
     var filter = Filter()
     filter.add("t.kind IN ('spending', 'refund') AND NOT t.pending")
     filter.add("t.date BETWEEN ? AND ?", [start, end])
     if let merchant = input.text("merchant") { try addMerchant(merchant, to: &filter, db) }
     if let category = input.text("category") {
-        filter.add("t.merchant_id IN (SELECT source FROM edges WHERE kind = 'in_category' AND target = ?)", ["category:" + category])
+        filter.add("""
+            (t.category_override = ? OR (t.category_override IS NULL
+             AND t.merchant_id IN (SELECT source FROM edges WHERE kind = 'in_category' AND target = ?)))
+            """, [category, "category:" + category])
     }
     return filter
 }
@@ -350,7 +359,8 @@ extension Tool {
 
     static let findTransactions = Tool(
         name: "find_transactions",
-        description: "Find individual transactions by store, amount, or date.",
+        description: "Find individual transactions by store, amount, or date. A row has familiar and category "
+            + "only when the person answered them.",
         inputs: [merchantInput,
                  ToolInput(name: "min_amount", kind: .number, description: "Smallest amount in dollars, ignoring sign.", required: false),
                  ToolInput(name: "max_amount", kind: .number, description: "Largest amount in dollars, ignoring sign.", required: false),
@@ -374,17 +384,19 @@ extension Tool {
 
     static let accountBalances = Tool(
         name: "account_balances",
-        description: "Current balance of every account.",
+        description: "Current balance of every account, with owner (mine or shared) when the person said.",
         inputs: [],
         run: { _, db in
             struct Balance: Codable, FetchableRecord {
                 let name, type: String
                 /// For a credit card this is the amount owed.
                 let balance: Double?
+                /// The person's answer, "mine" or "shared"; missing when they haven't said.
+                let owner: String?
             }
             struct Result: Encodable { let as_of: String?; let accounts: [Balance]; let total_count: Int? }
             let accounts = try Balance.fetchAll(db, sql: """
-                SELECT name, COALESCE(subtype, type) AS type, ROUND(json_extract(balances, '$.current'), 2) AS balance
+                SELECT name, COALESCE(subtype, type) AS type, ROUND(json_extract(balances, '$.current'), 2) AS balance, owner
                 FROM accounts ORDER BY name
                 """)
             // "Current" means as of the dataset's today, never the device clock.

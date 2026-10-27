@@ -3,7 +3,8 @@
 Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase.swift`:
 `v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
 `transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`),
-`v4` (profile_facts and profile_corrections) and `v5` (saved_answers).
+`v4` (profile_facts and profile_corrections), `v5` (saved_answers) and `v6` (`accounts.owner`,
+`transactions.familiar` and `transactions.category_override`).
 
 ```mermaid
 erDiagram
@@ -26,6 +27,7 @@ erDiagram
         text type "not null"
         text subtype
         text balances "not null, JSON: current, available, limit, currency codes"
+        text owner "v6, the person's answer: mine or shared, null if not answered"
     }
 
     transactions {
@@ -42,6 +44,8 @@ erDiagram
         text merchant_id "indexed, v2, an entities.id of kind merchant"
         text kind "v3: spending, income, transfer, card_payment or refund"
         text linked_transaction_id "v3, transfers and card payments only: the other side"
+        text familiar "v6, the person's answer: yes or not_sure, null if not answered"
+        text category_override "v6, a category name the person moved it to, null for the store's category"
     }
 
     meta {
@@ -127,6 +131,13 @@ erDiagram
   then profile_corrections (a correction whose kind starts the key, e.g. `housing` for
   `housing_type`). Nothing rebuilds the table; the Ask screen's "Reset saved questions"
   clears it.
+- **accounts.owner**, **transactions.familiar** and **transactions.category_override** are the
+  person's answers about one account or transaction, set and cleared by `Answers`. A category
+  belongs to a store (its in_category edge); `category_override` moves one transaction to
+  another category wherever spending is split by category (the tools' category input and the
+  Spending screen). Like merchant_id they aren't part of `Account` or `Transaction`, so reloading
+  the data or organizing again keeps them. A pending charge's answers stay with the pending
+  row, so they are dropped when it posts under a new id.
 
 ## Database files
 
