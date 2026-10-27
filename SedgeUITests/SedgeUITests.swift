@@ -415,6 +415,29 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "cash-flow-90-days")
     }
 
+    /// The purchase entry and the bill amount are laid out by hand (no Form rows), so each
+    /// needs its own 44 pt tall target.
+    @MainActor
+    func testCashFlowEntryTargetsAreAtLeast44Points() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Trends"].tap()
+        app.navigationBars.buttons["Cash flow"].tap()
+        XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
+
+        // Switch "Change a bill" on to show its amount field.
+        flip(app.switches["bill"], in: app)
+        let billAmount = app.textFields["Change per bill in dollars, e.g. 200 or -50"]
+        XCTAssertTrue(billAmount.waitForExistence(timeout: 5))
+
+        for (name, element) in [("Add purchase", app.buttons["Add purchase"]),
+                                ("Extra purchase field", app.textFields["Extra purchase in dollars"]),
+                                ("Bill amount field", billAmount)] {
+            XCTAssertGreaterThanOrEqual(element.frame.height, 44, "\(name) is \(element.frame.height) pt tall")
+        }
+    }
+
     /// Scrolls a switch clear of the tab bar, then taps its knob: a tap on the label of a SwiftUI
     /// toggle outside a list doesn't flip it, and a tap by position doesn't scroll by itself.
     @MainActor

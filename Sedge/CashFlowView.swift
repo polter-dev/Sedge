@@ -406,12 +406,19 @@ struct CashFlowView: View {
             HStack(spacing: 4) {
                 // A dollar sign in front, so a typed "1500" still reads as money.
                 Text("$").foregroundStyle(Color.muted).accessibilityHidden(true)
+                // Outside a Form nothing makes these rows 44 pt tall, so each target sets it.
                 TextField("Extra purchase in dollars", text: $amountText)
                     .keyboardType(.decimalPad)
-                Button("Add purchase") {
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+                Button {
                     guard let amount = Self.dollars(amountText), amount > 0, !date.isEmpty else { return }
                     purchases.append(Purchase(amount: amount, date: date))
                     amountText = ""
+                } label: {
+                    Text("Add purchase")
+                        .frame(minHeight: 44)
+                        .contentShape(.rect)
                 }
                 .font(.link)
                 .disabled((Self.dollars(amountText) ?? 0) <= 0)
@@ -449,6 +456,8 @@ struct CashFlowView: View {
                     // Numbers and punctuation, since a smaller bill needs a minus sign the number pad lacks.
                     TextField("Change per bill in dollars, e.g. 200 or -50", text: $billText)
                         .keyboardType(.numbersAndPunctuation)
+                        .frame(minHeight: 44)
+                        .contentShape(.rect)
                     LabeledContent("From") {
                         Picker("From", selection: $billFrom) {
                             ForEach(result.without, id: \.date) { Text(Self.day($0.date)).tag($0.date) }
@@ -497,7 +506,7 @@ struct CashFlowView: View {
                     Text("The projection counts")
                 } footer: {
                     Text("It starts from your balances on \(asOf.displayDate()). The shading redoes everyday spending at your busiest and quietest four weeks of the last twelve. Scenarios are a preview only; nothing changes in your accounts.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.muted)
                 }
                 .listRowBackground(Color.group)
             }
