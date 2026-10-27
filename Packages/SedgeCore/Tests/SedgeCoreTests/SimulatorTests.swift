@@ -318,3 +318,90 @@ func checkingDrops(_ database: SedgeDatabase) throws -> [String] {
     let late = Set((1...6).map { "2026-0\($0)-16" })
     #expect(try checkingDrops(partlyMatchedTransfers(late: late)) == ["2026-07-01 200.0", "2026-07-16 160.0"])
 }
+
+// MARK: - What-if scenarios and the range
+
+/// A one-time purchase, a rent raise and a cancelled rent each move checking by exactly their
+/// amount from their day on, and change nothing before it. Rent is due Feb 28 and Mar 31, so a
+/// change from Mar 1 leaves February's rent alone and first shows on Mar 31.
+@Test func scenariosMoveOnlyTheirDays() throws {
+    let database = try handMadeDatabase()
+    let base = try simulate(database, days: 60)
+    func expectMove(purchases: [Simulator.Purchase] = [], changes: [Simulator.Change] = [],
+                    by effect: Double, from start: String) throws -> [Simulator.Day] {
+        let days = try database.dbQueue.read { db in
+            try Simulator.simulate(db, days: 60, purchases: purchases, changes: changes)
+        }
+        for (before, after) in zip(base, days) where after.date < start {
+            #expect(after.balances == before.balances && after.bills.map(\.amount) == before.bills.map(\.amount))
+        }
+        for (before, after) in zip(base, days) where after.date >= start {
+            #expect(after.balances["checking"] == cents(before.balances["checking"]! + effect))
+            #expect(after.balances["card"] == before.balances["card"])
+        }
+        return days
+    }
+    _ = try expectMove(purchases: [Simulator.Purchase(amount: 75, date: "2026-03-10", account: "checking")],
+                       by: -75, from: "2026-03-10")
+    let raised = try expectMove(changes: [Simulator.Change(merchant: "Oakwood Apartments Rent", from: "2026-03-01", by: 200)],
+                                by: -200, from: "2026-03-31")
+    let rent = raised.flatMap { day in day.bills.filter { $0.name.contains("Rent") }.map { "\(day.date) \($0.amount)" } }
+    #expect(rent == ["2026-02-28 500.0", "2026-03-31 700.0"])
+    let cancelled = try expectMove(changes: [Simulator.Change(cancelling: "Oakwood Apartments Rent", from: "2026-03-01")],
+                                   by: 500, from: "2026-03-31")
+    #expect(cancelled.filter { $0.bills.contains { $0.name.contains("Rent") } }.map(\.date) == ["2026-02-28"])
+    // Cutting 600 off a 500 rent makes it 0, not money in.
+    _ = try expectMove(changes: [Simulator.Change(merchant: "Oakwood Apartments Rent", from: "2026-03-01", by: -600)],
+                       by: 500, from: "2026-03-31")
+}
+
+/// A checking account with 1000, today Jan 31, 2026, and one everyday purchase per (date, amount).
+func spendingDatabase(_ purchases: [(String, Double)]) throws -> SedgeDatabase {
+    let names = ["CORNER CAFE", "BOOK NOOK", "HARDWARE BARN"]
+    let transactions = purchases.enumerated().map { index, purchase in
+        Transaction(transaction_id: "t\(index)", account_id: "checking", date: purchase.0, name: names[index],
+                    amount: purchase.1, pending: false)
+    }
+    let database = try SedgeDatabase()
+    try database.save(accounts: [Account(account_id: "checking", name: "Checking", type: "depository", subtype: "checking",
+                                         balances: Balances(current: 1000))],
+                      transactions: transactions, asOf: "2026-01-31")
+    try Organizer.organize(database)
+    return database
+}
+
+/// The four-week windows ending today are Jan 4–31, Dec 7–Jan 3 and Nov 9–Dec 6. With 140, 280
+/// and 56 spent in them (5, 10 and 2 a day), the range reruns at 10 and 2 a day around the 5.
+@Test func rangeUsesBusiestAndQuietestWindows() throws {
+    let database = try spendingDatabase([("2025-11-09", 56), ("2025-12-20", 280), ("2026-01-20", 140)])
+    let line = try simulate(database, days: 10)
+    let range = try database.dbQueue.read { db in try Simulator.range(db, days: 10) }
+    #expect(line.last?.balances["checking"] == 950)
+    #expect(range.low.last?.balances["checking"] == 900)
+    #expect(range.high.last?.balances["checking"] == 980)
+}
+
+/// Data that starts Dec 20 doesn't reach back to Dec 7, so only today's window counts, even
+/// though Dec 20 is inside the one before, and the range is the projection itself.
+@Test func rangeWithOneWindowEqualsTheLine() throws {
+    let database = try spendingDatabase([("2025-12-20", 280), ("2026-01-20", 140)])
+    let line = try simulate(database, days: 30)
+    let range = try database.dbQueue.read { db in try Simulator.range(db, days: 30) }
+    #expect(range.low.map(\.balances) == line.map(\.balances))
+    #expect(range.high.map(\.balances) == line.map(\.balances))
+}
+
+/// On maya the range brackets the projection every day: checking is lowest on `low` and highest
+/// on `high`, and the card owes the most on `low`.
+@Test func rangeBracketsMayasProjection() throws {
+    let database = try organizedPersona("maya")
+    let line = try simulate(database, days: 90)
+    let range = try database.dbQueue.read { db in try Simulator.range(db, days: 90) }
+    for (low, (mid, high)) in zip(range.low, zip(line, range.high)) {
+        #expect(low.balances["maya-checking"]! <= mid.balances["maya-checking"]!)
+        #expect(mid.balances["maya-checking"]! <= high.balances["maya-checking"]!)
+        #expect(low.balances["maya-card"]! >= mid.balances["maya-card"]!)
+        #expect(mid.balances["maya-card"]! >= high.balances["maya-card"]!)
+    }
+    #expect(range.low.last!.balances["maya-checking"]! < range.high.last!.balances["maya-checking"]!)
+}

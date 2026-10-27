@@ -28,6 +28,31 @@ public enum Simulator {
         }
     }
 
+    /// A what-if change to a recurring series from a day on, such as "rent +$200 from Nov 1"
+    /// or "cancel Netflix before Nov 4". Card payments aren't series here, so they can't be changed.
+    public struct Change: Sendable {
+        /// The series' store, as `recurring_charges` names it ("Oakwood Apartments Rent").
+        public var merchant: String
+        /// "YYYY-MM-DD": charges on or after this day change; earlier ones don't.
+        public var from: String
+        /// Dollars added to each charge (negative makes it smaller, down to 0), or nil to cancel the series.
+        /// A paycheck grows by it too: this changes the size of the charge, not its direction.
+        public var by: Double?
+
+        public init(merchant: String, from: String, by: Double) {
+            self.merchant = merchant
+            self.from = from
+            self.by = by
+        }
+
+        /// Stops the series: no charges on or after `from`.
+        public init(cancelling merchant: String, from: String) {
+            self.merchant = merchant
+            self.from = from
+            self.by = nil
+        }
+    }
+
     /// A bill or card payment due on a projected day.
     public struct Bill: Sendable {
         public let name: String
@@ -46,11 +71,60 @@ public enum Simulator {
     }
 
     /// The `days` days after the dataset's today, oldest first.
-    public static func simulate(_ db: Database, days: Int, purchases: [Purchase] = []) throws -> [Day] {
+    public static func simulate(_ db: Database, days: Int, purchases: [Purchase] = [], changes: [Change] = []) throws -> [Day] {
+        try project(db, days: days, purchases: purchases, changes: changes, daily: nil)
+    }
+
+    /// Two more runs of `simulate` that shade a range around it. Everyday spending is redone
+    /// with each account's highest (`low`) and lowest (`high`) four-week spending among the last
+    /// 12 weeks: three four-week windows ending today, counting only the windows the data fully
+    /// reaches back to. So bank balances are lowest on `low`, where a card also owes the most.
+    /// With only today's window, both equal the projection.
+    public static func range(_ db: Database, days: Int, purchases: [Purchase] = [],
+                             changes: [Change] = []) throws -> (low: [Day], high: [Day]) {
+        let today = try asOf(db)
+        let earliest = try String.fetchOne(db, sql: "SELECT MIN(date) FROM transactions") ?? ""
+        let windows = try (0..<3).filter { back in
+            // A window runs from the day after its start; today's window always counts.
+            back == 0 || earliest <= text(calendar.date(byAdding: .day, value: 1 - trailingDays * (back + 1), to: today)!)
+        }.map { try everyday(db, today: today, windowsBack: $0) }
+        // An account with no spending in a window spent 0 a day there.
+        let accounts = Set(windows.flatMap(\.keys))
+        func pick(_ choose: ([Double]) -> Double) -> [String: Double] {
+            Dictionary(uniqueKeysWithValues: accounts.map { account in (account, choose(windows.map { $0[account] ?? 0 })) })
+        }
+        return (low: try project(db, days: days, purchases: purchases, changes: changes, daily: pick { $0.max()! }),
+                high: try project(db, days: days, purchases: purchases, changes: changes, daily: pick { $0.min()! }))
+    }
+
+    /// The dataset's today.
+    static func asOf(_ db: Database) throws -> Date {
         guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'") else {
             throw ToolError("No data has been loaded.")
         }
-        let start = try date(asOf)
+        return try date(asOf)
+    }
+
+    /// Everyday spending: four weeks of spending (less refunds) that isn't part of a recurring
+    /// series, per account, as an amount per day. The four weeks end `windowsBack` four-week
+    /// windows before today (0 is the last four weeks). Transfers and card payments have their own
+    /// kinds, so they are left out. With reconciliation off the organizer calls them spending, so
+    /// they are counted here like any purchase: that is the ablation.
+    static func everyday(_ db: Database, today: Date, windowsBack: Int) throws -> [String: Double] {
+        let windowEnd = calendar.date(byAdding: .day, value: -trailingDays * windowsBack, to: today)!
+        let windowStart = calendar.date(byAdding: .day, value: -trailingDays, to: windowEnd)!
+        return try Dictionary(uniqueKeysWithValues: Row.fetchAll(db, sql: """
+            SELECT t.account_id, SUM(t.amount) FROM transactions t
+            WHERE t.kind IN ('spending', 'refund') AND NOT t.pending AND t.date > ? AND t.date <= ?
+              AND NOT EXISTS (SELECT 1 FROM edges e WHERE e.source = t.transaction_id AND e.kind = 'recurring')
+            GROUP BY t.account_id
+            """, arguments: [text(windowStart), text(windowEnd)]).map { ($0[0] as String, ($0[1] as Double) / Double(trailingDays)) })
+    }
+
+    /// `simulate`, with everyday spending (per account, per day) given as `daily`, or nil for the last four weeks'.
+    static func project(_ db: Database, days: Int, purchases: [Purchase], changes: [Change],
+                        daily given: [String: Double]?) throws -> [Day] {
+        let start = try asOf(db)
         let end = calendar.date(byAdding: .day, value: days, to: start)!
 
         // Today's balances. An account without one can't be projected, so it is left out.
@@ -69,17 +143,7 @@ public enum Simulator {
             balance[account]! += card ? amount : -amount
         }
 
-        // Everyday spending: the last four weeks of spending (less refunds) that isn't part of a
-        // recurring series, per account, as an amount per day. Transfers and card payments have
-        // their own kinds, so they are left out. With reconciliation off the organizer calls them
-        // spending, so they are counted here like any purchase: that is the ablation.
-        let windowStart = text(calendar.date(byAdding: .day, value: -trailingDays, to: start)!)
-        let daily = try Dictionary(uniqueKeysWithValues: Row.fetchAll(db, sql: """
-            SELECT t.account_id, SUM(t.amount) FROM transactions t
-            WHERE t.kind IN ('spending', 'refund') AND NOT t.pending AND t.date > ? AND t.date <= ?
-              AND NOT EXISTS (SELECT 1 FROM edges e WHERE e.source = t.transaction_id AND e.kind = 'recurring')
-            GROUP BY t.account_id
-            """, arguments: [windowStart, asOf]).map { ($0[0] as String, ($0[1] as Double) / Double(trailingDays)) })
+        let daily = try given ?? everyday(db, today: start, windowsBack: 0)
 
         // Recurring series: one per merchant, kind and direction, as `recurring_charges` groups them.
         // Card payments are left out here and worked out from the card balances below.
@@ -104,7 +168,8 @@ public enum Simulator {
             WHERE e.kind = 'recurring' AND t.kind != 'card_payment'
             GROUP BY e.target, t.kind, outflow
             """) {
-            let cadence: String = row[3], outflow: Bool = row[2], kind: String = row[1], typical: Double = row[4]
+            let name: String = row[0], cadence: String = row[3], outflow: Bool = row[2], kind: String = row[1]
+            let typical: Double = row[4]
             guard ["monthly", "twice_monthly"].contains(cadence) || weeks[cadence] != nil else { continue }
             // Each charge as ["2026-03-01", "1000.0"], oldest first.
             let all = (row[7] as String).split(separator: ",").sorted().map { $0.split(separator: "=").map(String.init) }
@@ -134,8 +199,13 @@ public enum Simulator {
                         if day < (kind == "income" && weeks[cadence] == nil ? payGraceStart : graceStart) { break }
                         day = tomorrow
                     }
-                    scheduled[text(day), default: []].append(
-                        (row[0], row[6], outflow ? amount : -amount, outflow && kind == "spending"))
+                    // The what-if changes to this series that have started by this day.
+                    let key = text(day)
+                    let started = changes.filter { $0.merchant == name && $0.from <= key }
+                    if started.contains(where: { $0.by == nil }) { continue } // cancelled
+                    // Never below zero, so cutting more than a bill costs doesn't turn it into income.
+                    let size = max(0, started.reduce(amount) { $0 + $1.by! })
+                    scheduled[key, default: []].append((name, row[6], outflow ? size : -size, outflow && kind == "spending"))
                 }
             }
         }
@@ -164,7 +234,7 @@ public enum Simulator {
         let since = try Dictionary(uniqueKeysWithValues: Row.fetchAll(db, sql: """
             SELECT account_id, SUM(amount), SUM(CASE WHEN kind = 'card_payment' THEN -amount ELSE 0 END)
             FROM transactions WHERE NOT pending AND date > ? AND date <= ? GROUP BY account_id
-            """, arguments: [text(monthEnd), asOf]).map { ($0[0] as String, (charged: $0[1] as Double, paid: $0[2] as Double)) })
+            """, arguments: [text(monthEnd), text(start)]).map { ($0[0] as String, (charged: $0[1] as Double, paid: $0[2] as Double)) })
         for card in plans.keys where balance[card] != nil {
             statement[card] = balance[card]! - (since[card]?.charged ?? 0)
             paid[card] = since[card]?.paid ?? 0
