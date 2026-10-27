@@ -142,8 +142,9 @@ struct MainView: View {
         TabView(selection: $tab) {
             Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
-                    AskView(database: database)
-                        .navigationTitle("Ask")
+                    AskView(database: database) { tab = $0 }
+                        .navigationTitle("Ask Sedge")
+                        .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                 }
             }
