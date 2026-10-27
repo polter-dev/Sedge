@@ -158,10 +158,10 @@ struct MainView: View {
                         .navigationTitle("Spending")
                         .navigationSubtitle(dataName)
                         .toolbar {
-                            // The what-if projection opens from here until the cash-flow screen replaces it.
-                            NavigationLink("What if") {
-                                WhatIfView(database: database)
-                                    .navigationTitle("What if")
+                            // The cash-flow projection and its scenarios open from here.
+                            NavigationLink("Cash flow") {
+                                CashFlowView(database: database)
+                                    .navigationTitle("Cash flow")
                                     .navigationSubtitle(dataName)
                             }
                         }

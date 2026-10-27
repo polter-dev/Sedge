@@ -49,7 +49,7 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "ask-not-connected")
     }
 
-    /// Opens the spending, what-if and profile screens for every sample person and checks each
+    /// Opens the spending, cash-flow and profile screens for every sample person and checks each
     /// shows its data, with a screenshot of each. Nothing is corrected, so the saved files stay as they were.
     @MainActor
     func testNewScreensForEveryPersona() throws {
@@ -63,17 +63,19 @@ final class SedgeUITests: XCTestCase {
             XCTAssertFalse(app.staticTexts["No spending yet"].exists)
             attachScreenshot(app, "\(persona) spending")
 
-            app.navigationBars.buttons["What if"].tap()
+            app.navigationBars.buttons["Cash flow"].tap()
             let field = app.textFields["Extra purchase in dollars"]
             XCTAssertTrue(field.waitForExistence(timeout: 10))
             field.tap()
             field.typeText("400")
-            XCTAssertTrue(app.staticTexts["With the purchase"].waitForExistence(timeout: 5))
+            app.buttons["Add purchase"].tap()
+            XCTAssertTrue(app.switches["purchase"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.staticTexts["With changes"].waitForExistence(timeout: 5))
             // Scrolling hides the number pad, which would otherwise cover the tab bar. A simulator
             // with keyboard minimizing on (a used simulator that has seen a hardware keyboard) never
             // shows the pad: it waits just below the screen, still in the element tree. So the check
             // is that no pad overlaps the tabs, not that no keyboard exists.
-            app.collectionViews.firstMatch.swipeDown()
+            app.scrollViews.firstMatch.swipeDown()
             let tabs = app.tabBars.firstMatch.frame
             let tabsClear = NSPredicate { _, _ in
                 let pad = app.keyboards.firstMatch
@@ -81,7 +83,7 @@ final class SedgeUITests: XCTestCase {
             }
             let waited = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: tabsClear, object: nil)], timeout: 5)
             XCTAssertEqual(waited, .completed, "The number pad is still covering the tabs")
-            attachScreenshot(app, "\(persona) what if")
+            attachScreenshot(app, "\(persona) cash flow")
 
             app.tabBars.buttons["Accounts"].tap()
             app.buttons["About you"].tap()
@@ -224,9 +226,9 @@ final class SedgeUITests: XCTestCase {
         app.tabBars.buttons["Trends"].tap()
         XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
         attachScreenshot(app, "tab-trends-spending")
-        app.navigationBars.buttons["What if"].tap()
+        app.navigationBars.buttons["Cash flow"].tap()
         XCTAssertTrue(app.textFields["Extra purchase in dollars"].waitForExistence(timeout: 10))
-        attachScreenshot(app, "trends-what-if")
+        attachScreenshot(app, "trends-cash-flow")
 
         app.tabBars.buttons["Accounts"].tap()
         XCTAssertTrue(app.buttons["Transactions"].waitForExistence(timeout: 10))
@@ -284,6 +286,82 @@ final class SedgeUITests: XCTestCase {
 
         app.buttons["Ask about a tradeoff →"].tap()
         XCTAssertTrue(app.tabBars.buttons["Ask"].isSelected)
+    }
+
+    /// On Maya's cash flow, switching a scenario on moves "Projected" by exactly its amount, and
+    /// switching it off puts it back: a $400 purchase, then cancelling subscriptions by the saving
+    /// the simulator works out for that row. For dark screenshots, run it after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testCashFlowScenariosMoveProjectedByTheirAmount() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        app.navigationBars.buttons["Cash flow"].tap()
+        let projected = app.staticTexts["projected"]
+        XCTAssertTrue(projected.waitForExistence(timeout: 10))
+        attachScreenshot(app, "cash-flow")
+        let plan = try dollars(projected.label)
+
+        // A $400 purchase starts switched on.
+        let field = app.textFields["Extra purchase in dollars"]
+        field.tap()
+        field.typeText("400")
+        app.buttons["Add purchase"].tap()
+        let purchase = app.switches["purchase"]
+        XCTAssertTrue(purchase.waitForExistence(timeout: 5))
+        app.scrollViews.firstMatch.swipeDown()
+        try waitForDollars(projected, plan - 400)
+        attachScreenshot(app, "cash-flow-with-purchase")
+        flip(purchase, in: app)
+        try waitForDollars(projected, plan)
+
+        // The row says what cancelling saves, e.g. "Save $17.99 · before Jul 3".
+        let cancel = app.switches["cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        let saved = NSPredicate(format: "label CONTAINS 'Save $'")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: saved, object: cancel)], timeout: 5), .completed)
+        let saving = try dollars(String(cancel.label.components(separatedBy: "Save ")[1].split(separator: " ")[0]))
+        XCTAssertGreaterThan(saving, 0)
+        flip(cancel, in: app)
+        try waitForDollars(projected, plan + saving)
+        flip(cancel, in: app)
+        try waitForDollars(projected, plan)
+
+        // Over 90 days the card payments come from checking, so the shaded range widens.
+        app.scrollViews.firstMatch.swipeDown()
+        app.buttons["90 days"].tap()
+        XCTAssertTrue(app.staticTexts["Projected Sep 28"].waitForExistence(timeout: 5))
+        attachScreenshot(app, "cash-flow-90-days")
+    }
+
+    /// Scrolls a switch clear of the tab bar, then taps its knob: a tap on the label of a SwiftUI
+    /// toggle outside a list doesn't flip it, and a tap by position doesn't scroll by itself.
+    @MainActor
+    private func flip(_ toggle: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<4 where toggle.frame.maxY > app.tabBars.firstMatch.frame.minY {
+            app.scrollViews.firstMatch.swipeUp()
+        }
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+    }
+
+    /// Dollars from text such as "$2,420.15" or "-$12.00".
+    private func dollars(_ text: String) throws -> Double {
+        let number = text.filter { "0123456789.-".contains($0) }
+        return try XCTUnwrap(Double(number), "Not an amount: \(text)")
+    }
+
+    /// Waits for an amount to show exactly `expected`, to the cent, since the projection reloads after a switch.
+    @MainActor
+    private func waitForDollars(_ element: XCUIElement, _ expected: Double) throws {
+        let shown = NSPredicate { _, _ in
+            guard let value = try? self.dollars(element.label) else { return false }
+            return abs(value - expected) < 0.005
+        }
+        let waited = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: shown, object: nil)], timeout: 5)
+        XCTAssertEqual(waited, .completed, "Projected shows \(element.label), expected \(expected)")
     }
 
     /// Keeps a screenshot in the test results, named for what it shows.

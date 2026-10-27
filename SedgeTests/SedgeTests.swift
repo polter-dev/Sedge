@@ -45,7 +45,7 @@ struct SedgeTests {
         #expect("not a date".displayDate() == "not a date")
     }
 
-    /// The spending, what-if and profile screens each have something to show for every sample person.
+    /// The spending, cash-flow and profile screens each have something to show for every sample person.
     @Test(arguments: Persona.all) func newScreensHaveData(persona: String) throws {
         let database = try SedgeDatabase.open(persona)
 
@@ -57,11 +57,12 @@ struct SedgeTests {
         #expect(withMoved.contains { $0.category == SpendingTotal.movedCategory && $0.total > 0 })
 
         // A $400 purchase tomorrow lowers every projected checking balance by $400.
-        let whatIf = try #require(try WhatIf.load(database, extra: 400, on: nil))
+        let tomorrow = try #require(try CashFlow.load(database)?.without.first?.date)
+        let whatIf = try #require(try CashFlow.load(database, purchases: [(400, tomorrow)]))
         let with = try #require(whatIf.with)
-        #expect(whatIf.without.count == WhatIf.days)
+        #expect(whatIf.without.count == CashFlow.days)
         #expect(zip(whatIf.without, with).allSatisfy { abs($0.balances[whatIf.account]! - $1.balances[whatIf.account]! - 400) < 0.01 })
-        #expect(!whatIf.billDays.isEmpty)
+        #expect(!whatIf.bills.isEmpty)
 
         let facts = try Profile.facts(in: database)
         #expect(facts.contains { $0.kind == "income" && !$0.evidence.isEmpty })
