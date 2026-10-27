@@ -91,7 +91,9 @@ struct SavedAnswersView: View {
                     .foregroundStyle(.primary)
                     .accessibilityHint("Change this answer")
                     .swipeActions {
+                        // The swipe button's circle is the accent, so its icon takes the color made to sit on it.
                         Button("Remove", systemImage: "trash", role: .destructive) { remove(entry) }
+                            .foregroundStyle(Color.contrast)
                     }
                 }
             } footer: {
