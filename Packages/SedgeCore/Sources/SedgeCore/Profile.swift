@@ -192,10 +192,12 @@ public enum Profile {
                 // HOA dues are housing too but are neither rent nor a mortgage, so they are skipped.
                 guard let type = says(["mortgage"]) ? "mortgage" : says(rentWords) ? "rent" : nil else { continue }
                 if let series {
-                    // Rent paid in two halves a month costs both halves, each at its own amount
-                    // (1000 on the 1st and 900 on the 16th is 1900), split every other charge as the organizer did.
-                    let halves = series.cadence == "twice_monthly"
-                        ? Organizer.everyOther(inSeries.map { abs($0.amount) }).map(Organizer.typical).reduce(0, +) : nil
+                    // Rent paid on two days a month costs each day's own typical amount (1000 on the 1st
+                    // and 900 on the 16th is 1900). Grouped by day as the organizer does, so a pending or
+                    // transfer charge left out of `inSeries` moves no other charge to the wrong day.
+                    let days = series.cadence == "twice_monthly"
+                        ? Organizer.byDay(try inSeries.map { try Simulator.date($0.date) }) : nil
+                    let halves = days?.map { day in Organizer.typical(day.map { abs(inSeries[$0].amount) }) }.reduce(0, +)
                     fact("housing", Value(name: first.store, type: type, amount: cents(series.typical!), schedule: series.cadence,
                                           day: series.cadence == "monthly" ? usualDay(inSeries) : nil,
                                           monthly_average: halves.map(cents)),

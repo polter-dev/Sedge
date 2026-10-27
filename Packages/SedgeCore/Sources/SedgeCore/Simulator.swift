@@ -108,10 +108,13 @@ public enum Simulator {
             guard ["monthly", "twice_monthly"].contains(cadence) || weeks[cadence] != nil else { continue }
             // Each charge as ["2026-03-01", "1000.0"], oldest first.
             let all = (row[7] as String).split(separator: ",").sorted().map { $0.split(separator: "=").map(String.init) }
-            // A twice-monthly series is two monthly ones, every other charge each (as the organizer
-            // found it), so each of its two days is projected on its own below, at its own amount.
-            // A half is empty when reconciliation took some of the series' charges as transfers.
-            for half in cadence == "twice_monthly" ? Organizer.everyOther(all) : [all] where !half.isEmpty {
+            // A twice-monthly series is two monthly ones, one per day of the month, so each day is
+            // projected on its own below, at its own amount. Its charges are grouped by day as the
+            // organizer does, because these rows are split by kind: when reconciliation takes some
+            // charges as transfers, a row can hold only one day's charges, or both days' with some missing.
+            let whole = [Array(all.indices)]
+            let days = cadence == "twice_monthly" ? Organizer.byDay(try all.map { try date($0[0]) }) ?? whole : whole
+            for half in days.map({ $0.map { all[$0] } }) {
                 let charges = half.map { $0[0] }
                 let amount = cadence == "twice_monthly" ? Organizer.typical(half.map { Double($0[1])! }) : typical
                 let latest = try date(charges.last!)

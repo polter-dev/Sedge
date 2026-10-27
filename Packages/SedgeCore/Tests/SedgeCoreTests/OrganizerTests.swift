@@ -215,8 +215,30 @@ func inSeries(_ database: SedgeDatabase) throws -> Int {
     #expect(Organizer.typical([]) == 0)
 }
 
-/// A bill on one day of the month stays monthly: every other charge is two months apart.
+/// A bill on one day of the month stays monthly: all its charges are on one day.
 @Test func monthlyBillOnOneDayStaysMonthly() throws {
     let database = try seriesDatabase(asOf: "2026-06-30", rent: (1...6).map { "2026-0\($0)-03" })
     #expect(try seriesFound(database, "bills") == ["monthly 500 2026-07-03"])
+}
+
+/// A bill that moves from the 5th (Jan to Mar) to the 7th (Apr to Jun) is on two days with three
+/// monthly charges each, but the days don't take turns, so it stays monthly.
+@Test func billThatMovesToANewDayStaysMonthly() throws {
+    let rent = ["2026-01-05", "2026-02-05", "2026-03-05", "2026-04-07", "2026-05-07", "2026-06-07"]
+    let database = try seriesDatabase(asOf: "2026-06-30", rent: rent)
+    #expect(try seriesFound(database, "bills") == ["monthly 500 2026-07-07"])
+}
+
+/// With unequal days (1000 on the 1st, 900 on the 16th) the amount recurring_charges gives is the
+/// next date's own day's, the one the simulator projects that day. Data ending on Jun 1 instead
+/// gives the 16th's next date at the 16th's amount.
+@Test func recurringAmountMatchesTheNextCharge() throws {
+    let charges = (3...6).flatMap { m in [("a\(m)", "2026-0\(m)-01", "MAPLE COURT RENT", 1000.0),
+                                          ("b\(m)", "2026-0\(m)-16", "MAPLE COURT RENT", 900.0)] }
+    let database = try housingData(charges)
+    let series = try rows(call("recurring_charges", ["kind": "bills"], on: database), "series")
+    let next = series.first!["next"] as! String, amount = series.first!["amount"] as! Double
+    let projected = try simulate(database, days: 47).first { $0.date == next }?.bills.first?.amount
+    #expect(next == "2026-07-01" && amount == projected)
+    #expect(try seriesFound(housingData(charges.dropLast()), "bills") == ["twice_monthly 900 2026-06-16"])
 }
