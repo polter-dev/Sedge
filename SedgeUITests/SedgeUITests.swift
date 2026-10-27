@@ -44,9 +44,87 @@ final class SedgeUITests: XCTestCase {
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
         field.tap()
         field.typeText("How much did I spend at Netflix this year?")
-        app.collectionViews.buttons["Ask"].tap()
+        app.buttons["Send"].tap()
         XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
+        // Without the sample, nothing on screen is demo content.
+        XCTAssertTrue(app.staticTexts["Local analysis"].exists)
         attachScreenshot(app, "ask-not-connected")
+    }
+
+    /// The Debug sample conversation shows the breakdown card, the answer and the quick check,
+    /// and a quick-check tap is saved like any other answer. It is removed again at the end,
+    /// so Maya's saved file stays as it was.
+    @MainActor
+    func testSampleChatSavesTheQuickCheck() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["Food & dining"].waitForExistence(timeout: 10), "No breakdown card")
+        XCTAssertTrue(app.staticTexts["You · Have I been overspending on food?"].exists)
+        let answer = app.staticTexts.containing(NSPredicate(format: "label ENDSWITH 'accounts for most of the difference.'")).firstMatch
+        XCTAssertTrue(answer.exists, "No answer")
+        XCTAssertTrue(app.staticTexts["A quick check"].exists, "No quick check")
+        XCTAssertTrue(app.staticTexts["Local analysis · demo state"].exists)
+        attachScreenshot(app, "ask-sample")
+        // The quick check's buttons sit below the fold on a phone, so scroll to show them too.
+        app.scrollViews.firstMatch.swipeUp()
+        attachScreenshot(app, "ask-sample-quick-check")
+
+        app.buttons["Yes, mine"].tap()
+        let saved = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 5), "The tap wasn't saved")
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Saved answers"].tap()
+        let row = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "The quick check isn't in Saved answers")
+        XCTAssertTrue(app.staticTexts["Yes, mine"].exists)
+        attachScreenshot(app, "ask-sample-saved")
+        row.swipeLeft()
+        app.buttons["Remove"].tap()
+        XCTAssertFalse(row.waitForExistence(timeout: 2), "The saved answer wasn't removed")
+    }
+
+    /// The sample shows the same quick check on every launch, so a later tap must replace the
+    /// answer saved earlier. The saved answer is removed before asserting, so Maya's file stays as it was.
+    @MainActor
+    func testSecondLaunchTapNoIsSaved() throws {
+        continueAfterFailure = true
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        var shown = "(none)", firstSaved = false, savedAnswersHasNo = false
+
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["Yes, mine"].tap()
+        firstSaved = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5)
+        app.terminate()
+
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["No"].tap()
+        let any = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved:' OR label BEGINSWITH 'Not saved'")).firstMatch
+        _ = any.waitForExistence(timeout: 5)
+        shown = any.exists ? any.label : "(none)"
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Saved answers"].tap()
+        let row = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        if row.waitForExistence(timeout: 5) {
+            savedAnswersHasNo = app.staticTexts["No"].exists
+            row.swipeLeft()
+            app.buttons["Remove"].tap()
+        }
+        XCTAssertTrue(firstSaved, "first launch didn't save Yes, mine")
+        XCTAssertTrue(shown.hasPrefix("Saved: No"), "Label after tapping No was: \(shown)")
+        XCTAssertTrue(savedAnswersHasNo, "Saved answers does not show No")
     }
 
     /// Opens the spending, what-if and profile screens for every sample person and checks each
