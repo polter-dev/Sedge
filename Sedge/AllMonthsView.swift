@@ -47,8 +47,6 @@ struct AllMonthsView: View {
     /// Whole dollars on the axes and labels; cents only clutter a chart.
     private static let dollars = FloatingPointFormatStyle<Double>.Currency(code: "USD").precision(.fractionLength(0))
 
-    /// Grows with the text size, so category names never overlap their bars.
-    @ScaledMetric(relativeTo: .caption) private var barRow: CGFloat = 36
     /// The reader's text size setting.
     @Environment(\.dynamicTypeSize) private var textSize
 
@@ -96,31 +94,28 @@ struct AllMonthsView: View {
                     .frame(minHeight: 52)
                     .background(Color.group, in: .rect(cornerRadius: 12))
                     .padding(.vertical, 8)
-                Chart(categories) { bar in
-                    BarMark(x: .value("Spent", bar.total), y: .value("Category", bar.label), height: .ratio(0.5))
-                        .cornerRadius(5)
-                        // Money moved in the quieter chart gray; its name on the axis says what it is.
-                        .foregroundStyle(bar.label == Self.movedLabel ? Color.second : Color.accent)
-                        .accessibilityLabel(bar.label)
-                        .accessibilityValue(bar.total.formatted(Self.dollars))
-                }
-                // Each bar is labeled with its total, so the dollar axis is left out.
-                .chartXAxis(.hidden)
-                .chartYAxis {
-                    // Each name and total above its bar, so at large text sizes nothing runs off the
-                    // screen and the bars keep the full width.
-                    AxisMarks { value in
-                        if let label = value.as(String.self), let bar = categories.first(where: { $0.label == label }) {
-                            AxisValueLabel {
-                                Text("\(label)  \(Text(bar.total, format: Self.dollars).foregroundStyle(Color.muted))")
-                                    .font(.row)
-                                    .foregroundStyle(Color.ink)
-                            }
+                // Plain rows rather than a chart: a chart's axis label stays on one line and runs off
+                // the screen at large text sizes, while a row's text wraps and the row grows to fit.
+                ForEach(categories) { bar in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("\(bar.label)  \(Text(bar.total, format: Self.dollars).foregroundStyle(Color.muted))")
+                            .font(.row)
+                            .foregroundStyle(Color.ink)
+                        // Biggest first, so the first bar fills the width and the others are its share.
+                        GeometryReader { space in
+                            RoundedRectangle(cornerRadius: 5)
+                                // Money moved in the quieter chart gray; its name above says what it is.
+                                .fill(bar.label == Self.movedLabel ? Color.second : Color.accent)
+                                .frame(width: space.size.width * max(0, bar.total) / max(categories[0].total, 1))
                         }
+                        .frame(height: 18)
                     }
+                    .padding(.top, 10)
+                    // One VoiceOver element per category, read as its name and total.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(bar.label)
+                    .accessibilityValue(bar.total.formatted(Self.dollars))
                 }
-                // A fixed height per bar keeps every category name readable.
-                .frame(height: CGFloat(categories.count) * barRow + 20)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
