@@ -438,6 +438,31 @@ final class SedgeUITests: XCTestCase {
         }
     }
 
+    /// A tap anywhere in the 44 pt purchase and bill fields focuses them, not only in the middle.
+    @MainActor
+    func testCashFlowFieldsFocusFromTheirWholeHeight() throws {
+        for name in ["Extra purchase in dollars", "Change per bill in dollars, e.g. 200 or -50"] {
+            let app = XCUIApplication()
+            app.launchArguments = ["-persona", "maya"]
+            app.launch()
+            app.tabBars.buttons["Trends"].tap()
+            app.navigationBars.buttons["Cash flow"].tap()
+            XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
+            if name.hasPrefix("Change") { flip(app.switches["bill"], in: app) }
+            let field = app.textFields[name]
+            XCTAssertTrue(field.waitForExistence(timeout: 5))
+            for _ in 0..<4 where field.frame.maxY > app.tabBars.firstMatch.frame.minY {
+                app.scrollViews.firstMatch.swipeUp()
+            }
+            // 6 pt below the top: inside the 44 pt target, outside the old 22 pt text.
+            field.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: field.frame.width / 2, dy: 6)).tap()
+            let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
+            XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 3), .completed, "\(name): a tap near the top did not focus it")
+            app.terminate()
+        }
+    }
+
     /// Scrolls a switch clear of the tab bar, then taps its knob: a tap on the label of a SwiftUI
     /// toggle outside a list doesn't flip it, and a tap by position doesn't scroll by itself.
     @MainActor

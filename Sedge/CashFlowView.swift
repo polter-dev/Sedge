@@ -106,6 +106,9 @@ struct CashFlowView: View {
     @State private var billName = ""
     @State private var billText = ""
     @State private var billFrom = ""
+    /// Which entry field has the cursor, so a tap anywhere in its 44 pt frame can give it the cursor.
+    @FocusState private var amountFocused: Bool
+    @FocusState private var billFocused: Bool
 
     /// Cancelling subscriptions. All of them are chosen until the person unticks one, so the
     /// set holds the ones kept rather than the ones cancelled.
@@ -409,8 +412,11 @@ struct CashFlowView: View {
                 // Outside a Form nothing makes these rows 44 pt tall, so each target sets it.
                 TextField("Extra purchase in dollars", text: $amountText)
                     .keyboardType(.decimalPad)
+                    .focused($amountFocused)
                     .frame(minHeight: 44)
                     .contentShape(.rect)
+                    // A text field only takes taps on its text line, so the rest of the frame passes them on.
+                    .onTapGesture { amountFocused = true }
                 Button {
                     guard let amount = Self.dollars(amountText), amount > 0, !date.isEmpty else { return }
                     purchases.append(Purchase(amount: amount, date: date))
@@ -456,8 +462,10 @@ struct CashFlowView: View {
                     // Numbers and punctuation, since a smaller bill needs a minus sign the number pad lacks.
                     TextField("Change per bill in dollars, e.g. 200 or -50", text: $billText)
                         .keyboardType(.numbersAndPunctuation)
+                        .focused($billFocused)
                         .frame(minHeight: 44)
                         .contentShape(.rect)
+                        .onTapGesture { billFocused = true }
                     LabeledContent("From") {
                         Picker("From", selection: $billFrom) {
                             ForEach(result.without, id: \.date) { Text(Self.day($0.date)).tag($0.date) }
