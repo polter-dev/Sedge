@@ -14,6 +14,8 @@ struct AskView: View {
     /// True after Ask is tapped, to show that nothing can answer yet.
     @State private var notConnected = false
     @State private var resetDone = false
+    /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
+    @State private var confirmingReset = false
     @FocusState private var questionFocused: Bool
 
     var body: some View {
@@ -61,10 +63,19 @@ struct AskView: View {
                     Label("Saved answers", systemImage: "tray.full")
                 }
                 Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
-                    resetDone = (try? AskUser.reset(database)) != nil
+                    confirmingReset = true
                 }
                 // A destructive button colors only its text; this makes the icon match.
                 .foregroundStyle(.red)
+                // Deleting can't be undone, so ask first. An alert always shows its Cancel button.
+                .alert("Delete all saved answers?", isPresented: $confirmingReset) {
+                    Button("Delete", role: .destructive) {
+                        resetDone = (try? AskUser.reset(database)) != nil
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This can't be undone.")
+                }
             } footer: {
                 Text(resetDone ? "Saved answers cleared." : "Answers to quick questions are saved, so each is asked only once.")
             }
