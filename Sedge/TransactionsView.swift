@@ -79,8 +79,10 @@ struct TransactionsView: View {
                         .accessibilityElement(children: .combine)
                     }
                 }
+                .listRowBackground(Color.group)
             }
         }
+        .themedBackground()
         .overlay {
             if rows.isEmpty { ContentUnavailableView("No transactions", systemImage: "tray", description: Text("This data has no transactions yet.")) }
         }
@@ -94,7 +96,7 @@ struct TransactionsView: View {
         case "income":
             Text("\(Image(systemName: "arrow.down.circle")) Income")
                 .font(.caption)
-                .foregroundStyle(.green)
+                .foregroundStyle(.tint)
                 .accessibilityLabel("Income")
         // A card payment is also money moving between the person's own accounts.
         case "transfer", "card_payment":
