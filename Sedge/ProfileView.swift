@@ -121,7 +121,7 @@ struct CorrectFactView: View {
     @State private var amount: String
     @State private var day: String
 
-    static let schedules = ["weekly", "biweekly", "monthly", "irregular"]
+    static let schedules = ["weekly", "biweekly", "twice_monthly", "monthly", "irregular"]
 
     init(fact: Profile.Fact, save: @escaping (Profile.Value) -> Void) {
         self.fact = fact

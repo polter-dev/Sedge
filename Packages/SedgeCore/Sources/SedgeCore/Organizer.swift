@@ -46,6 +46,7 @@ public enum Organizer {
 
     /// Allowed gaps in days between charges for each cadence. Monthly is wide
     /// because months are 28 to 31 days and "last business day" pay moves around.
+    /// Twice-monthly is not a gap: `recurrence(of:)` finds it from two monthly halves.
     static let cadences: [(name: String, days: ClosedRange<Int>)] = [
         ("weekly", 6...8), ("biweekly", 12...16), ("monthly", 26...35),
     ]
@@ -330,17 +331,76 @@ public enum Organizer {
     static func recurrence(of series: [Line]) throws -> (cadence: String, typicalAmount: Double, nextDate: String)? {
         guard series.count >= 3 else { return nil }
         let dates = try series.map { try Date($0.date + "T00:00:00Z", strategy: .iso8601) }
-        let gaps = zip(dates, dates.dropFirst()).map { calendar.dateComponents([.day], from: $0, to: $1).day! }
-        guard let cadence = cadences.first(where: { c in gaps.allSatisfy { c.days.contains($0) } }) else { return nil }
+        func gaps(_ dates: [Date]) -> [Int] { zip(dates, dates.dropFirst()).map { calendar.dateComponents([.day], from: $0, to: $1).day! } }
+        // Twice a month on two fixed days (the 1st and 15th, the 15th and the last day): every charge
+        // is on one of two days, the days take turns, and each day's charges on their own pass the
+        // monthly rule. Taking turns keeps a bill that moved from the 5th to the 7th monthly. It is
+        // checked before biweekly because biweekly pay also makes 28-day runs, but they drift through
+        // the month, so they never stay on one day each. Six charges is the fewest for three a day.
+        let monthly = cadences.first { $0.name == "monthly" }!.days
+        let days = series.count >= 6 ? byDay(dates) : nil
+        let twiceMonthly = days?.count == 2 && days!.allSatisfy { day in
+            day.count >= 3 && zip(day, day.dropFirst()).allSatisfy { $1 - $0 == 2 }
+                && gaps(day.map { dates[$0] }).allSatisfy(monthly.contains)
+        }
+        guard let cadence = twiceMonthly ? "twice_monthly"
+                : cadences.first(where: { c in gaps(dates).allSatisfy { c.days.contains($0) } })?.name else { return nil }
         let amounts = series.map { abs($0.amount) }
         let steady = zip(amounts, amounts.dropFirst()).allSatisfy { abs($0 - $1) <= priceChangeAllowance * max($0, $1) }
         guard steady else { return nil }
-        // The middle of the last three charges: after a price change it is the new price.
-        let typical = amounts.suffix(3).sorted()[1]
-        let next = cadence.name == "monthly"
-            ? calendar.date(byAdding: .month, value: 1, to: dates.last!)!
-            : calendar.date(byAdding: .day, value: cadence.name == "weekly" ? 7 : 14, to: dates.last!)!
-        return (cadence.name, typical, next.formatted(.iso8601.year().month().day()))
+        // Each day of a twice-monthly series is a monthly series of its own, so the next charge is
+        // the day whose latest charge is older, at that day's own typical amount. Other cadences are one run.
+        let next = (twiceMonthly ? days! : [Array(series.indices)]).min { dates[$0.last!] < dates[$1.last!] }!
+        let typical = Self.typical(next.map { amounts[$0] })
+        let latest = dates[next.last!]
+        let nextDate = cadence == "monthly" || twiceMonthly
+            ? calendar.date(byAdding: .month, value: 1, to: latest)!
+            : calendar.date(byAdding: .day, value: cadence == "weekly" ? 7 : 14, to: latest)!
+        return (cadence, typical, nextDate.formatted(.iso8601.year().month().day()))
+    }
+
+    /// The middle of the last three amounts: after a price change it is the new price. With fewer
+    /// (a series the simulator sees cut short by reconciliation) it is the later of two, or the one.
+    static func typical(_ amounts: [Double]) -> Double {
+        let last = amounts.suffix(3).sorted()
+        return last.isEmpty ? 0 : last[last.count / 2]
+    }
+
+    /// The charges of a twice-monthly series grouped by the day of the month each is on (`isOn`):
+    /// positions in `dates`, one or two groups, each oldest first. The organizer, profile and
+    /// simulator all split a series with this, so a missing charge, or one that reconciliation or
+    /// a pending flag takes out, never moves another charge to the wrong day. nil when no two days
+    /// cover every date. A date on both days (when they are a few days apart, or both past a short
+    /// month's end) goes with the first.
+    static func byDay(_ dates: [Date]) -> [[Int]]? {
+        guard let first = dates.first else { return [] }
+        for a in 1...31 where isOn(first, a) {
+            let onA = dates.map { isOn($0, a) }
+            let rest = dates.indices.filter { !onA[$0] }
+            guard let other = rest.first else { return [Array(dates.indices)] }
+            if (1...31).contains(where: { b in isOn(dates[other], b) && rest.allSatisfy { isOn(dates[$0], b) } }) {
+                return [dates.indices.filter { onA[$0] }, rest]
+            }
+        }
+        return nil
+    }
+
+    /// Whether `date` is on `day` of its month, or paid the Friday before or Monday after when that
+    /// day is a Saturday or Sunday. Only weekends move a date, so biweekly pay that drifts past a
+    /// weekday never fits (Fri Jan 2 is no shift of Thu Jan 1). A day past a month's end means its
+    /// last day, as in `Simulator.monthDay`, so the 31st covers Feb 28, Apr 30 and Mar 31.
+    /// The day may be in the month before or after (the 1st, a Sunday, paid on Fri Feb 27).
+    static func isOn(_ date: Date, _ day: Int) -> Bool {
+        (-1...1).contains { months in
+            let due = Simulator.monthDay(day, monthsAfter: months, date)
+            let shift = calendar.dateComponents([.day], from: due, to: date).day!
+            // Weekday 7 is Saturday and 1 is Sunday: both move to Friday or Monday.
+            return switch calendar.component(.weekday, from: due) {
+            case 7: [0, -1, 2].contains(shift)
+            case 1: [0, -2, 1].contains(shift)
+            default: shift == 0
+            }
+        }
     }
 
     /// Dates are calendar days with no time zone, so all date math happens in UTC.

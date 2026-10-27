@@ -59,7 +59,7 @@ erDiagram
         text source "not null, indexed"
         text kind "not null"
         text target "not null, indexed"
-        text cadence "recurring only: weekly, biweekly, monthly"
+        text cadence "recurring only: weekly, biweekly, twice_monthly, monthly"
         double typical_amount "recurring only"
         text next_expected_date "recurring only, YYYY-MM-DD"
     }

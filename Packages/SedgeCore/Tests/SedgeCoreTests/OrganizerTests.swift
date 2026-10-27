@@ -153,3 +153,92 @@ func groupingMatchesTheAnswerKey(persona: String) throws {
     let m = Organizer.groupedMerchants(["IC* SAFEWAY", "IC* COSTCO"])
     #expect(m["IC* SAFEWAY"]?.id != m["IC* COSTCO"]?.id)
 }
+
+// MARK: - Twice a month
+
+/// recurring_charges for one kind ("income" or "bills"), as "cadence amount next" lines.
+func seriesFound(_ database: SedgeDatabase, _ kind: String) throws -> [String] {
+    try rows(call("recurring_charges", ["kind": kind], on: database), "series")
+        .map { "\($0["cadence"]!) \($0["amount"]!) \($0["next"]!)" }
+}
+
+/// How many transactions the organizer put in a recurring series.
+func inSeries(_ database: SedgeDatabase) throws -> Int {
+    try database.dbQueue.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM edges WHERE kind = 'recurring'")! }
+}
+
+/// Pay on the 15th and the last day, 2026. A weekend moves it to Friday (Feb 13, Jan 30, ...), so
+/// Fri Mar 13 to Tue Mar 31 is 18 days, too long for biweekly: it is still one twice-monthly series,
+/// and the next pay is the 15th's, a month after Jun 15.
+@Test func payOnTheFifteenthAndLastDayIsTwiceMonthly() throws {
+    let pay = ["2026-01-15", "2026-01-30", "2026-02-13", "2026-02-27", "2026-03-13", "2026-03-31",
+               "2026-04-15", "2026-04-30", "2026-05-15", "2026-05-29", "2026-06-15", "2026-06-30"]
+    let database = try seriesDatabase(asOf: "2026-06-30", paydays: pay, paycheck: 800)
+    #expect(try seriesFound(database, "income") == ["twice_monthly 800 2026-07-15"])
+    #expect(try inSeries(database) == pay.count)
+}
+
+/// Pay on the 1st and 15th, 2026, paid the Friday before a weekend: Sun Feb 1 on Fri Jan 30,
+/// Sun Mar 1 on Fri Feb 27, Sun Feb 15 on Fri Feb 13. Twice-monthly, not biweekly.
+@Test func payOnTheFirstAndFifteenthIsTwiceMonthly() throws {
+    let pay = ["2026-01-01", "2026-01-15", "2026-01-30", "2026-02-13", "2026-02-27", "2026-03-13",
+               "2026-04-01", "2026-04-15", "2026-05-01", "2026-05-15", "2026-06-01", "2026-06-15"]
+    let database = try seriesDatabase(asOf: "2026-06-30", paydays: pay, paycheck: 800)
+    #expect(try seriesFound(database, "income") == ["twice_monthly 800 2026-07-01"])
+    #expect(try inSeries(database) == pay.count)
+}
+
+/// Every 14 days for all of 2026 lands three times in January and July and drifts through the
+/// month, so it stays biweekly even though every other paycheck is 28 days apart.
+@Test func trueBiweeklyPayStaysBiweekly() throws {
+    let start = try Simulator.date("2026-01-02")
+    let pay = (0..<26).map { Simulator.text(Simulator.calendar.date(byAdding: .day, value: 14 * $0, to: start)!) }
+    #expect(pay.filter { $0.hasPrefix("2026-01") }.count == 3)
+    let database = try seriesDatabase(asOf: "2026-12-31", paydays: pay, paycheck: 800)
+    #expect(try seriesFound(database, "income") == ["biweekly 800 2027-01-01"])
+}
+
+/// Six paychecks every 14 days across February stay near the 1st and 15th, but Jan 2 is no
+/// weekend shift of Thu Jan 1, so they stay biweekly and project four paydays in 60 days.
+@Test func sixBiweeklyPaychecksAcrossFebruaryStayBiweekly() throws {
+    let pay = ["2026-01-02", "2026-01-16", "2026-01-30", "2026-02-13", "2026-02-27", "2026-03-13"]
+    let database = try seriesDatabase(asOf: "2026-03-13", paydays: pay, paycheck: 800)
+    #expect(try seriesFound(database, "income") == ["biweekly 800 2026-03-27"])
+    #expect(paydays(try simulate(database, days: 60), from: 5000) == ["2026-03-27", "2026-04-10", "2026-04-24", "2026-05-08"])
+}
+
+/// The middle of the last three amounts, and no crash when the simulator has fewer.
+@Test func typicalAmountIsTheMiddleOfTheLastThree() {
+    #expect(Organizer.typical([1, 9, 4, 7]) == 7)
+    #expect(Organizer.typical([4, 9]) == 9)
+    #expect(Organizer.typical([4]) == 4)
+    #expect(Organizer.typical([]) == 0)
+}
+
+/// A bill on one day of the month stays monthly: all its charges are on one day.
+@Test func monthlyBillOnOneDayStaysMonthly() throws {
+    let database = try seriesDatabase(asOf: "2026-06-30", rent: (1...6).map { "2026-0\($0)-03" })
+    #expect(try seriesFound(database, "bills") == ["monthly 500 2026-07-03"])
+}
+
+/// A bill that moves from the 5th (Jan to Mar) to the 7th (Apr to Jun) is on two days with three
+/// monthly charges each, but the days don't take turns, so it stays monthly.
+@Test func billThatMovesToANewDayStaysMonthly() throws {
+    let rent = ["2026-01-05", "2026-02-05", "2026-03-05", "2026-04-07", "2026-05-07", "2026-06-07"]
+    let database = try seriesDatabase(asOf: "2026-06-30", rent: rent)
+    #expect(try seriesFound(database, "bills") == ["monthly 500 2026-07-07"])
+}
+
+/// With unequal days (1000 on the 1st, 900 on the 16th) the amount recurring_charges gives is the
+/// next date's own day's, the one the simulator projects that day. Data ending on Jun 1 instead
+/// gives the 16th's next date at the 16th's amount.
+@Test func recurringAmountMatchesTheNextCharge() throws {
+    let charges = (3...6).flatMap { m in [("a\(m)", "2026-0\(m)-01", "MAPLE COURT RENT", 1000.0),
+                                          ("b\(m)", "2026-0\(m)-16", "MAPLE COURT RENT", 900.0)] }
+    let database = try housingData(charges)
+    let series = try rows(call("recurring_charges", ["kind": "bills"], on: database), "series")
+    let next = series.first!["next"] as! String, amount = series.first!["amount"] as! Double
+    let projected = try simulate(database, days: 47).first { $0.date == next }?.bills.first?.amount
+    #expect(next == "2026-07-01" && amount == projected)
+    #expect(try seriesFound(housingData(charges.dropLast()), "bills") == ["twice_monthly 900 2026-06-16"])
+}

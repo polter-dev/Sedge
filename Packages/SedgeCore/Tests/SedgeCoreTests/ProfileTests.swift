@@ -155,12 +155,14 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect((bursar["payments"] as? [Any])?.count == 2 && (bursar["refunds"] as? [Any])?.count == 1)
 }
 
-/// A checking account with only the given (id, date, name, amount) charges, organized.
-func housingData(_ charges: [(String, String, String, Double)]) throws -> SedgeDatabase {
+/// A checking account with only the given (id, date, name, amount) charges, organized. The ids
+/// in `pending` are still pending.
+func housingData(_ charges: [(String, String, String, Double)], pending: Set<String> = []) throws -> SedgeDatabase {
     let database = try SedgeDatabase()
     try database.save(
         accounts: [Account(account_id: "chk", name: "Checking", type: "depository", balances: Balances())],
-        transactions: charges.map { Transaction(transaction_id: $0.0, account_id: "chk", date: $0.1, name: $0.2, amount: $0.3, pending: false) },
+        transactions: charges.map { Transaction(transaction_id: $0.0, account_id: "chk", date: $0.1, name: $0.2, amount: $0.3,
+                                                pending: pending.contains($0.0)) },
         asOf: "2026-06-30")
     try Organizer.organize(database)
     return database
@@ -193,6 +195,45 @@ func irregularRent() throws -> SedgeDatabase {
     #expect(housing.map(\.value) == [Profile.Value(name: "Maple Court Rent", type: "rent", amount: 1500, schedule: "monthly", day: 3)])
     #expect(housing.first?.rule == "recurring_housing_bill" && housing.first?.confidence == Profile.keywordConfidence)
     #expect(housing.first?.evidence.sorted() == ["s1", "s2", "s3", "s4"])
+}
+
+/// Rent split into two halves on the 1st and 16th, March to June: twice-monthly housing that
+/// costs two halves a month. Pay twice a month averages two paychecks a month.
+@Test func twiceMonthlyRentAndPayCountTwoPaymentsAMonth() throws {
+    let days = (3...6).flatMap { ["2026-0\($0)-01", "2026-0\($0)-16"] }
+    let database = try housingData(days.enumerated().map { ("h\($0.offset)", $0.element, "MAPLE COURT RENT", 750) })
+    let housing = try Profile.facts(in: database).filter { $0.kind == "housing" }
+    #expect(housing.map(\.value) == [Profile.Value(name: "Maple Court Rent", type: "rent", amount: 750, schedule: "twice_monthly",
+                                                   monthly_average: 1500)])
+    #expect(housing.first?.rule == "recurring_housing_bill" && housing.first?.evidence.count == 8)
+
+    let pay = try seriesDatabase(asOf: "2026-06-30", paydays: days, paycheck: 800)
+    #expect(try profile(pay)["income"] == [Profile.Value(name: "Acme Payroll", amount: 800, schedule: "twice_monthly", monthly_average: 1600)])
+}
+
+/// Rent paid in two unequal halves, 1000 on the 1st and 900 on the 16th, March to June 2026:
+/// it costs 1900 a month, and each day is projected at its own amount.
+@Test func twiceMonthlyUnequalHalvesKeepTheirOwnAmounts() throws {
+    let charges = (3...6).flatMap { m in [("a\(m)", "2026-0\(m)-01", "MAPLE COURT RENT", 1000.0),
+                                          ("b\(m)", "2026-0\(m)-16", "MAPLE COURT RENT", 900.0)] }
+    let database = try housingData(charges)
+    let housing = try #require(try Profile.facts(in: database).first { $0.kind == "housing" })
+    #expect(housing.value.schedule == "twice_monthly")
+    #expect(housing.value.monthly_average == 1900)
+    let rent = try simulate(database, days: 47).flatMap { day in day.bills.map { "\(day.date) \($0.amount)" } }
+    #expect(rent == ["2026-07-01 1000.0", "2026-07-16 900.0", "2026-08-01 1000.0", "2026-08-16 900.0"])
+}
+
+/// The same rent with the May 1 charge still pending: the organizer's series has it, but the
+/// profile leaves pending charges out, so the days no longer take turns in what it sees. Each
+/// charge still goes with its own day, so the month still costs 1000 + 900, not 900 + 900.
+@Test func twiceMonthlyRentWithAPendingChargeKeepsEachDaysAmount() throws {
+    let charges = (3...6).flatMap { m in [("a\(m)", "2026-0\(m)-01", "MAPLE COURT RENT", 1000.0),
+                                          ("b\(m)", "2026-0\(m)-16", "MAPLE COURT RENT", 900.0)] }
+    let database = try housingData(charges, pending: ["a5"])
+    let housing = try #require(try Profile.facts(in: database).first { $0.kind == "housing" })
+    #expect(housing.value.schedule == "twice_monthly" && housing.value.monthly_average == 1900)
+    #expect(housing.evidence.count == 7)
 }
 
 @Test func personsHousingCorrectionReplacesIrregularRent() throws {

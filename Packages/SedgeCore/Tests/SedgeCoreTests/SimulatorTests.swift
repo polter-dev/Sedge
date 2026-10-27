@@ -254,3 +254,67 @@ func weekendShiftedPaycheckIsOnTime(asOf: String, pay: [String], expected: [Stri
     let payments = try simulate(database, days: 30).filter { $0.bills.contains { $0.name == "Credit Card payment" } }.map(\.date)
     #expect(payments == ["2026-05-05"])
 }
+
+/// Pay on the 15th and the last day, moved to Friday by weekends (Nov 14, Nov 28, Jan 30), is
+/// projected on both days: the last day is Feb 28 in February, and Jan 30 makes the 30th after
+/// that (pay dates aren't moved to business days). When the 15th is due today and not paid yet it
+/// is projected tomorrow, once. The end balance shows each payday was added exactly once.
+@Test(arguments: [
+    (asOf: "2026-01-31", expected: ["2026-02-15", "2026-02-28", "2026-03-15"]),
+    (asOf: "2026-02-15", expected: ["2026-02-16", "2026-02-28", "2026-03-15", "2026-03-30"]),
+])
+func twiceMonthlyPayIsProjectedOnBothDays(asOf: String, expected: [String]) throws {
+    let pay = ["2025-10-15", "2025-10-31", "2025-11-14", "2025-11-28", "2025-12-15", "2025-12-31", "2026-01-15", "2026-01-30"]
+    let database = try seriesDatabase(asOf: asOf, paydays: pay, paycheck: 800, checking: 1000)
+    let days = try simulate(database, days: 45)
+    #expect(paydays(days, from: 1000) == expected)
+    #expect(days.last?.balances["checking"] == 1000 + 800 * Double(expected.count))
+}
+
+/// Checking moves 200 to savings on the 1st and 160 on the 16th, Jan to Jun 2026, today Jun 20.
+/// The savings deposits on the dates in `late` post 5 days later, past the 3-day transfer window,
+/// so those checking charges stay unmatched and get another kind than the rest.
+func partlyMatchedTransfers(late: Set<String>) throws -> SedgeDatabase {
+    var count = 0
+    func charge(_ account: String, _ date: String, _ name: String, _ amount: Double) -> Transaction {
+        count += 1
+        return Transaction(transaction_id: "t\(count)", account_id: account, date: date, name: name, amount: amount, pending: false)
+    }
+    var transactions: [Transaction] = []
+    for month in 1...6 {
+        for (day, amount) in [("01", 200.0), ("16", 160.0)] {
+            let date = "2026-0\(month)-\(day)"
+            let posted = late.contains(date) ? "2026-0\(month)-\(Int(day)! + 5)" : date
+            transactions.append(charge("checking", date, "ONLINE TRANSFER TO SAVINGS", amount))
+            transactions.append(charge("savings", posted, "ONLINE TRANSFER FROM CHECKING", -amount))
+        }
+    }
+    func account(_ id: String, _ name: String) -> Account {
+        Account(account_id: id, name: name, type: "depository", subtype: id, balances: Balances(current: 5000))
+    }
+    let database = try SedgeDatabase()
+    try database.save(accounts: [account("checking", "Checking"), account("savings", "Savings")],
+                      transactions: transactions, asOf: "2026-06-20")
+    try Organizer.organize(database, useReconciliation: true)
+    return database
+}
+
+/// The checking balance drops of more than 1 in the next 40 days, as "date amount".
+func checkingDrops(_ database: SedgeDatabase) throws -> [String] {
+    let days = try simulate(database, days: 40)
+    return zip(days, [5000.0] + days.map { $0.balances["checking"]! })
+        .filter { $0.balances["checking"]! < $1 - 1 }.map { "\($0.date) \($1 - $0.balances["checking"]!)" }
+}
+
+/// One charge of a twice-monthly series (Jun 1) stays unmatched, so the simulator sees that day's
+/// charges split across two kinds. Each day is still projected at its own amount.
+@Test func partlyMatchedTwiceMonthlyKeepsEachDaysAmount() throws {
+    #expect(try checkingDrops(partlyMatchedTransfers(late: ["2026-06-01"])) == ["2026-07-01 200.0", "2026-07-16 160.0"])
+}
+
+/// Every 16th's charge stays unmatched, so one kind holds only the 1st's charges and the other only
+/// the 16th's: each is projected as its one day, at its own amount.
+@Test func twiceMonthlyWithOneDayPerKindProjectsBothDays() throws {
+    let late = Set((1...6).map { "2026-0\($0)-16" })
+    #expect(try checkingDrops(partlyMatchedTransfers(late: late)) == ["2026-07-01 200.0", "2026-07-16 160.0"])
+}
