@@ -100,6 +100,12 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - An account's owner (mine or shared) and a transaction's familiar answer (yes or not_sure) are only reported to the model; they don't change any total. — `Answers.swift`; `Tools.swift` `accountBalances`, `findTransactions`
 - An answer about a pending charge is lost when the charge posts under a new id. — `SedgeDatabase.swift` `save`
 
+## Ask screen demo
+
+- The Debug sample conversation counts food as groceries, dining and coffee, and its "usual pace" is the average of the same days (1st through today's day, or the month's end) of the last three months. — `Sedge/AskView.swift` `ChatTurn.sample`, `monthToDate`
+- The sample's quick check asks about the month's largest transfer or card payment with a positive amount, the latest one on a tie. — `Sedge/AskView.swift` `ChatTurn.transferCheck`
+- A quick-check tap is saved through `ask_user` and replaces an answer already saved for that fact; "Later" saves nothing and keeps any earlier answer, so it may be asked again. — `Sedge/AskView.swift` `TurnView.answer`
+
 ## Spending screen
 
 - Months are compared over the same first days: the day of the month of `as_of` (a shorter month just ends sooner), for `as_of`'s month and the three before it. — `Sedge/SpendingView.swift` `SpendingTotal.all`, `SpendingView.months`
