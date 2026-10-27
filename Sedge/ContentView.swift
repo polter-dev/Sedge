@@ -177,6 +177,7 @@ struct MainView: View {
                 }
             }
         }
+        .modifier(AccountChecksAfterConnecting(database: database))
     }
 }
 
@@ -188,6 +189,7 @@ struct AccountsView: View {
     let dataName: String
     let changeData: () -> Void
     @State private var rows: [ListedTransaction] = []
+    @State private var accounts: [ListedAccount] = []
     @State private var resetDone = false
     /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
     @State private var confirmingReset = false
@@ -204,7 +206,7 @@ struct AccountsView: View {
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background(Color.background)
                         } else {
-                            TransactionsView(rows: rows)
+                            TransactionsView(rows: rows, database: database)
                                 .refreshable {
                                     // Pull down to sync again with the same bank login.
                                     guard isBank else { return }
@@ -226,6 +228,20 @@ struct AccountsView: View {
                 }
             }
             .listRowBackground(Color.group)
+            if !accounts.isEmpty {
+                Section("Your accounts") {
+                    ForEach(accounts) { account in
+                        NavigationLink {
+                            AccountCheckView(database: database, account: account)
+                        } label: {
+                            LabeledContent(accountTitle(account.name, account.mask), value: account.ownerLabel)
+                        }
+                        .accessibilityLabel(accountTitle(account.name, account.mask, spoken: true))
+                        .accessibilityValue(account.ownerLabel)
+                    }
+                }
+                .listRowBackground(Color.group)
+            }
             Section {
                 NavigationLink {
                     SavedAnswersView(database: database)
@@ -260,8 +276,9 @@ struct AccountsView: View {
     private func reload() {
         do {
             rows = try ListedTransaction.all(in: database)
+            accounts = try ListedAccount.all(in: database)
         } catch {
-            print("Could not read transactions:", error)
+            print("Could not read transactions or accounts:", error)
         }
     }
 

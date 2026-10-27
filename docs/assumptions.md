@@ -104,3 +104,9 @@ To add a rule, add one line under its area in the same shape as the others: the 
 
 - Months are compared over the same first days: the day of the month of `as_of` (a shorter month just ends sooner), for `as_of`'s month and the three before it. — `Sedge/SpendingView.swift` `SpendingTotal.all`, `SpendingView.months`
 - The spending graph shows a category's three biggest stores this month and adds the rest up as "Other stores", or every store when there are four or fewer. — `Sedge/SpendingView.swift` `SpendingView.stores`
+
+## Transaction screen
+
+- Sedge's context compares a purchase with the same store's three posted purchases just before it (same-day ones by id; refunds, transfers and pending charges left out): above all three is higher, below all three is lower, anything else is in line. With fewer than three earlier purchases there is no comparison. — `Sedge/TransactionDetailView.swift` `StoreContext.compare`, `TransactionDetail.earlierCharges`
+- Choosing a transaction's store category again clears the person's category answer instead of saving it. — `Sedge/TransactionDetailView.swift` `setCategory`
+- After a bank connection, each account with no owner answer is asked about once; Later saves nothing, so it is asked again after the next connection. — `Sedge/AccountCheckView.swift` `AccountChecksAfterConnecting`

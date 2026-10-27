@@ -132,7 +132,7 @@ struct SpendingView: View {
     }
 
     /// A stored category written for people: "phone_internet" becomes "Phone internet".
-    private static func title(_ category: String) -> String {
+    static func title(_ category: String) -> String {
         let words = category.replacingOccurrences(of: "_", with: " ")
         return words.prefix(1).uppercased() + words.dropFirst()
     }
@@ -164,23 +164,26 @@ struct SpendingView: View {
             // Spending only older than the four months shown counts as none.
             if categories.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
         }
-        // Runs when the screen opens and again whenever another category is picked.
+        // Runs each time the screen shows, so a transaction moved to another category counts
+        // here, and again whenever another category is picked.
         .task(id: category) {
             do {
-                if asOf == nil {
-                    asOf = try database.asOf()
-                    totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: day)
+                let first = asOf == nil
+                asOf = try database.asOf()
+                totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: day)
+                if first {
                     // The design opens on dining; any other data opens on its first category.
                     category = categories.contains("dining") ? "dining" : categories.first ?? ""
                 }
                 guard let asOf else { return }
                 rows = try ListedTransaction.spending(in: database, category: category,
                                                       from: String(asOf.prefix(8)) + "01", through: asOf)
-                selected = nil
             } catch {
                 print("Could not read spending:", error)
             }
         }
+        // A tapped store belongs to one category, so picking another clears it.
+        .onChange(of: category) { selected = nil }
     }
 
     /// "Your patterns": this month so far and the three months before it, over the same days.
@@ -329,8 +332,7 @@ struct SpendingView: View {
     /// The tapped store's latest transaction; tapping it opens the transaction.
     private func latest(_ row: ListedTransaction) -> some View {
         NavigationLink {
-            TransactionsView(rows: [row])
-                .navigationTitle("Transaction")
+            TransactionDetailView(database: database, id: row.id)
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {

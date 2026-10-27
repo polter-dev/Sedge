@@ -23,21 +23,24 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
 
     var id: String { transaction_id }
 
-    /// Every transaction, newest first, the same order the tools use.
-    static func all(in database: SedgeDatabase) throws -> [ListedTransaction] {
+    /// Every transaction, or with `merchant` only that store's, newest first, the same order the tools use.
+    static func all(in database: SedgeDatabase, merchant: String? = nil) throws -> [ListedTransaction] {
         try database.dbQueue.read { db in
             try ListedTransaction.fetchAll(db, sql: """
                 SELECT t.transaction_id, t.date, COALESCE(m.name, t.name) AS store, t.name, t.amount, t.kind
                 FROM transactions t LEFT JOIN entities m ON m.id = t.merchant_id
+                WHERE ? IS NULL OR t.merchant_id = ?
                 ORDER BY t.date DESC, t.transaction_id DESC
-                """)
+                """, arguments: [merchant, merchant])
         }
     }
 }
 
 /// The list of transactions from the chosen database, grouped by day like a bank statement.
+/// Tapping one opens it.
 struct TransactionsView: View {
     let rows: [ListedTransaction]
+    let database: SedgeDatabase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// The rows split into days, keeping their newest-first order.
@@ -60,23 +63,27 @@ struct TransactionsView: View {
             ForEach(days, id: \.date) { day in
                 Section(day.date.displayDate()) {
                     ForEach(day.rows) { row in
-                        layout {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(row.store)
-                                Text(row.name)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                        NavigationLink {
+                            TransactionDetailView(database: database, id: row.id)
+                        } label: {
+                            layout {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(row.store)
+                                    Text(row.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 8)
+                                VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
+                                    // Flip Plaid's sign so money in shows as positive, like a bank statement.
+                                    Text(-row.amount, format: .currency(code: "USD"))
+                                        .monospacedDigit()
+                                    kindTag(row.kind)
+                                }
                             }
-                            Spacer(minLength: 8)
-                            VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
-                                // Flip Plaid's sign so money in shows as positive, like a bank statement.
-                                Text(-row.amount, format: .currency(code: "USD"))
-                                    .monospacedDigit()
-                                kindTag(row.kind)
-                            }
+                            // VoiceOver reads the whole row as one item: store, statement name, amount, tag.
+                            .accessibilityElement(children: .combine)
                         }
-                        // VoiceOver reads the whole row as one item: store, statement name, amount, tag.
-                        .accessibilityElement(children: .combine)
                     }
                 }
                 .listRowBackground(Color.group)
@@ -116,7 +123,7 @@ struct TransactionsView: View {
             ListedTransaction(transaction_id: "1", date: "2026-06-28", store: "Netflix", name: "NETFLIX.COM 866-579-7172 CA", amount: 17.99, kind: "spending"),
             ListedTransaction(transaction_id: "2", date: "2026-06-26", store: "Acme Corp Payroll", name: "ACME CORP PAYROLL DIR DEP", amount: -2140.55, kind: "income"),
             ListedTransaction(transaction_id: "3", date: "2026-06-25", store: "Card Payment", name: "PAYMENT THANK YOU", amount: -450, kind: "card_payment"),
-        ])
+        ], database: try! SedgeDatabase())
         .navigationTitle("Transactions")
     }
 }
