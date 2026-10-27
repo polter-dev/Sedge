@@ -97,9 +97,12 @@ struct SavedAnswersView: View {
             } footer: {
                 if !entries.isEmpty {
                     Text("Sedge uses these instead of asking, so a wrong one gives a wrong answer. Tap to change one, or swipe to remove it and be asked again next time.")
+                        .foregroundStyle(.secondary)
                 }
             }
+            .listRowBackground(Color.group)
         }
+        .themedBackground()
         .overlay {
             if entries.isEmpty {
                 ContentUnavailableView("No saved answers", systemImage: "tray",

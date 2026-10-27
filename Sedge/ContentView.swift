@@ -20,6 +20,7 @@ struct ContentView: View {
     @State private var error: String?
     /// True while the data picker is shown over the main tabs.
     @State private var picking = false
+    @State private var tab = MainTab.ask
 
     var body: some View {
         Group {
@@ -30,7 +31,7 @@ struct ContentView: View {
             } else if let opened, opened.choice == choice {
                 // A new identity per choice: without it SwiftUI reuses the old tabs, and they
                 // keep showing the previous data's transactions under the new name.
-                MainView(database: opened.database, choice: choice) { picking = true }
+                MainView(database: opened.database, choice: choice, tab: $tab) { picking = true }
                     .id(choice)
             } else if let error {
                 ContentUnavailableView {
@@ -44,6 +45,9 @@ struct ContentView: View {
                 ProgressView()
             }
         }
+        // Fills the screen behind the loading and error states; the tabs paint their own.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.background)
         // Runs at launch and again whenever the choice changes.
         .task(id: choice) {
             opened = nil
@@ -79,17 +83,21 @@ struct DataPickerView: View {
                 } header: {
                     Text("Sample people")
                 } footer: {
-                    Text("Fake data, with today as \(Persona.asOf.displayDate()).")
+                    Text("Fake data, with today as \(Persona.asOf.displayDate()).").foregroundStyle(.secondary)
                 }
+                .listRowBackground(Color.group)
                 Section {
                     row("Connect bank", systemImage: "building.columns", choice: SedgeDatabase.bankChoice)
                 } footer: {
-                    Text("Bank data is kept in its own file, apart from the sample people.")
+                    Text("Bank data is kept in its own file, apart from the sample people.").foregroundStyle(.secondary)
                 }
+                .listRowBackground(Color.group)
                 Section("About") {
                     Label("Not financial advice. Demo data is made up.", systemImage: "info.circle")
                 }
+                .listRowBackground(Color.group)
             }
+            .themedBackground()
             .navigationTitle("Choose data")
             .toolbar {
                 if let cancel {
@@ -115,26 +123,81 @@ struct DataPickerView: View {
     }
 }
 
-/// The main screens for one database.
+/// The three tabs, so the open tab can be kept when the data changes.
+enum MainTab { case ask, trends, accounts }
+
+/// The main screens for one database, in three tabs: Ask, Trends and Accounts.
 struct MainView: View {
     let database: SedgeDatabase
     /// A persona's name or "bank", shown under each screen's title so it's clear whose data this is.
     let choice: String
+    /// The open tab. It lives in ContentView, so picking other data from Accounts comes back to Accounts.
+    @Binding var tab: MainTab
     let changeData: () -> Void
-    @State private var rows: [ListedTransaction] = []
 
-    private var isBank: Bool { choice == SedgeDatabase.bankChoice }
-    private var dataName: String { isBank ? "Bank" : choice.capitalized }
+    private var dataName: String { choice == SedgeDatabase.bankChoice ? "Bank" : choice.capitalized }
 
     var body: some View {
-        TabView {
-            Tab("Transactions", systemImage: "list.bullet") {
+        // The tab icons are the design's own drawings, kept as template images so they take the tab colors.
+        TabView(selection: $tab) {
+            Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
+                    AskView(database: database)
+                        .navigationTitle("Ask")
+                        .navigationSubtitle(dataName)
+                }
+            }
+            Tab("Trends", image: "tab-trends", value: .trends) {
+                NavigationStack {
+                    SpendingView(database: database)
+                        .navigationTitle("Spending")
+                        .navigationSubtitle(dataName)
+                        .toolbar {
+                            // The what-if projection opens from here until the cash-flow screen replaces it.
+                            NavigationLink("What if") {
+                                WhatIfView(database: database)
+                                    .navigationTitle("What if")
+                                    .navigationSubtitle(dataName)
+                            }
+                        }
+                }
+            }
+            Tab("Accounts", image: "tab-accounts", value: .accounts) {
+                NavigationStack {
+                    AccountsView(database: database, isBank: choice == SedgeDatabase.bankChoice,
+                                 dataName: dataName, changeData: changeData)
+                        .navigationTitle("Accounts")
+                        .navigationSubtitle(dataName)
+                        .toolbar { Button("Change data", systemImage: "person.2", action: changeData) }
+                }
+            }
+        }
+    }
+}
+
+/// The Accounts tab: the transactions, what Sedge learned about the person, and the saved
+/// answers, with the data picker in its toolbar.
+struct AccountsView: View {
+    let database: SedgeDatabase
+    let isBank: Bool
+    let dataName: String
+    let changeData: () -> Void
+    @State private var rows: [ListedTransaction] = []
+    @State private var resetDone = false
+    /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
+    @State private var confirmingReset = false
+
+    var body: some View {
+        List {
+            Section {
+                NavigationLink {
                     Group {
                         if isBank && rows.isEmpty {
                             // Only the bank file is ever handed to the Plaid flow, so a sync
                             // can't write into a persona's file.
                             ConnectBankScreen(database: database, onSynced: reload, useSample: changeData)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color.background)
                         } else {
                             TransactionsView(rows: rows)
                                 .refreshable {
@@ -146,47 +209,47 @@ struct MainView: View {
                     }
                     .navigationTitle("Transactions")
                     .navigationSubtitle(dataName)
-                    .toolbar { changeDataButton }
+                } label: {
+                    Label("Transactions", systemImage: "list.bullet")
                 }
-            }
-            Tab("Ask", systemImage: "questionmark.bubble") {
-                NavigationStack {
-                    AskView(database: database)
-                        .navigationTitle("Ask")
-                        .navigationSubtitle(dataName)
-                        .toolbar { changeDataButton }
-                }
-            }
-            Tab("Spending", systemImage: "chart.bar") {
-                NavigationStack {
-                    SpendingView(database: database)
-                        .navigationTitle("Spending")
-                        .navigationSubtitle(dataName)
-                        .toolbar { changeDataButton }
-                }
-            }
-            Tab("What if", systemImage: "chart.line.uptrend.xyaxis") {
-                NavigationStack {
-                    WhatIfView(database: database)
-                        .navigationTitle("What if")
-                        .navigationSubtitle(dataName)
-                        .toolbar { changeDataButton }
-                }
-            }
-            Tab("About you", systemImage: "person.text.rectangle") {
-                NavigationStack {
+                NavigationLink {
                     ProfileView(database: database)
                         .navigationTitle("What Sedge learned")
                         .navigationSubtitle(dataName)
-                        .toolbar { changeDataButton }
+                } label: {
+                    Label("About you", systemImage: "person.text.rectangle")
                 }
             }
+            .listRowBackground(Color.group)
+            Section {
+                NavigationLink {
+                    SavedAnswersView(database: database)
+                        .navigationTitle("Saved answers")
+                } label: {
+                    Label("Saved answers", systemImage: "tray.full")
+                }
+                Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
+                    confirmingReset = true
+                }
+                // A destructive button colors only its text; this makes the icon match.
+                .foregroundStyle(.red)
+                // Deleting can't be undone, so ask first. An alert always shows its Cancel button.
+                .alert("Delete all saved answers?", isPresented: $confirmingReset) {
+                    Button("Delete", role: .destructive) {
+                        resetDone = (try? AskUser.reset(database)) != nil
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This can't be undone.")
+                }
+            } footer: {
+                Text(resetDone ? "Saved answers cleared." : "Answers to quick questions are saved, so each is asked only once.")
+                    .foregroundStyle(.secondary)
+            }
+            .listRowBackground(Color.group)
         }
+        .themedBackground()
         .task { reload() }
-    }
-
-    private var changeDataButton: some View {
-        Button("Change data", systemImage: "person.2", action: changeData)
     }
 
     private func reload() {

@@ -14,6 +14,12 @@ struct SedgeApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // The theme's text colors for the whole app: plain text is `ink`, and any text
+                // styled `.secondary` takes the second color here, `muted`. Section footers
+                // would turn `ink` too, so each footer asks for `.secondary` itself.
+                .foregroundStyle(Color.ink, Color.muted)
+                // Set by hand because, in dark mode, the system swaps a gray AccentColor for its blue.
+                .tint(Color.accent)
         }
     }
 }

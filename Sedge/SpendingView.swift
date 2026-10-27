@@ -96,13 +96,14 @@ struct SpendingView: View {
             Section {
                 Toggle("Include money moved between my accounts", isOn: $includeMoved)
             }
+            .listRowBackground(Color.group)
             Section("By month") {
                 Chart(byMonth) { bar in
                     BarMark(x: .value("Month", bar.label), y: .value("Spent", bar.total))
                         .foregroundStyle(by: .value("Kind", bar.group))
                 }
-                // The app's green for spending and a quiet gray for money moved, the same in both charts.
-                .chartForegroundStyleScale(["Spending": Color.accentColor, "Moved between accounts": Color.gray])
+                // The theme's accent for spending and its quieter gray for money moved, the same in both charts.
+                .chartForegroundStyleScale(["Spending": Color.accent, "Moved between accounts": Color.second])
                 // With only spending shown, a one-item legend says nothing.
                 .chartLegend(includeMoved ? .visible : .hidden)
                 .chartXAxis {
@@ -116,10 +117,11 @@ struct SpendingView: View {
                 .chartYAxis { AxisMarks(format: Self.dollars) }
                 .frame(height: 220)
             }
+            .listRowBackground(Color.group)
             Section("By category") {
                 Chart(byCategory) { bar in
                     BarMark(x: .value("Spent", bar.total), y: .value("Category", bar.label))
-                        .foregroundStyle(bar.group == SpendingTotal.movedCategory ? Color.gray : Color.accentColor)
+                        .foregroundStyle(bar.group == SpendingTotal.movedCategory ? Color.second : Color.accent)
                         // The total at the end of each bar.
                         .annotation(position: .trailing) {
                             Text(bar.total, format: Self.dollars)
@@ -135,7 +137,9 @@ struct SpendingView: View {
                 // A fixed height per bar keeps every category name readable.
                 .frame(height: CGFloat(byCategory.count) * barRow + 20)
             }
+            .listRowBackground(Color.group)
         }
+        .themedBackground()
         .overlay {
             if totals.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
         }

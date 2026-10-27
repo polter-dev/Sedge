@@ -6,16 +6,14 @@
 import SedgeCore
 import SwiftUI
 
-/// Ask a question about the chosen data. No model is wired in yet, so asking only says so;
-/// the saved answers that `ask_user` keeps can still be seen and reset from here.
+/// Ask a question about the chosen data. No model is wired in yet, so asking only says so.
+/// The saved answers that `ask_user` keeps are seen and reset from the Accounts tab.
 struct AskView: View {
+    /// The data questions are answered from, once a model is connected.
     let database: SedgeDatabase
     @State private var question = ""
     /// True after Ask is tapped, to show that nothing can answer yet.
     @State private var notConnected = false
-    @State private var resetDone = false
-    /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
-    @State private var confirmingReset = false
     @FocusState private var questionFocused: Bool
 
     var body: some View {
@@ -50,41 +48,19 @@ struct AskView: View {
                         .disabled(question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .listRowBackground(Color.group)
             if notConnected {
                 Section("Answer") {
                     Label("The assistant isn't connected yet.", systemImage: "info.circle")
                 }
-            }
-            Section {
-                NavigationLink {
-                    SavedAnswersView(database: database)
-                        .navigationTitle("Saved answers")
-                } label: {
-                    Label("Saved answers", systemImage: "tray.full")
-                }
-                Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
-                    confirmingReset = true
-                }
-                // A destructive button colors only its text; this makes the icon match.
-                .foregroundStyle(.red)
-                // Deleting can't be undone, so ask first. An alert always shows its Cancel button.
-                .alert("Delete all saved answers?", isPresented: $confirmingReset) {
-                    Button("Delete", role: .destructive) {
-                        resetDone = (try? AskUser.reset(database)) != nil
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("This can't be undone.")
-                }
-            } footer: {
-                Text(resetDone ? "Saved answers cleared." : "Answers to quick questions are saved, so each is asked only once.")
+                .listRowBackground(Color.group)
             }
         }
+        .themedBackground()
     }
 
     private func ask() {
         guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        resetDone = false
         notConnected = true
     }
 }

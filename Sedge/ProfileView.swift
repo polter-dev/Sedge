@@ -51,10 +51,12 @@ struct ProfileView: View {
                     Text(Self.titles[kind] ?? kind)
                 } footer: {
                     // The rows don't look like buttons, so the first section says they are.
-                    if kind == kinds.first { Text("Tap a fact to correct it.") }
+                    if kind == kinds.first { Text("Tap a fact to correct it.").foregroundStyle(.secondary) }
                 }
+                .listRowBackground(Color.group)
             }
         }
+        .themedBackground()
         .overlay {
             if facts.isEmpty { ContentUnavailableView("Nothing learned yet", systemImage: "person.text.rectangle", description: Text("No paychecks, rent, tuition, loans or accounts were found in this data.")) }
         }
@@ -149,30 +151,35 @@ struct CorrectFactView: View {
     var body: some View {
         NavigationStack {
             Form {
-                LabeledContent("Name") {
-                    TextField("Name", text: $value.name).multilineTextAlignment(.trailing)
-                }
-                if fact.value.type != nil {
-                    LabeledContent("Type") {
-                        TextField("Type", text: Binding { value.type ?? "" } set: { value.type = $0 }).multilineTextAlignment(.trailing)
+                // One section, so the theme's row color can be set on every row at once.
+                Section {
+                    LabeledContent("Name") {
+                        TextField("Name", text: $value.name).multilineTextAlignment(.trailing)
+                    }
+                    if fact.value.type != nil {
+                        LabeledContent("Type") {
+                            TextField("Type", text: Binding { value.type ?? "" } set: { value.type = $0 }).multilineTextAlignment(.trailing)
+                        }
+                    }
+                    if fact.value.amount != nil {
+                        LabeledContent("Amount ($)") {
+                            TextField("Amount", text: $amount).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                        }
+                    }
+                    if fact.value.schedule != nil {
+                        Picker("Schedule", selection: Binding { value.schedule ?? "" } set: { value.schedule = $0 }) {
+                            ForEach(Self.schedules, id: \.self) { Text($0) }
+                        }
+                    }
+                    if fact.value.day != nil {
+                        LabeledContent("Day of the month") {
+                            TextField("Day", text: $day).keyboardType(.numberPad).multilineTextAlignment(.trailing)
+                        }
                     }
                 }
-                if fact.value.amount != nil {
-                    LabeledContent("Amount ($)") {
-                        TextField("Amount", text: $amount).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
-                    }
-                }
-                if fact.value.schedule != nil {
-                    Picker("Schedule", selection: Binding { value.schedule ?? "" } set: { value.schedule = $0 }) {
-                        ForEach(Self.schedules, id: \.self) { Text($0) }
-                    }
-                }
-                if fact.value.day != nil {
-                    LabeledContent("Day of the month") {
-                        TextField("Day", text: $day).keyboardType(.numberPad).multilineTextAlignment(.trailing)
-                    }
-                }
+                .listRowBackground(Color.group)
             }
+            .themedBackground()
             .navigationTitle("Correct this")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
