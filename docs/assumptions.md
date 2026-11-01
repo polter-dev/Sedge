@@ -21,7 +21,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - "amzn" means amazon and "st" means street. — `Organizer.swift` `aliases`
 - One to three letters or "paypal" before a "*", and a leading "pos", "pos debit" or "pos purchase", are a payment-processor tag, not the store, so a store with a name that short loses it. — `Organizer.swift` `processorPrefix`, `clean`
 - Words with a digit in them are store numbers or ids, not part of the store's name. — `Organizer.swift` `clean`
-- A statement name starting with "REFUND " is a refund. — `Organizer.swift` `clean`
+- A statement name starting with "REFUND ", or ending in the word "REFUND" after a store name (a trailing reference number is ignored), is a refund. — `Organizer.swift` `clean`
 - A store's category is the keyword list most of its names match; ties go to the earlier list, no match is "other". — `Organizer.swift` `category(of:)`
 - A subscription word beats a shopping word ("amazon prime membership" is a subscription). — `Organizer.swift` `categoryKeywords`
 - HOA dues are in the housing category. — `Organizer.swift` `categoryKeywords`
@@ -56,7 +56,8 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - One education charge of $1,000 or more is tuition, not books or fees. — `Profile.swift` `tuitionMinimum`
 - Tuition is paid per term, so its schedule is usually irregular. — `Profile.swift` `infer`
 - Tuition paid and tuition refunded are kept separately; a refund doesn't erase the payment. — `Profile.swift` `Value.paid`, `Value.refunded`
-- A tuition refund is a refund at the tuition store; under the $1,000 rule only a refund of $1,000 or more counts. With reconciliation off a refund is income, so tuition refunded is 0. — `Profile.swift` `infer`
+- A tuition refund is any refund at the tuition store, of any size, including when tuition was found only by the $1,000 rule. With reconciliation off a refund is income, so tuition refunded is 0. — `Profile.swift` `infer`
+- A plain school-name line ("STATE U") can merge the school's bookstore and tuition into one store; a bookstore refund there counts as tuition refunded, on purpose. — `Profile.swift` `infer`
 - A store in the loans category, or Affirm, Klarna, Afterpay or "installment", is a loan. — `Profile.swift` `installmentWords`, `infer`
 - A loan is installment, auto or student by the words in its name, otherwise "other". — `Profile.swift` `loanTypes`
 - Two or more payments to a lender without a cadence are an irregular loan. — `Profile.swift` `infer`

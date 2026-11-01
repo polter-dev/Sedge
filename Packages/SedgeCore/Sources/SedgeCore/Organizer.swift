@@ -217,9 +217,10 @@ public enum Organizer {
     }
 
     /// Lowercases a raw statement name and strips what isn't the store's name:
-    /// a "REFUND" prefix (reported separately), processor tags, ".com",
+    /// a "REFUND" word at the start or end (reported separately), processor tags, ".com",
     /// descriptors after "*", store numbers and ids, and punctuation.
-    /// "SQ *BEAN ST COFFEE" becomes "bean st coffee"; "VALUE-MART #104" becomes "value mart".
+    /// "SQ *BEAN ST COFFEE" becomes "bean st coffee"; "VALUE-MART #104" becomes "value mart";
+    /// "STATE U REFUND" becomes "state u", a refund.
     static func clean(_ raw: String) -> (name: String, isRefund: Bool) {
         var text = raw.lowercased()
         let isRefund = text.hasPrefix("refund ")
@@ -231,9 +232,14 @@ public enum Organizer {
         text = text.replacingOccurrences(of: "'", with: "") // "joe's" and "joes" match
         text = text.replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression)
         // Store numbers and trailing ids are the words with a digit in them ("104", "x1234").
-        let name = text.split(separator: " ").filter { !$0.contains(where: \.isNumber) }.joined(separator: " ")
+        var words = text.split(separator: " ").filter { !$0.contains(where: \.isNumber) }
+        // Some banks put the word last ("STATE U REFUND #881"). Checked after ids are dropped so a
+        // trailing id doesn't hide it, and only when a store name is left in front of it.
+        let endsInRefund = words.count > 1 && words.last == "refund"
+        if endsInRefund { words.removeLast() }
+        let name = words.joined(separator: " ")
         // If nothing is left (a name made only of numbers), keep the raw text rather than "".
-        return (name.isEmpty ? raw.lowercased() : name, isRefund)
+        return (name.isEmpty ? raw.lowercased() : name, isRefund || endsInRefund)
     }
 
     /// A cleaned name's words with aliases applied: "amzn mktp us" becomes ["amazon", "mktp", "us"].

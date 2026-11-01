@@ -138,8 +138,8 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(tuition[1] == Profile.Value(name: "State U Bursar", amount: 4250.55, schedule: "irregular", paid: 7350.65, refunded: 1200.30,
                                         payments: [.init(date: "2026-01-10", amount: 4250.55), .init(date: "2026-05-08", amount: 3100.10)],
                                         refunds: [.init(date: "2026-02-15", amount: 1200.30)]))
-    // Under the size rule, a $40 refund is a book or a fee, not tuition.
-    #expect(tuition[0].paid == 1500 && tuition[0].refunded == 0 && tuition[0].refunds == [])
+    // Tuition found only by the $1,000 rule still counts a refund of any size.
+    #expect(tuition[0].paid == 1500 && tuition[0].refunded == 40 && tuition[0].refunds == [.init(date: "2026-01-20", amount: 40)])
 
     // With reconciliation off the refund is income, so nothing is refunded and the payments still count.
     let ablated = try #require(try profile(tuitionWithRefund(useReconciliation: false))["tuition"])
@@ -153,6 +153,44 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     let bursar = try #require(values.first { $0["name"] as? String == "State U Bursar" })
     #expect(bursar["paid"] as? Double == 7350.65 && bursar["refunded"] as? Double == 1200.30)
     #expect((bursar["payments"] as? [Any])?.count == 2 && (bursar["refunds"] as? [Any])?.count == 1)
+}
+
+/// The $40 refund at the college (tuition found by size) can be looked up three ways, and all agree.
+@Test func smallTuitionRefundIsFoundByEveryTool() throws {
+    let database = try tuitionWithRefund()
+    let values = rows(try call("get_profile", [:], on: database), "facts").compactMap { $0["value"] as? [String: Any] }
+    let college = try #require(values.first { $0["name"] as? String == "Riverside College" })
+    #expect(college["paid"] as? Double == 1500 && college["refunded"] as? Double == 40)
+
+    // find_transactions lists the refund with its kind, so a model can add it up itself.
+    let found = rows(try call("find_transactions", ["merchant": "Riverside College"], on: database))
+    #expect(found.filter { $0["kind"] as? String == "refund" }.map { $0["amount"] as? Double } == [-40])
+    #expect(found.filter { $0["kind"] as? String == "spending" }.map { $0["amount"] as? Double } == [1500])
+
+    // total_spent nets the refund against the payment.
+    let spent = try call("total_spent", firstHalf(["merchant": "Riverside College"]), on: database)
+    #expect(spent["total"] as? Double == 1460 && spent["count"] as? Int == 2)
+}
+
+/// A refund named with the word last is a refund, not income, and counts as tuition refunded.
+@Test func refundWordAtTheEndIsATuitionRefund() throws {
+    let database = try housingData([("p1", "2026-01-10", "STATE U BURSAR", 4000), ("r1", "2026-02-01", "STATE U BURSAR REFUND", -650)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'r1'") }
+    #expect(kind == "refund")
+    let tuition = try #require(try profile(database)["tuition"])
+    #expect(tuition == [Profile.Value(name: "State U Bursar", amount: 4000, schedule: "irregular", paid: 4000, refunded: 650,
+                                      payments: [.init(date: "2026-01-10", amount: 4000)], refunds: [.init(date: "2026-02-01", amount: 650)])])
+    #expect(try profile(database)["income"] == nil)
+}
+
+/// Kept on purpose: a plain school-name line ("STATE U") merges the school's bookstore and
+/// tuition into one store, so a bookstore refund there counts as tuition refunded.
+@Test func bookstoreRefundAtAMergedSchoolStoreCountsAsTuition() throws {
+    let database = try housingData([("t1", "2026-01-10", "STATE U TUITION", 4000), ("s1", "2026-01-11", "STATE U", 200),
+                                    ("b1", "2026-01-12", "STATE U BOOKSTORE", 120), ("r1", "2026-01-20", "REFUND STATE U BOOKSTORE", -45)])
+    let tuition = try #require(try profile(database)["tuition"])
+    #expect(tuition.count == 1)
+    #expect(tuition[0].paid == 4320 && tuition[0].refunded == 45 && tuition[0].refunds == [.init(date: "2026-01-20", amount: 45)])
 }
 
 /// A checking account with only the given (id, date, name, amount) charges, organized. The ids
