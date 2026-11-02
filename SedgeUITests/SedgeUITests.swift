@@ -748,8 +748,10 @@ final class SedgeUITests: XCTestCase {
         // Each rank in turn, scrolling to it: the list only builds the rows in view, and at the
         // largest text sizes it starts below the fold.
         let cuts = app.descendants(matching: .any).matching(identifier: "cut")
-        let expected = ["1. Netflix, $16.74 a month.", "2. Homegoods, $47.29 a month.", "3. Amazon, $70.60 a month.",
-                        "4. Bean Street Coffee, $10.21 a month.", "5. Corner Cafe, $180.01 a month."]
+        // Netflix is a monthly charge, so its evidence says the low weeks don't judge it (review R2-1).
+        let expected = ["1. Netflix, $16.74 a month. Subscriptions; bought in 5 of 25 weeks; once a month at most, so not judged on lowest-balance weeks.",
+                        "2. Homegoods, $47.29 a month. Shopping; bought in 8 of 25 weeks; 100% of usual",
+                        "3. Amazon, $70.60 a month.", "4. Bean Street Coffee, $10.21 a month.", "5. Corner Cafe, $180.01 a month."]
         for start in expected {
             let cut = cuts.matching(NSPredicate(format: "label BEGINSWITH %@", start)).firstMatch
             for _ in 0..<6 where !cut.waitForExistence(timeout: 2) { app.swipeUp() }

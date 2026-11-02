@@ -15,7 +15,7 @@ public enum Savings {
         public let per_month: Double
         /// The value score, 0 to 1: lower means the person seems to value this store less.
         public let value: Double
-        /// What the score was worked out from, e.g. "bought in 6 of 25 weeks; 40% of usual in low-balance weeks".
+        /// What the score was worked out from, e.g. "bought in 6 of 25 weeks; 40% of usual in each month's lowest-balance week".
         public let evidence: String
     }
 
@@ -136,17 +136,21 @@ public enum Savings {
             //  - kept up: spending per day in the tight stretches as a share of the store's usual
             //    spending per day (over all the data), capped at 1. Spending kept up when money is
             //    short is valued; spending dropped then is easy to give up. With no bank balance it
-            //    is 0.5, so it moves no store up or down.
+            //    is 0.5, so it moves no store up or down. A monthly charge (bought at most once in any
+            //    month) is 0.5 too: its one charge a month falls inside the 7-day stretch or misses
+            //    it by billing day alone, so the stretch says nothing about whether it was kept up.
             //  - regular: the share of weeks with a purchase. A habit is valued; a rare buy is not.
             //  - size: this store's spending as a share of the biggest flexible store's. A big share
             //    of what the person chooses to spend shows they value it.
             // `net` is above 0 for every store kept, so the usual rate is never a division by zero.
-            let kept = tight.map { tight in min(1, max(0, Double(lean) / Double(tight.count) / (Double(net) / Double(days)))) } ?? 0.5
+            let monthly = Dictionary(grouping: group.filter { $0.cents > 0 }) { $0.date.prefix(7) }.values.allSatisfy { $0.count == 1 }
+            let kept = monthly ? 0.5 : tight.map { tight in min(1, max(0, Double(lean) / Double(tight.count) / (Double(net) / Double(days)))) } ?? 0.5
             let regular = Double(bought.count) / Double(weeks)
             let size = Double(net) / Double(largest)
             let value = ((kept + regular + size) / 3 * 100).rounded() / 100
             let evidence = "bought in \(bought.count) of \(weeks) weeks"
-                + (tight == nil ? "" : "; \(Int((kept * 100).rounded()))% of usual in low-balance weeks")
+                + (tight == nil ? "" : monthly ? "; once a month at most, so not judged on lowest-balance weeks"
+                    : "; \(Int((kept * 100).rounded()))% of usual in each month's lowest-balance week")
             ranked.append(Cut(store: first.store, category: first.category, per_month: cents(Double(net) / 100 / Double(months)),
                               value: value, evidence: evidence))
         }

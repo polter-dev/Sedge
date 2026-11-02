@@ -79,9 +79,12 @@ func eachCutIsTheStoresAverageMonth(persona: String) throws {
     let ranked = try organizedPersona("maya").dbQueue.read { try Savings.ranked($0) }
     #expect(ranked.first { $0.store == "Value Mart" }?.per_month == 95.77)
     #expect(ranked.first { $0.store == "Netflix" }?.per_month == 16.74)
-    // Netflix's score: kept up 1, regular 5 of 25 weeks = 0.2, size 100.44 / 574.64 = 0.175 of
-    // Value Mart (her biggest flexible store); (1 + 0.2 + 0.175) / 3 = 0.458, shown as 0.46.
-    #expect(ranked.first { $0.store == "Netflix" }?.value == 0.46)
+    // Netflix's score: one charge on the 3rd of each month, so kept up is the neutral 0.5; regular
+    // 5 of 25 weeks = 0.2 (January 3 is before the oldest whole week); size 100.44 / 574.64 = 0.175
+    // of Value Mart (her biggest flexible store); (0.5 + 0.2 + 0.175) / 3 = 0.292, shown as 0.29.
+    let netflix = try #require(ranked.first { $0.store == "Netflix" })
+    #expect(netflix.value == 0.29)
+    #expect(netflix.evidence == "bought in 5 of 25 weeks; once a month at most, so not judged on lowest-balance weeks")
 }
 
 /// A made-up person, 2026-04-01 to 2026-06-30 (91 days, 13 whole weeks, 3 months). Rent (3,000)
@@ -125,10 +128,23 @@ private func madeUpPerson(extra: [(String, String, String, Double)] = []) throws
     // Rent is housing, so it is never a cut. Monthly amounts are over 3 months: 70 / 3 and 182 / 3.
     #expect(try madeUpPerson() == [
         Savings.Cut(store: "Gadget Shop", category: "other", per_month: 23.33, value: 0.44,
-                    evidence: "bought in 12 of 13 weeks; 0% of usual in low-balance weeks"),
+                    evidence: "bought in 12 of 13 weeks; 0% of usual in each month's lowest-balance week"),
         Savings.Cut(store: "Bean Coffee", category: "coffee", per_month: 60.67, value: 1,
-                    evidence: "bought in 13 of 13 weeks; 100% of usual in low-balance weeks"),
+                    evidence: "bought in 13 of 13 weeks; 100% of usual in each month's lowest-balance week"),
     ])
+}
+
+/// Two subscriptions paid every month without a miss score the same, whatever day they bill on (review R2-1).
+@Test func monthlyChargeScoreDoesNotDependOnBillingDay() throws {
+    var extra: [(String, String, String, Double)] = []
+    for month in ["04", "05", "06"] {
+        extra.append(("netflix\(month)", "2026-\(month)-03", "NETFLIX.COM", 16.74))  // outside the 10th-16th low stretch
+        extra.append(("spotify\(month)", "2026-\(month)-12", "SPOTIFY USA", 16.74))  // inside it
+    }
+    let cuts = try madeUpPerson(extra: extra)
+    let early = try #require(cuts.first { $0.store == "Netflix" })
+    let mid = try #require(cuts.first { $0.store == "Spotify Usa" })
+    #expect(early.value == mid.value, "\(early.evidence) vs \(mid.evidence)")
 }
 
 /// A store bought from only once, and one bought from in two months but last on April 30 (61 days
@@ -182,11 +198,15 @@ private func madeUpPerson(extra: [(String, String, String, Double)] = []) throws
     #expect(answer["goal_per_month"] as? Double == 200)
 }
 
-/// Daniel's flexible stores could reach $600 together, but his 5 least valued (324.85) can't.
+/// Daniel's flexible stores could reach $600 together, but his 5 least valued can't: Netflix
+/// 16.74 + Homegoods 47.29 + Amazon 70.60 + Bean Street Coffee 10.21 + Corner Cafe 180.01 = 324.85.
+/// Netflix, a monthly charge and so neutral on kept up, still ranks first: (0.5 + 5 of 25 weeks +
+/// 100.44 / 2005.25 of Value Mart) / 3 = 0.25, below Homegoods' 0.49.
 @Test func goalPastFiveCutsSaysSo() throws {
     let answer = try call("savings_options", ["goal_amount": 600], on: organizedPersona("daniel"))
     #expect(answer["reached"] as? Bool == false)
     #expect(rows(answer, "cuts").count == Savings.maxCuts)
+    #expect(rows(answer, "cuts").first?["value"] as? Double == 0.25)
     #expect(answer["total_per_month"] as? Double == 324.85)
     #expect(answer["short_by"] as? Double == 275.15)
     #expect(answer["note"] as? String == "Short of the goal within 5 cuts.")
