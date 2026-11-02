@@ -96,17 +96,32 @@ public enum Organizer {
                 }
                 let startsWithRefund = { (line: Line) in line.raw.lowercased().hasPrefix("refund ") }
                 let purchases = merchantLines.filter { !startsWithRefund($0) && $0.amount > 0 }
-                // A name starting with "REFUND" is always a refund. Money back named with "REFUND" last is
-                // a refund only when this store has a purchase on or before it, so "STATE TAX REFUND" stays income.
+                let storeName = { (line: Line) in words(clean(line.raw).name).joined(separator: " ") }
+                // The purchases on or before a refund that it can be for. A name starting with "REFUND" can be
+                // for any purchase at this store. A name ending in "REFUND" must name the purchase's whole store
+                // ("GEICO PREMIUM REFUND" names "GEICO"), because stores sharing a first word are merged, and
+                // "TAX REFUND" must not be paired with a "TAX PREP SERVICES" fee.
+                func paidBefore(_ refund: Line) -> [Line] {
+                    let refundName = storeName(refund)
+                    return purchases.filter { purchase in
+                        let purchaseName = storeName(purchase)
+                        return purchase.date <= refund.date && (startsWithRefund(refund)
+                            || purchaseName.filter { $0 != " " }.count <= refundName.filter { $0 != " " }.count && sameStore(purchaseName, refundName))
+                    }
+                }
+                // A name starting with "REFUND" is always a refund. Money back named with "REFUND" last is a refund
+                // only up to what was paid for it, so "STATE TAX REFUND", or an "IRS TAX REFUND" larger than the
+                // tax paid, stays income.
                 let refunds = merchantLines.filter { line in
-                    startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund && purchases.contains { $0.date <= line.date }
+                    startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund
+                        && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) + 0.005
                 }
                 refundIDs.formUnion(refunds.map(\.id))
                 guard useGraph else { continue }
 
-                // A refund points at the latest earlier purchase of the same amount at the same store.
+                // A refund points at the latest earlier purchase of the same amount that it can be for.
                 for refund in refunds {
-                    if let original = purchases.last(where: { $0.date <= refund.date && abs($0.amount + refund.amount) < 0.005 }) {
+                    if let original = paidBefore(refund).last(where: { abs($0.amount + refund.amount) < 0.005 }) {
                         try addEdge(db, refund.id, "refund_of", original.id)
                     }
                 }
@@ -229,7 +244,7 @@ public enum Organizer {
     /// a "REFUND" word at the start or end (reported separately), processor tags, ".com",
     /// descriptors after "*", store numbers and ids, and punctuation.
     /// "SQ *BEAN ST COFFEE" becomes "bean st coffee"; "VALUE-MART #104" becomes "value mart";
-    /// "STATE U REFUND" becomes "state u", flagged; `organize` keeps it a refund only if the store has a purchase.
+    /// "STATE U REFUND" becomes "state u", flagged; `organize` keeps it a refund only up to what was paid for it.
     static func clean(_ raw: String) -> (name: String, isRefund: Bool) {
         var text = raw.lowercased()
         let isRefund = text.hasPrefix("refund ")

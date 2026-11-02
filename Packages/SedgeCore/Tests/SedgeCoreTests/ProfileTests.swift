@@ -194,6 +194,41 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(spent["total"] as? Double == 200 && spent["count"] as? Int == 2)
 }
 
+/// "TAX REFUND" shares a first word with "TAX PREP SERVICES", so the two are one store, but the fee
+/// isn't what the refund is for: it stays income.
+@Test func taxRefundAfterTaxPrepStaysIncome() throws {
+    let database = try housingData([("prep", "2026-03-02", "TAX PREP SERVICES", 200), ("g1", "2026-03-10", "VALUE MART", 120),
+                                    ("tax", "2026-03-15", "TAX REFUND", -1500)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'tax'") }
+    #expect(kind == "income")
+    let spent = try call("total_spent", ["start_date": "2026-03-01", "end_date": "2026-03-31"], on: database)
+    #expect(spent["total"] as? Double == 320 && spent["count"] as? Int == 2)
+}
+
+/// The same with a refund smaller than the other store's purchase, so only the store name keeps it income.
+@Test func noRefundAfterNoFrillsStaysIncome() throws {
+    let database = try housingData([("nf", "2026-04-02", "NO FRILLS", 60), ("no", "2026-04-15", "NO REFUND", -40)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'no'") }
+    #expect(kind == "income")
+    let spent = try call("total_spent", ["start_date": "2026-04-01", "end_date": "2026-04-30"], on: database)
+    #expect(spent["total"] as? Double == 60 && spent["count"] as? Int == 1)
+}
+
+/// A refund named last counts only up to what was paid for it: a $900 tax refund after $400 of tax
+/// paid is income, and so is $900 back from a store where only $500 was spent. A premium refund
+/// after monthly charges at the same insurer is still a refund.
+@Test func refundWordAtTheEndIsCappedByPurchases() throws {
+    let database = try housingData([("irs1", "2026-02-01", "IRS TAX PAYMENT", 400), ("irs2", "2026-04-15", "IRS TAX REFUND", -900),
+                                    ("u1", "2026-01-10", "STATE U", 500), ("u2", "2026-02-10", "STATE U REFUND", -900),
+                                    ("g1", "2026-01-05", "GEICO", 90), ("g2", "2026-02-05", "GEICO", 90),
+                                    ("g3", "2026-02-20", "GEICO PREMIUM REFUND", -120)])
+    let kinds = try database.dbQueue.read { db in
+        try Dictionary(uniqueKeysWithValues: Row.fetchAll(db, sql: "SELECT transaction_id, kind FROM transactions WHERE amount < 0")
+            .map { ($0[0] as String, $0[1] as String) })
+    }
+    #expect(kinds == ["irs2": "income", "u2": "income", "g3": "refund"])
+}
+
 /// Under the size rule only the $1,500 charge is tuition paid, so refunding the $40 charge too
 /// can't make refunded larger than paid. Every refund is still listed.
 @Test func tuitionRefundedIsCappedAtPaid() throws {
