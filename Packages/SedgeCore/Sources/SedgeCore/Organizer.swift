@@ -67,9 +67,9 @@ public enum Organizer {
         try database.dbQueue.write { db in
             // Only the columns the organizer is allowed to use.
             let lines = try Row.fetchAll(db, sql: """
-                SELECT transaction_id, account_id, date, name, amount FROM transactions
+                SELECT transaction_id, account_id, date, name, amount, pending FROM transactions
                 ORDER BY date, transaction_id
-                """).map { Line(id: $0[0], account: $0[1], date: $0[2], raw: $0[3], amount: $0[4]) }
+                """).map { Line(id: $0[0], account: $0[1], date: $0[2], raw: $0[3], amount: $0[4], pending: $0[5]) }
 
             try db.execute(sql: "DELETE FROM edges")
             try db.execute(sql: "DELETE FROM entities")
@@ -78,6 +78,7 @@ public enum Organizer {
             // Which merchant each raw name belongs to, as (entity id, display name).
             let merchantOf = useGraph ? groupedMerchants(lines.map(\.raw)) : rawMerchants(Set(lines.map(\.raw)))
             let byMerchant = Dictionary(grouping: lines) { merchantOf[$0.raw]!.id }
+            var refundIDs: Set<String> = []
 
             for (merchantID, merchantLines) in byMerchant {
                 try db.execute(sql: "INSERT INTO entities (id, kind, name) VALUES (?, 'merchant', ?)",
@@ -93,12 +94,46 @@ public enum Organizer {
                     try db.execute(sql: "UPDATE transactions SET merchant_id = ? WHERE transaction_id = ?",
                                    arguments: [merchantID, line.id])
                 }
+                let startsWithRefund = { (line: Line) in line.raw.lowercased().hasPrefix("refund ") }
+                // Only posted charges count as paid, as in the profile: a pending charge may never post.
+                let purchases = merchantLines.filter { !startsWithRefund($0) && $0.amount > 0 && !$0.pending }
+                let storeName = { (line: Line) in words(clean(line.raw).name).joined(separator: " ") }
+                // The profile's tuition rule (see `Profile.infer`), checked here because the profile is built only
+                // after refunds are decided: a store that isn't housing where a name says tuition or bursar, or an
+                // education store has one charge of $1,000 or more.
+                let isSchool = category != "housing" && purchases.contains { !Set(words(clean($0.raw).name)).isDisjoint(with: Profile.tuitionWords) }
+                    || category == "education" && purchases.contains { $0.amount >= Profile.tuitionMinimum }
+                // The purchases on or before a refund that it can be for. A name starting with "REFUND" can be
+                // for any purchase at this store. A name ending in "REFUND" must name the purchase's whole store
+                // ("GEICO PREMIUM REFUND" names "GEICO"), because stores sharing a first word are merged, and
+                // "TAX REFUND" must not be paired with a "TAX PREP SERVICES" fee. A school's refund often names
+                // only the school, so there "STATE U REFUND" can be for "STATE U TUITION".
+                func paidBefore(_ refund: Line) -> [Line] {
+                    let refundName = storeName(refund)
+                    return purchases.filter { purchase in
+                        let purchaseName = storeName(purchase)
+                        return purchase.date <= refund.date && (startsWithRefund(refund)
+                            || (isSchool || purchaseName.filter { $0 != " " }.count <= refundName.filter { $0 != " " }.count)
+                                && sameStore(purchaseName, refundName))
+                    }
+                }
+                // A name starting with "REFUND" is always a refund. Money back named with "REFUND" last is a refund
+                // only if it is no more than the purchases it names and no more than what is left at the store
+                // (everything paid on or before it less the refunds before it), so "STATE TAX REFUND", an
+                // "IRS TAX REFUND" larger than the tax paid, or a second $300 back on $500 paid, stays income.
+                var refunds: [Line] = [], refundedSoFar = 0.0
+                for line in merchantLines where startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund
+                    && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) + 0.005
+                    && -line.amount <= purchases.filter { $0.date <= line.date }.map(\.amount).reduce(0, +) - refundedSoFar + 0.005 {
+                    refunds.append(line)
+                    refundedSoFar += max(0, -line.amount)
+                }
+                refundIDs.formUnion(refunds.map(\.id))
                 guard useGraph else { continue }
 
-                // A refund points at the latest earlier purchase of the same amount at the same store.
-                let purchases = merchantLines.filter { !clean($0.raw).isRefund && $0.amount > 0 }
-                for refund in merchantLines where clean(refund.raw).isRefund {
-                    if let original = purchases.last(where: { $0.date <= refund.date && abs($0.amount + refund.amount) < 0.005 }) {
+                // A refund points at the latest earlier purchase of the same amount that it can be for.
+                for refund in refunds {
+                    if let original = paidBefore(refund).last(where: { abs($0.amount + refund.amount) < 0.005 }) {
                         try addEdge(db, refund.id, "refund_of", original.id)
                     }
                 }
@@ -107,7 +142,7 @@ public enum Organizer {
                 // shortcut: one series per direction per merchant, so a subscription mixed with
                 // one-off buys at the same store (e.g. a membership plus orders) isn't found;
                 // split by amount band if that shows up in real data.
-                let regular = merchantLines.filter { !clean($0.raw).isRefund }
+                let regular = merchantLines.filter { !refundIDs.contains($0.id) }
                 for series in [regular.filter { $0.amount > 0 }, regular.filter { $0.amount < 0 }] {
                     guard let found = try recurrence(of: series) else { continue }
                     for line in series {
@@ -116,7 +151,7 @@ public enum Organizer {
                     }
                 }
             }
-            try reconcile(db, useReconciliation: useReconciliation)
+            try reconcile(db, useReconciliation: useReconciliation, refundIDs: refundIDs)
             // The profile reads the merchants, series and kinds found above, so it goes last.
             try Profile.rebuild(db)
         }
@@ -125,7 +160,8 @@ public enum Organizer {
     /// Sets every transaction's `kind`, and links the two sides of each card payment and
     /// own-account transfer through `linked_transaction_id`. Without this, paying a card
     /// would count the same money twice: once at the store, once as the payment.
-    static func reconcile(_ db: Database, useReconciliation: Bool) throws {
+    /// `refundIDs` are the transactions `organize` found to be refunds.
+    static func reconcile(_ db: Database, useReconciliation: Bool, refundIDs: Set<String>) throws {
         /// One transaction plus the facts about its account that matching needs.
         struct Side {
             let id, account, accountType, accountName, raw: String
@@ -145,10 +181,10 @@ public enum Organizer {
             }
 
         // Start from the sign: money out is spending, money in is income or, when the
-        // name says so, a refund. The ablation stops here, so its refunds count as income.
+        // name says so (see `organize`), a refund. The ablation stops here, so its refunds count as income.
         var kind: [String: String] = [:], partner: [String: String] = [:]
         for side in sides {
-            kind[side.id] = side.amount >= 0 ? "spending" : useReconciliation && clean(side.raw).isRefund ? "refund" : "income"
+            kind[side.id] = side.amount >= 0 ? "spending" : useReconciliation && refundIDs.contains(side.id) ? "refund" : "income"
         }
 
         if useReconciliation {
@@ -214,26 +250,39 @@ public enum Organizer {
     struct Line {
         let id, account, date, raw: String
         let amount: Double
+        let pending: Bool
     }
 
     /// Lowercases a raw statement name and strips what isn't the store's name:
-    /// a "REFUND" prefix (reported separately), processor tags, ".com",
+    /// a "REFUND" word at the start or end (reported separately), processor tags, ".com",
     /// descriptors after "*", store numbers and ids, and punctuation.
-    /// "SQ *BEAN ST COFFEE" becomes "bean st coffee"; "VALUE-MART #104" becomes "value mart".
+    /// "SQ *BEAN ST COFFEE" becomes "bean st coffee"; "VALUE-MART #104" becomes "value mart";
+    /// "STATE U REFUND" becomes "state u", flagged; `organize` keeps it a refund only up to what was paid for it.
     static func clean(_ raw: String) -> (name: String, isRefund: Bool) {
         var text = raw.lowercased()
         let isRefund = text.hasPrefix("refund ")
         if isRefund { text.removeFirst("refund ".count) }
         text = text.replacingOccurrences(of: processorPrefix, with: "", options: .regularExpression)
         // With the processor tag gone, a "*" separates store from descriptor: "TMOBILE*AUTOPAY".
-        if let star = text.firstIndex(of: "*") { text = String(text[..<star]) }
+        // The descriptor can end in the word ("AMAZON.COM*AB12C REFUND"), so look for it before the cut,
+        // skipping trailing ids as below.
+        var refundAfterStar = false
+        if let star = text.firstIndex(of: "*") {
+            refundAfterStar = text[star...].split { !$0.isLetter && !$0.isNumber }.last { !$0.contains(where: \.isNumber) } == "refund"
+            text = String(text[..<star])
+        }
         text = text.replacingOccurrences(of: #"\.(com|net|org)\b"#, with: "", options: .regularExpression)
         text = text.replacingOccurrences(of: "'", with: "") // "joe's" and "joes" match
         text = text.replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression)
         // Store numbers and trailing ids are the words with a digit in them ("104", "x1234").
-        let name = text.split(separator: " ").filter { !$0.contains(where: \.isNumber) }.joined(separator: " ")
+        var words = text.split(separator: " ").filter { !$0.contains(where: \.isNumber) }
+        // Some banks put the word last ("STATE U REFUND #881"). Checked after ids are dropped so a
+        // trailing id doesn't hide it, and only when a store name is left in front of it.
+        let endsInRefund = words.count > 1 && words.last == "refund"
+        if endsInRefund { words.removeLast() }
+        let name = words.joined(separator: " ")
         // If nothing is left (a name made only of numbers), keep the raw text rather than "".
-        return (name.isEmpty ? raw.lowercased() : name, isRefund)
+        return (name.isEmpty ? raw.lowercased() : name, isRefund || endsInRefund || refundAfterStar && !name.isEmpty)
     }
 
     /// A cleaned name's words with aliases applied: "amzn mktp us" becomes ["amazon", "mktp", "us"].

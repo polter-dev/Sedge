@@ -131,6 +131,9 @@ func groupingMatchesTheAnswerKey(persona: String) throws {
     #expect(Organizer.clean("NETFLIX.COM").name == "netflix")
     #expect(Organizer.clean("SHELL OIL 1234567").name == "shell oil")
     #expect(Organizer.clean("REFUND SHELL SERVICE STATION") == ("shell service station", true))
+    // The word can come last too, even before a reference number; on its own it names no store.
+    #expect(Organizer.clean("STATE U BURSAR REFUND #881") == ("state u bursar", true))
+    #expect(Organizer.clean("REFUND") == ("refund", false))
     #expect(Organizer.sameStore("shell", "shell oil"))
     #expect(!Organizer.sameStore("shell", "shelby diner"))
     #expect(!Organizer.sameStore("home goods", "home mortgage"))

@@ -138,8 +138,8 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(tuition[1] == Profile.Value(name: "State U Bursar", amount: 4250.55, schedule: "irregular", paid: 7350.65, refunded: 1200.30,
                                         payments: [.init(date: "2026-01-10", amount: 4250.55), .init(date: "2026-05-08", amount: 3100.10)],
                                         refunds: [.init(date: "2026-02-15", amount: 1200.30)]))
-    // Under the size rule, a $40 refund is a book or a fee, not tuition.
-    #expect(tuition[0].paid == 1500 && tuition[0].refunded == 0 && tuition[0].refunds == [])
+    // Tuition found only by the $1,000 rule still counts a refund of any size.
+    #expect(tuition[0].paid == 1500 && tuition[0].refunded == 40 && tuition[0].refunds == [.init(date: "2026-01-20", amount: 40)])
 
     // With reconciliation off the refund is income, so nothing is refunded and the payments still count.
     let ablated = try #require(try profile(tuitionWithRefund(useReconciliation: false))["tuition"])
@@ -153,6 +153,168 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     let bursar = try #require(values.first { $0["name"] as? String == "State U Bursar" })
     #expect(bursar["paid"] as? Double == 7350.65 && bursar["refunded"] as? Double == 1200.30)
     #expect((bursar["payments"] as? [Any])?.count == 2 && (bursar["refunds"] as? [Any])?.count == 1)
+}
+
+/// The $40 refund at the college (tuition found by size) can be looked up three ways, and all agree.
+@Test func smallTuitionRefundIsFoundByEveryTool() throws {
+    let database = try tuitionWithRefund()
+    let values = rows(try call("get_profile", [:], on: database), "facts").compactMap { $0["value"] as? [String: Any] }
+    let college = try #require(values.first { $0["name"] as? String == "Riverside College" })
+    #expect(college["paid"] as? Double == 1500 && college["refunded"] as? Double == 40)
+
+    // find_transactions lists the refund with its kind, so a model can add it up itself.
+    let found = rows(try call("find_transactions", ["merchant": "Riverside College"], on: database))
+    #expect(found.filter { $0["kind"] as? String == "refund" }.map { $0["amount"] as? Double } == [-40])
+    #expect(found.filter { $0["kind"] as? String == "spending" }.map { $0["amount"] as? Double } == [1500])
+
+    // total_spent nets the refund against the payment.
+    let spent = try call("total_spent", firstHalf(["merchant": "Riverside College"]), on: database)
+    #expect(spent["total"] as? Double == 1460 && spent["count"] as? Int == 2)
+}
+
+/// A refund named with the word last is a refund, not income, and counts as tuition refunded.
+@Test func refundWordAtTheEndIsATuitionRefund() throws {
+    let database = try housingData([("p1", "2026-01-10", "STATE U BURSAR", 4000), ("r1", "2026-02-01", "STATE U BURSAR REFUND", -650)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'r1'") }
+    #expect(kind == "refund")
+    let tuition = try #require(try profile(database)["tuition"])
+    #expect(tuition == [Profile.Value(name: "State U Bursar", amount: 4000, schedule: "irregular", paid: 4000, refunded: 650,
+                                      payments: [.init(date: "2026-01-10", amount: 4000)], refunds: [.init(date: "2026-02-01", amount: 650)])])
+    #expect(try profile(database)["income"] == nil)
+}
+
+/// With no earlier purchase at the store, a name ending in "REFUND" is money in, not a refund, so it
+/// doesn't make June's spending negative.
+@Test func refundWordAtTheEndWithNoPurchaseStaysIncome() throws {
+    let database = try housingData([("g1", "2026-06-10", "VALUE MART", 120), ("g2", "2026-06-20", "VALUE MART", 80),
+                                    ("tax", "2026-06-15", "STATE TAX REFUND", -800)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'tax'") }
+    #expect(kind == "income")
+    let spent = try call("total_spent", ["start_date": "2026-06-01", "end_date": "2026-06-30"], on: database)
+    #expect(spent["total"] as? Double == 200 && spent["count"] as? Int == 2)
+}
+
+/// "TAX REFUND" shares a first word with "TAX PREP SERVICES", so the two are one store, but the fee
+/// isn't what the refund is for: it stays income.
+@Test func taxRefundAfterTaxPrepStaysIncome() throws {
+    let database = try housingData([("prep", "2026-03-02", "TAX PREP SERVICES", 200), ("g1", "2026-03-10", "VALUE MART", 120),
+                                    ("tax", "2026-03-15", "TAX REFUND", -1500)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'tax'") }
+    #expect(kind == "income")
+    let spent = try call("total_spent", ["start_date": "2026-03-01", "end_date": "2026-03-31"], on: database)
+    #expect(spent["total"] as? Double == 320 && spent["count"] as? Int == 2)
+}
+
+/// The same with a refund smaller than the other store's purchase, so only the store name keeps it income.
+@Test func noRefundAfterNoFrillsStaysIncome() throws {
+    let database = try housingData([("nf", "2026-04-02", "NO FRILLS", 60), ("no", "2026-04-15", "NO REFUND", -40)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'no'") }
+    #expect(kind == "income")
+    let spent = try call("total_spent", ["start_date": "2026-04-01", "end_date": "2026-04-30"], on: database)
+    #expect(spent["total"] as? Double == 60 && spent["count"] as? Int == 1)
+}
+
+/// A refund named last counts only up to what was paid for it: a $900 tax refund after $400 of tax
+/// paid is income, and so is $900 back from a store where only $500 was spent. A premium refund
+/// after monthly charges at the same insurer is still a refund.
+@Test func refundWordAtTheEndIsCappedByPurchases() throws {
+    let database = try housingData([("irs1", "2026-02-01", "IRS TAX PAYMENT", 400), ("irs2", "2026-04-15", "IRS TAX REFUND", -900),
+                                    ("u1", "2026-01-10", "STATE U", 500), ("u2", "2026-02-10", "STATE U REFUND", -900),
+                                    ("g1", "2026-01-05", "GEICO", 90), ("g2", "2026-02-05", "GEICO", 90),
+                                    ("g3", "2026-02-20", "GEICO PREMIUM REFUND", -120)])
+    let kinds = try database.dbQueue.read { db in
+        try Dictionary(uniqueKeysWithValues: Row.fetchAll(db, sql: "SELECT transaction_id, kind FROM transactions WHERE amount < 0")
+            .map { ($0[0] as String, $0[1] as String) })
+    }
+    #expect(kinds == ["irs2": "income", "u2": "income", "g3": "refund"])
+}
+
+/// Under the size rule only the $1,500 charge is tuition paid, so refunding the $40 charge too
+/// can't make refunded larger than paid. Every refund is still listed.
+@Test func tuitionRefundedIsCappedAtPaid() throws {
+    let database = try housingData([("c1", "2026-01-12", "RIVERSIDE COLLEGE", 1500), ("c3", "2026-01-13", "RIVERSIDE COLLEGE", 40),
+                                    ("c2", "2026-01-20", "REFUND RIVERSIDE COLLEGE", -1500), ("c4", "2026-01-21", "REFUND RIVERSIDE COLLEGE", -40)])
+    let tuition = try #require(try profile(database)["tuition"]?.first)
+    #expect(tuition.paid == 1500 && tuition.refunded == 1500 && tuition.refunds?.count == 2)
+}
+
+/// Kept on purpose: a plain school-name line ("STATE U") merges the school's bookstore and
+/// tuition into one store, so a bookstore refund there counts as tuition refunded.
+@Test func bookstoreRefundAtAMergedSchoolStoreCountsAsTuition() throws {
+    let database = try housingData([("t1", "2026-01-10", "STATE U TUITION", 4000), ("s1", "2026-01-11", "STATE U", 200),
+                                    ("b1", "2026-01-12", "STATE U BOOKSTORE", 120), ("r1", "2026-01-20", "REFUND STATE U BOOKSTORE", -45)])
+    let tuition = try #require(try profile(database)["tuition"])
+    #expect(tuition.count == 1)
+    #expect(tuition[0].paid == 4320 && tuition[0].refunded == 45 && tuition[0].refunds == [.init(date: "2026-01-20", amount: 45)])
+}
+
+/// At a store the profile finds as tuition, a refund naming only the school ("STATE U REFUND")
+/// is for the tuition payment ("STATE U TUITION"), so it nets against it.
+@Test func schoolNamedRefundAfterTuitionPaymentIsATuitionRefund() throws {
+    let database = try housingData([("t1", "2026-01-10", "STATE U TUITION", 1500), ("r1", "2026-02-10", "STATE U REFUND", -500)])
+    #expect(try kindOf("r1", database) == "refund")
+    #expect(try profile(database)["tuition"]?.first?.refunded == 500)
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 1000 && spent["count"] as? Int == 2)
+    // The same with a bursar payment.
+    let bursar = try housingData([("t1", "2026-01-10", "STATE UNIVERSITY BURSAR", 1500), ("r1", "2026-02-10", "STATE UNIVERSITY REFUND", -500)])
+    #expect(try kindOf("r1", bursar) == "refund")
+}
+
+/// A "*" descriptor ending in the word ("AMAZON.COM*AB12C REFUND") is a refund like "AMAZON REFUND".
+@Test func refundWordAfterAStarDescriptorIsARefund() throws {
+    #expect(Organizer.clean("AMAZON.COM*AB12C REFUND") == ("amazon", true))
+    let database = try housingData([("p", "2026-01-10", "AMAZON.COM*AB12C", 40), ("r", "2026-01-12", "AMAZON.COM*AB12C REFUND", -10)])
+    #expect(try kindOf("r", database) == "refund")
+}
+
+/// Each refund named last counts only up to what is left after earlier refunds: $500 paid, then
+/// $300 back twice, makes the second one income, and spending $200.
+@Test func partialRefundsTogetherStopAtWhatWasPaid() throws {
+    let database = try housingData([("t1", "2026-01-10", "STATE U", 500), ("r1", "2026-02-10", "STATE U REFUND", -300),
+                                    ("r2", "2026-03-10", "STATE U REFUND", -300)])
+    #expect(try kindOf("r1", database) == "refund" && kindOf("r2", database) == "income")
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 200 && spent["count"] as? Int == 2)
+}
+
+/// A store whose category is housing is never tuition to the profile, so a refund naming only the
+/// school there stays income even though one of its lines says TUITION.
+@Test func shortRefundAtAHousingStoreWithATuitionLineStaysIncome() throws {
+    let database = try housingData([("a1", "2026-01-01", "STATE U APARTMENTS", 800), ("a2", "2026-02-01", "STATE U APARTMENTS", 800),
+                                    ("a3", "2026-03-01", "STATE U APARTMENTS", 800), ("p", "2026-01-05", "STATE U", 50),
+                                    ("t", "2026-01-10", "STATE U TUITION", 1500), ("r", "2026-02-10", "STATE U REFUND", -500)])
+    #expect(try profile(database)["tuition"] == nil)
+    #expect(try kindOf("r", database) == "income")
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 3950 && spent["count"] as? Int == 5)
+}
+
+/// A pending charge isn't paid yet: it neither raises the refund cap nor makes the store a school.
+@Test func pendingChargeIsNotPaidForTheRefundCap() throws {
+    let capped = try housingData([("a", "2026-06-01", "STATE U", 100), ("b", "2026-06-25", "STATE U", 400),
+                                  ("r", "2026-06-27", "STATE U REFUND", -300)], pending: ["b"])
+    #expect(try kindOf("r", capped) == "income")
+    let school = try housingData([("a", "2026-06-01", "STATE U BOOKS", 50), ("b", "2026-06-20", "STATE U TUITION", 1200),
+                                  ("r", "2026-06-27", "STATE U REFUND", -40)], pending: ["b"])
+    #expect(try profile(school)["tuition"] == nil)
+    #expect(try kindOf("r", school) == "income")
+}
+
+/// A refund named last counts when it is no more than the purchases it names and no more than what is
+/// left at the store: $590 paid, $500 back for "GEICO AUTO", then $90 back for "GEICO" is a refund too.
+@Test func refundCapUsesWhatIsLeftAtTheStore() throws {
+    let database = try housingData([("p1", "2026-01-05", "GEICO", 90), ("p2", "2026-01-10", "GEICO AUTO", 500),
+                                    ("r1", "2026-02-01", "GEICO AUTO REFUND", -500), ("r2", "2026-02-05", "GEICO REFUND", -90)])
+    #expect(try kindOf("r1", database) == "refund")
+    #expect(try kindOf("r2", database) == "refund")
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 0 && spent["count"] as? Int == 4)
+}
+
+/// One transaction's kind, as the organizer saved it.
+func kindOf(_ id: String, _ database: SedgeDatabase) throws -> String? {
+    try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = ?", arguments: [id]) }
 }
 
 /// A checking account with only the given (id, date, name, amount) charges, organized. The ids

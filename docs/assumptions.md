@@ -21,7 +21,8 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - "amzn" means amazon and "st" means street. — `Organizer.swift` `aliases`
 - One to three letters or "paypal" before a "*", and a leading "pos", "pos debit" or "pos purchase", are a payment-processor tag, not the store, so a store with a name that short loses it. — `Organizer.swift` `processorPrefix`, `clean`
 - Words with a digit in them are store numbers or ids, not part of the store's name. — `Organizer.swift` `clean`
-- A statement name starting with "REFUND " is a refund. — `Organizer.swift` `clean`
+- A statement name starting with "REFUND " is a refund. Money in whose name ends in the word "REFUND" after a store name (a trailing reference number is ignored, and the word may end a "*" descriptor, as in "AMAZON.COM*AB12C REFUND") is a refund only if it is no more than the purchases on or before it whose store name it names in full ("GEICO PREMIUM REFUND" names "GEICO"; "TAX REFUND" does not name "TAX PREP SERVICES", though the two merge by first word), and no more than what is left at the store (everything paid there on or before it, minus the refunds there before it; after "GEICO" $90, "GEICO AUTO" $500 and "GEICO AUTO REFUND" $500, a $90 "GEICO REFUND" counts). Only posted charges count as paid; a pending charge doesn't. A larger refund, or one with no such purchase, stays income ("STATE TAX REFUND"; "IRS TAX REFUND" $900 after "IRS TAX PAYMENT" $400; a second $300 "STATE U REFUND" after $500 paid and $300 already refunded). With the graph off each raw name is its own store, so such a name never finds its purchase and stays income. — `Organizer.swift` `clean`, `organize`
+- At a tuition store (by the profile's rule, on posted charges: a store whose category isn't housing where a name says tuition or bursar, or an education store has one charge of $1,000 or more), a refund named last may name less of the store than the payment does, so "STATE U REFUND" counts against "STATE U TUITION". — `Organizer.swift` `organize`
 - A store's category is the keyword list most of its names match; ties go to the earlier list, no match is "other". — `Organizer.swift` `category(of:)`
 - A subscription word beats a shopping word ("amazon prime membership" is a subscription). — `Organizer.swift` `categoryKeywords`
 - HOA dues are in the housing category. — `Organizer.swift` `categoryKeywords`
@@ -56,7 +57,9 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - One education charge of $1,000 or more is tuition, not books or fees. — `Profile.swift` `tuitionMinimum`
 - Tuition is paid per term, so its schedule is usually irregular. — `Profile.swift` `infer`
 - Tuition paid and tuition refunded are kept separately; a refund doesn't erase the payment. — `Profile.swift` `Value.paid`, `Value.refunded`
-- A tuition refund is a refund at the tuition store; under the $1,000 rule only a refund of $1,000 or more counts. With reconciliation off a refund is income, so tuition refunded is 0. — `Profile.swift` `infer`
+- A tuition refund is any refund at the tuition store, of any size, including when tuition was found only by the $1,000 rule. With reconciliation off a refund is income, so tuition refunded is 0. — `Profile.swift` `infer`
+- Tuition `refunded` is capped at tuition paid, while the `refunds` list shows every refund. — `Profile.swift` `infer`
+- A plain school-name line ("STATE U") can merge the school's bookstore and tuition into one store; a bookstore refund there counts as tuition refunded, on purpose. — `Profile.swift` `infer`
 - A store in the loans category, or Affirm, Klarna, Afterpay or "installment", is a loan. — `Profile.swift` `installmentWords`, `infer`
 - A loan is installment, auto or student by the words in its name, otherwise "other". — `Profile.swift` `loanTypes`
 - Two or more payments to a lender without a cadence are an irregular loan. — `Profile.swift` `infer`
