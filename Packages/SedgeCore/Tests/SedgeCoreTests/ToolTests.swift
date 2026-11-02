@@ -248,6 +248,12 @@ func balancesMatchTheKey(persona: String) throws {
     ("simulate_balance", #"{"days": 7, "extra_amount": 400, "extra_date": "2026-07-08"}"#, "extra_date is outside the days looked at."),
     ("simulate_balance", #"{"days": 7, "extra_amount": 400, "extra_date": "2026-06-30"}"#, "extra_date is outside the days looked at."),
     ("simulate_balance", #"{"days": 7, "extra_date": "2026-07-02"}"#, "extra_date needs extra_amount."),
+    ("savings_options", #"{}"#, "Missing input \"goal_amount\"."),
+    ("savings_options", #"{"goal_amount": 0}"#, "Bad value for \"goal_amount\"."),
+    ("savings_options", #"{"goal_amount": 200, "by_date": "2026-06-30"}"#, "by_date is not after today."),
+    ("savings_options", #"{"goal_amount": 1e307}"#, "Bad value for \"goal_amount\"."),
+    // Finite as typed, but spread over one day (× 30) it is past the largest number a Double holds.
+    ("savings_options", #"{"goal_amount": 1e308, "by_date": "2026-07-01"}"#, "Bad value for \"goal_amount\"."),
 ])
 func badInputReturnsAnError(tool: String, input: String, error: String) throws {
     let text = try #require(Tool.named(tool)).call(Data(input.utf8), database: organizedPersona("maya"))
@@ -302,5 +308,6 @@ func claudeSchemaFollowsStrictRules(name: String) throws {
         "account_balances()",
         "get_profile()",
         "simulate_balance(days,extra_amount,extra_date)",
+        "savings_options(goal_amount,by_date)",
     ])
 }

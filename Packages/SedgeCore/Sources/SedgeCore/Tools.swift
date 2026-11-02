@@ -37,11 +37,12 @@ public struct Tool: Sendable {
     /// v6 = get_profile's tuition reports paid and refunded apart, with each payment and refund (#46).
     /// v7 = recurring_charges and get_profile can report the twice_monthly cadence, with housing's monthly cost (#53).
     /// v8 = account_balances reports each account's owner, and transaction rows the person's familiar and category answers (#76).
-    public static let version = "v8"
+    /// v9 added savings_options (in Savings.swift) (#19).
+    public static let version = "v9"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
-                             getProfile, simulateBalance]
+                             getProfile, simulateBalance, savingsOptions]
 
     public static func named(_ name: String) -> Tool? { all.first { $0.name == name } }
 
