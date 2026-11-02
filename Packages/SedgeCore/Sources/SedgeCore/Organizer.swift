@@ -97,24 +97,33 @@ public enum Organizer {
                 let startsWithRefund = { (line: Line) in line.raw.lowercased().hasPrefix("refund ") }
                 let purchases = merchantLines.filter { !startsWithRefund($0) && $0.amount > 0 }
                 let storeName = { (line: Line) in words(clean(line.raw).name).joined(separator: " ") }
+                // The profile's tuition rule (see `Profile.infer`), checked here because the profile is built only
+                // after refunds are decided: a name says tuition or bursar, or an education store has one charge
+                // of $1,000 or more.
+                let isSchool = purchases.contains { !Set(words(clean($0.raw).name)).isDisjoint(with: Profile.tuitionWords) }
+                    || category == "education" && purchases.contains { $0.amount >= Profile.tuitionMinimum }
                 // The purchases on or before a refund that it can be for. A name starting with "REFUND" can be
                 // for any purchase at this store. A name ending in "REFUND" must name the purchase's whole store
                 // ("GEICO PREMIUM REFUND" names "GEICO"), because stores sharing a first word are merged, and
-                // "TAX REFUND" must not be paired with a "TAX PREP SERVICES" fee.
+                // "TAX REFUND" must not be paired with a "TAX PREP SERVICES" fee. A school's refund often names
+                // only the school, so there "STATE U REFUND" can be for "STATE U TUITION".
                 func paidBefore(_ refund: Line) -> [Line] {
                     let refundName = storeName(refund)
                     return purchases.filter { purchase in
                         let purchaseName = storeName(purchase)
                         return purchase.date <= refund.date && (startsWithRefund(refund)
-                            || purchaseName.filter { $0 != " " }.count <= refundName.filter { $0 != " " }.count && sameStore(purchaseName, refundName))
+                            || (isSchool || purchaseName.filter { $0 != " " }.count <= refundName.filter { $0 != " " }.count)
+                                && sameStore(purchaseName, refundName))
                     }
                 }
                 // A name starting with "REFUND" is always a refund. Money back named with "REFUND" last is a refund
-                // only up to what was paid for it, so "STATE TAX REFUND", or an "IRS TAX REFUND" larger than the
-                // tax paid, stays income.
-                let refunds = merchantLines.filter { line in
-                    startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund
-                        && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) + 0.005
+                // only up to what was paid for it less the refunds before it, so "STATE TAX REFUND", an
+                // "IRS TAX REFUND" larger than the tax paid, or a second $300 back on $500 paid, stays income.
+                var refunds: [Line] = [], refundedSoFar = 0.0
+                for line in merchantLines where startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund
+                    && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) - refundedSoFar + 0.005 {
+                    refunds.append(line)
+                    refundedSoFar += max(0, -line.amount)
                 }
                 refundIDs.formUnion(refunds.map(\.id))
                 guard useGraph else { continue }
@@ -251,7 +260,13 @@ public enum Organizer {
         if isRefund { text.removeFirst("refund ".count) }
         text = text.replacingOccurrences(of: processorPrefix, with: "", options: .regularExpression)
         // With the processor tag gone, a "*" separates store from descriptor: "TMOBILE*AUTOPAY".
-        if let star = text.firstIndex(of: "*") { text = String(text[..<star]) }
+        // The descriptor can end in the word ("AMAZON.COM*AB12C REFUND"), so look for it before the cut,
+        // skipping trailing ids as below.
+        var refundAfterStar = false
+        if let star = text.firstIndex(of: "*") {
+            refundAfterStar = text[star...].split { !$0.isLetter && !$0.isNumber }.last { !$0.contains(where: \.isNumber) } == "refund"
+            text = String(text[..<star])
+        }
         text = text.replacingOccurrences(of: #"\.(com|net|org)\b"#, with: "", options: .regularExpression)
         text = text.replacingOccurrences(of: "'", with: "") // "joe's" and "joes" match
         text = text.replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression)
@@ -263,7 +278,7 @@ public enum Organizer {
         if endsInRefund { words.removeLast() }
         let name = words.joined(separator: " ")
         // If nothing is left (a name made only of numbers), keep the raw text rather than "".
-        return (name.isEmpty ? raw.lowercased() : name, isRefund || endsInRefund)
+        return (name.isEmpty ? raw.lowercased() : name, isRefund || endsInRefund || refundAfterStar && !name.isEmpty)
     }
 
     /// A cleaned name's words with aliases applied: "amzn mktp us" becomes ["amazon", "mktp", "us"].

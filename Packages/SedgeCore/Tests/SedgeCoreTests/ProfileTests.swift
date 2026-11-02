@@ -248,6 +248,41 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(tuition[0].paid == 4320 && tuition[0].refunded == 45 && tuition[0].refunds == [.init(date: "2026-01-20", amount: 45)])
 }
 
+/// At a store the profile finds as tuition, a refund naming only the school ("STATE U REFUND")
+/// is for the tuition payment ("STATE U TUITION"), so it nets against it.
+@Test func schoolNamedRefundAfterTuitionPaymentIsATuitionRefund() throws {
+    let database = try housingData([("t1", "2026-01-10", "STATE U TUITION", 1500), ("r1", "2026-02-10", "STATE U REFUND", -500)])
+    #expect(try kindOf("r1", database) == "refund")
+    #expect(try profile(database)["tuition"]?.first?.refunded == 500)
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 1000 && spent["count"] as? Int == 2)
+    // The same with a bursar payment.
+    let bursar = try housingData([("t1", "2026-01-10", "STATE UNIVERSITY BURSAR", 1500), ("r1", "2026-02-10", "STATE UNIVERSITY REFUND", -500)])
+    #expect(try kindOf("r1", bursar) == "refund")
+}
+
+/// A "*" descriptor ending in the word ("AMAZON.COM*AB12C REFUND") is a refund like "AMAZON REFUND".
+@Test func refundWordAfterAStarDescriptorIsARefund() throws {
+    #expect(Organizer.clean("AMAZON.COM*AB12C REFUND") == ("amazon", true))
+    let database = try housingData([("p", "2026-01-10", "AMAZON.COM*AB12C", 40), ("r", "2026-01-12", "AMAZON.COM*AB12C REFUND", -10)])
+    #expect(try kindOf("r", database) == "refund")
+}
+
+/// Each refund named last counts only up to what is left after earlier refunds: $500 paid, then
+/// $300 back twice, makes the second one income, and spending $200.
+@Test func partialRefundsTogetherStopAtWhatWasPaid() throws {
+    let database = try housingData([("t1", "2026-01-10", "STATE U", 500), ("r1", "2026-02-10", "STATE U REFUND", -300),
+                                    ("r2", "2026-03-10", "STATE U REFUND", -300)])
+    #expect(try kindOf("r1", database) == "refund" && kindOf("r2", database) == "income")
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 200 && spent["count"] as? Int == 2)
+}
+
+/// One transaction's kind, as the organizer saved it.
+func kindOf(_ id: String, _ database: SedgeDatabase) throws -> String? {
+    try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = ?", arguments: [id]) }
+}
+
 /// A checking account with only the given (id, date, name, amount) charges, organized. The ids
 /// in `pending` are still pending.
 func housingData(_ charges: [(String, String, String, Double)], pending: Set<String> = []) throws -> SedgeDatabase {
