@@ -194,6 +194,15 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(spent["total"] as? Double == 200 && spent["count"] as? Int == 2)
 }
 
+/// Under the size rule only the $1,500 charge is tuition paid, so refunding the $40 charge too
+/// can't make refunded larger than paid. Every refund is still listed.
+@Test func tuitionRefundedIsCappedAtPaid() throws {
+    let database = try housingData([("c1", "2026-01-12", "RIVERSIDE COLLEGE", 1500), ("c3", "2026-01-13", "RIVERSIDE COLLEGE", 40),
+                                    ("c2", "2026-01-20", "REFUND RIVERSIDE COLLEGE", -1500), ("c4", "2026-01-21", "REFUND RIVERSIDE COLLEGE", -40)])
+    let tuition = try #require(try profile(database)["tuition"]?.first)
+    #expect(tuition.paid == 1500 && tuition.refunded == 1500 && tuition.refunds?.count == 2)
+}
+
 /// Kept on purpose: a plain school-name line ("STATE U") merges the school's bookstore and
 /// tuition into one store, so a bookstore refund there counts as tuition refunded.
 @Test func bookstoreRefundAtAMergedSchoolStoreCountsAsTuition() throws {

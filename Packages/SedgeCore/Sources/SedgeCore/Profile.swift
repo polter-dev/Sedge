@@ -218,10 +218,13 @@ public enum Profile {
                 // A school-name store can merge in its bookstore, so a book refund there counts too.
                 // With reconciliation off nothing is a refund (it is income), so refunded is 0.
                 let refunds = groups["refund|" + first.merchant] ?? []
+                // Capped at what was paid: under the size rule a refunded $40 fee isn't in paid, so it can't
+                // push refunded past it. The refund list still shows every refund.
+                let refunded = min(refunds.map { abs($0.amount) }.reduce(0, +), paidAmounts.reduce(0, +))
                 func entries(_ lines: [Line]) -> [Entry] { lines.map { Entry(date: $0.date, amount: cents(abs($0.amount))) } }
                 // Tuition is paid per term, a cadence the organizer doesn't detect, so it is usually irregular.
                 fact("tuition", Value(name: first.store, amount: cents(median(paidAmounts)), schedule: series?.cadence ?? "irregular",
-                                      paid: cents(paidAmounts.reduce(0, +)), refunded: cents(refunds.map { abs($0.amount) }.reduce(0, +)),
+                                      paid: cents(paidAmounts.reduce(0, +)), refunded: cents(refunded),
                                       payments: entries(paid), refunds: entries(refunds)),
                      named ? keywordConfidence : guessConfidence, paid, named ? "tuition_payment" : "large_education_charge")
             } else if first.category == "category:loans" || says(installmentWords) {
