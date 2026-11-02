@@ -155,6 +155,16 @@ struct SpendingView: View {
                     .font(.link)
                     .multilineTextAlignment(.leading)
                     .frame(minHeight: 44)
+                    // From spending to where it could be cut.
+                    NavigationLink {
+                        SavingsView(database: database).navigationTitle("Ways to save")
+                    } label: {
+                        // The whole 44 pt row takes the tap, not only the words.
+                        Text("Ways to save →")
+                            .frame(minHeight: 44)
+                            .contentShape(.rect)
+                    }
+                    .font(.link)
                     connected
                     Button("Ask about a tradeoff →", action: ask)
                         .font(.link)
