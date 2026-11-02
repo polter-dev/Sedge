@@ -64,9 +64,7 @@ public enum Savings {
                     short_by: reached ? nil : cents(cents(goal) - total), note: note)
     }
 
-    /// Every flexible store as a cut, least valued first.
-    /// shortcut: a store not bought lately (a one-off months ago) is still suggested; require a
-    /// recent purchase if real data shows suggestions the person already stopped.
+    /// Every flexible store the person still shops at, as a cut, least valued first.
     static func ranked(_ db: Database) throws -> [Cut] {
         guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'"),
               let earliest = try String.fetchOne(db, sql: "SELECT MIN(date) FROM transactions WHERE NOT pending") else {
@@ -107,11 +105,18 @@ public enum Savings {
                 !fixedCategories.contains(line.category) && !obligations.contains(line.store.lowercased())
                     && (everydayCategories.contains(line.category) || !recurring.contains(line.merchant))
             }
-        let stores = Dictionary(grouping: lines, by: \.merchant).filter { $0.value.map(\.cents).reduce(0, +) > 0 }
+        // Only habits the person still has: bought in at least 2 calendar months, and at least once in the
+        // last 60 days. Stopping at a store bought from once, or not lately, saves nothing from now on.
+        let stores = try Dictionary(grouping: lines, by: \.merchant).filter { _, group in
+            let purchases = group.filter { $0.cents > 0 }
+            let recent = try purchases.contains { try daysBack($0.date) <= 60 }
+            return group.map(\.cents).reduce(0, +) > 0 && Set(purchases.map { $0.date.prefix(7) }).count >= 2 && recent
+        }
 
-        // Tight weeks: the third of the weeks whose lowest checking balance was lowest (a tie goes to
-        // the earlier week). Nil when there is no bank balance to tell tight weeks from others.
-        let tight = try tightWeeks(db, weeks: weeks, daysBack: daysBack)
+        // Every day of data, today included, for the tight-stretch rate below.
+        let days = try daysBack(earliest) + 1
+        // Tight days (as days back from today), or nil with no bank balance to tell them from others.
+        let tight = try tightDays(db, today: today, days: days, daysBack: daysBack)
         let largest = stores.values.map { $0.map(\.cents).reduce(0, +) }.max() ?? 1
 
         var ranked: [Cut] = []
@@ -119,26 +124,24 @@ public enum Savings {
         for key in stores.keys.sorted() {
             let group = stores[key]!, first = group[0]
             let net = group.map(\.cents).reduce(0, +)
-            // Spending per week (refunds included) and the weeks with a purchase, for the whole weeks only.
-            var weekly = Array(repeating: 0, count: weeks)
+            // Spending on tight days (refunds included), and the whole weeks with a purchase.
+            var lean = 0
             var bought = Set<Int>()
             for line in group {
-                let week = try daysBack(line.date) / 7
-                guard week < weeks else { continue }
-                weekly[week] += line.cents
-                if line.cents > 0 { bought.insert(week) }
+                let back = try daysBack(line.date)
+                if tight?.contains(back) == true { lean += line.cents }
+                if line.cents > 0 && back / 7 < weeks { bought.insert(back / 7) }
             }
             // The value score is the average of three parts, each from 0 to 1:
-            //  - kept up: spending in a tight week as a share of a usual week's, capped at 1. Spending
-            //    kept up when money is short is valued; spending dropped then is easy to give up.
-            //    With no bank balance it is 0.5, so it moves no store up or down.
+            //  - kept up: spending per day in the tight stretches as a share of the store's usual
+            //    spending per day (over all the data), capped at 1. Spending kept up when money is
+            //    short is valued; spending dropped then is easy to give up. With no bank balance it
+            //    is 0.5, so it moves no store up or down.
             //  - regular: the share of weeks with a purchase. A habit is valued; a rare buy is not.
             //  - size: this store's spending as a share of the biggest flexible store's. A big share
             //    of what the person chooses to spend shows they value it.
-            let usual = Double(weekly.reduce(0, +)) / Double(weeks)
-            let kept = tight.map { lean in
-                usual > 0 ? min(1, max(0, Double(lean.map { weekly[$0] }.reduce(0, +)) / Double(lean.count) / usual)) : 0
-            } ?? 0.5
+            // `net` is above 0 for every store kept, so the usual rate is never a division by zero.
+            let kept = tight.map { tight in min(1, max(0, Double(lean) / Double(tight.count) / (Double(net) / Double(days)))) } ?? 0.5
             let regular = Double(bought.count) / Double(weeks)
             let size = Double(net) / Double(largest)
             let value = ((kept + regular + size) / 3 * 100).rounded() / 100
@@ -154,9 +157,15 @@ public enum Savings {
     /// Monthly amounts added up in whole cents.
     private static func sum(_ cuts: [Cut]) -> Double { cents(cuts.map(\.per_month).reduce(0, +)) }
 
-    /// The tight weeks (0 is the last 7 days), or nil with no bank balance. Each day's closing
-    /// checking balance is found by undoing, from today's balance, every posted transaction after it.
-    private static func tightWeeks(_ db: Database, weeks: Int, daysBack: (String) throws -> Int) throws -> [Int]? {
+    /// The tight days, as days back from today (0 is today), or nil with no bank balance.
+    /// In each calendar month the tight stretch is the 7 days in a row, inside that month, whose
+    /// end-of-day checking balances add up lowest; a tie goes to the earlier stretch, and a month
+    /// with under 7 days of data has none. It is per month, not the lowest weeks of all the data,
+    /// because balances drift (they rise over the half-year for every persona): the lowest weeks
+    /// overall would all be early ones and measure early spending, not spending when money is short.
+    /// Each day's closing balance is found by undoing, from today's balance, every posted
+    /// transaction after it.
+    private static func tightDays(_ db: Database, today: Date, days: Int, daysBack: (String) throws -> Int) throws -> Set<Int>? {
         // The same account simulate_balance and the cash-flow screen use.
         guard let checking = try Row.fetchOne(db, sql: """
             SELECT account_id, ROUND(json_extract(balances, '$.current') * 100) FROM accounts
@@ -164,7 +173,7 @@ public enum Savings {
             ORDER BY subtype = 'checking' DESC, name LIMIT 1
             """) else { return nil }
         // Cents that left (positive) or came into (negative) the account, per day back from today.
-        var moved = Array(repeating: 0, count: weeks * 7)
+        var moved = Array(repeating: 0, count: days)
         for row in try Row.fetchAll(db, sql: "SELECT date, CAST(ROUND(amount * 100) AS INTEGER) FROM transactions WHERE account_id = ? AND NOT pending",
                                     arguments: [checking[0] as String]) {
             let back = try daysBack(row[0])
@@ -172,12 +181,23 @@ public enum Savings {
         }
         // Walking back a day adds back what left that day: Plaid's positive amount lowered the balance.
         var balance = checking[1] as Int
-        var lows = Array(repeating: Int.max, count: weeks)
-        for back in 0..<moved.count {
-            lows[back / 7] = min(lows[back / 7], balance)
+        var closing = Array(repeating: 0, count: days)
+        for back in 0..<days {
+            closing[back] = balance
             balance += moved[back]
         }
-        return Array(lows.indices.sorted { (lows[$0], -$0) < (lows[$1], -$1) }.prefix(weeks / 3))
+        // Days grouped by calendar month ("YYYY-MM"), each month's days oldest first.
+        let months = Dictionary(grouping: (0..<days).reversed()) { back in
+            Simulator.text(Simulator.calendar.date(byAdding: .day, value: -back, to: today)!).prefix(7)
+        }
+        var tight = Set<Int>()
+        for month in months.values where month.count >= 7 {
+            // Each start leaves 6 more days in the month; the lowest total wins, then the earlier start.
+            let total = { (start: Int) in month[start..<start + 7].map { closing[$0] }.reduce(0, +) }
+            let start = (0...month.count - 7).min { (total($0), $0) < (total($1), $1) }!
+            tight.formUnion(month[start..<start + 7])
+        }
+        return tight
     }
 }
 

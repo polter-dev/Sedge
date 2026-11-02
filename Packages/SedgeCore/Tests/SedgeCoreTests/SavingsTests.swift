@@ -27,11 +27,12 @@ import Testing
 /// transactions.json: the groceries, gas, dining, coffee, shopping and streaming stores, and none of
 /// the rent, mortgage, utility, phone, internet, insurance, loan, installment, tuition, card payment
 /// or transfer ones (nor maya's transit pass or jordan's monthly software and storage, which are
-/// steady recurring charges, and maya's bookstore, which is education).
+/// steady recurring charges, and maya's bookstore, which is education). Jordan's The Camera Store
+/// is left out too: one purchase (54.43 on 2026-04-26), so stopping there saves nothing from now on.
 @Test(arguments: [
     ("maya", ["Bean Street Coffee", "Corner Cafe", "Netflix", "Value Mart"]),
     ("daniel", ["Amazon", "Bean Street Coffee", "Corner Cafe", "Homegoods", "Netflix", "Shell Service Station", "Value Mart"]),
-    ("jordan", ["Bean Street Coffee", "Camera Shop", "Corner Cafe", "Shell Oil", "The Camera Store", "Value Mart"]),
+    ("jordan", ["Bean Street Coffee", "Camera Shop", "Corner Cafe", "Shell Oil", "Value Mart"]),
     ("elena", ["Bean Street Coffee", "Corner Cafe", "Home Goods", "Shell Oil", "Value Mart"]),
 ])
 func fixedObligationsAreNeverSuggested(persona: String, stores: [String]) throws {
@@ -83,40 +84,63 @@ func eachCutIsTheStoresAverageMonth(persona: String) throws {
     #expect(ranked.first { $0.store == "Netflix" }?.value == 0.46)
 }
 
-/// A made-up person whose checking balance is low in weeks 1 and 2 (rent paid, pay not yet in).
-/// Coffee is bought every week; the gadget shop is skipped in exactly those two weeks, so it is
-/// the one dropped when money is tight and ranks first.
-@Test func spendingDroppedInTightWeeksRanksFirst() throws {
+/// A made-up person, 2026-04-01 to 2026-06-30 (91 days, 13 whole weeks, 3 months). Rent (3,000)
+/// leaves checking on the 10th of each month and pay (3,500) comes in on the 17th, so the balance
+/// is low from the 10th to the 16th every month and rises 500 a month: 500, then 1,000, then 1,500
+/// in those stretches, 3,500 to 5,000 the rest of the time. Purchases go on the card, so they don't
+/// move the checking balance. Coffee is bought every day; the gadget shop every day except the
+/// 10th to the 16th. `extra` adds more card purchases as (id, day, statement name, amount).
+private func madeUpPerson(extra: [(String, String, String, Double)] = []) throws -> [Savings.Cut] {
     let database = try SedgeDatabase()
-    /// The day `back` days before today (2026-06-30).
-    func day(_ back: Int) -> String {
-        Simulator.text(Simulator.calendar.date(byAdding: .day, value: -back, to: try! Simulator.date("2026-06-30"))!)
+    var lines: [Transaction] = []
+    func add(_ id: String, _ account: String, _ date: String, _ name: String, _ amount: Double) {
+        lines.append(Transaction(transaction_id: id, account_id: account, date: date, name: name, amount: amount, pending: false))
     }
-    func line(_ id: String, _ account: String, _ back: Int, _ name: String, _ amount: Double) -> Transaction {
-        Transaction(transaction_id: id, account_id: account, date: day(back), name: name, amount: amount, pending: false)
+    for month in ["04", "05", "06"] {
+        add("rent\(month)", "chk", "2026-\(month)-10", "OAKWOOD APARTMENTS RENT", 3000)
+        add("pay\(month)", "chk", "2026-\(month)-17", "ACME PAYROLL", -3500)
+        for day in 1...(month == "05" ? 31 : 30) {
+            let date = "2026-\(month)-" + (day < 10 ? "0\(day)" : "\(day)")
+            add("coffee\(date)", "card", date, "BEAN COFFEE", 2)
+            if !(10...16).contains(day) { add("gadget\(date)", "card", date, "GADGET SHOP", 1) }
+        }
     }
-    // Purchases go on the card, so only the rent and the pay move the checking balance:
-    // 5,000 now, 2,000 from rent day (20 days back) until payday (7 days back).
-    var lines = [line("rent", "chk", 20, "OAKWOOD APARTMENTS RENT", 3000), line("pay", "chk", 7, "ACME PAYROLL", -3000)]
-    for week in 0..<8 {
-        // The oldest day of each week, so the data is exactly 8 whole weeks.
-        lines.append(line("coffee\(week)", "card", week * 7 + 6, "BEAN COFFEE", 5))
-        if week != 1 && week != 2 { lines.append(line("gadget\(week)", "card", week * 7 + 6, "GADGET SHOP", 5)) }
-    }
+    for (id, date, name, amount) in extra { add(id, "card", date, name, amount) }
     try database.save(accounts: [Account(account_id: "chk", name: "Checking", type: "depository", subtype: "checking",
                                          balances: Balances(current: 5000)),
                                  Account(account_id: "card", name: "Card", type: "credit", balances: Balances(current: 0))],
                       transactions: lines, asOf: "2026-06-30")
     try Organizer.organize(database)
-    let ranked = try database.dbQueue.read { try Savings.ranked($0) }
-    // Gadget: kept up 0, regular 6/8, size 30/40, so (0 + 0.75 + 0.75) / 3 = 0.5. Coffee: all three are 1.
-    // Rent is housing, so it is never a cut. Two calendar months (May and June) of data.
-    #expect(ranked == [
-        Savings.Cut(store: "Gadget Shop", category: "other", per_month: 15, value: 0.5,
-                    evidence: "bought in 6 of 8 weeks; 0% of usual in low-balance weeks"),
-        Savings.Cut(store: "Bean Coffee", category: "coffee", per_month: 20, value: 1,
-                    evidence: "bought in 8 of 8 weeks; 100% of usual in low-balance weeks"),
+    return try database.dbQueue.read { try Savings.ranked($0) }
+}
+
+/// The gadget shop is skipped in every month's low stretch (the 10th to the 16th), the later,
+/// higher-balance months included, so it is the one dropped when money is tight and ranks first.
+@Test func spendingDroppedInEachMonthsTightStretchRanksFirst() throws {
+    // Tight days: the 10th to the 16th of April, May and June, 21 days in all.
+    // Gadget: 70 days × $1 = $70, none on a tight day, so kept up 0. Weeks are 7-day blocks back from
+    // June 30, and June 10 to 16 is exactly one of them, so it was bought in 12 of 13 weeks.
+    // Size 70 / 182 (coffee's 91 × $2). (0 + 12/13 + 70/182) / 3 = 0.436, shown as 0.44.
+    // Coffee: $2 a day, the same in tight stretches as usual, so all three parts are 1.
+    // Rent is housing, so it is never a cut. Monthly amounts are over 3 months: 70 / 3 and 182 / 3.
+    #expect(try madeUpPerson() == [
+        Savings.Cut(store: "Gadget Shop", category: "other", per_month: 23.33, value: 0.44,
+                    evidence: "bought in 12 of 13 weeks; 0% of usual in low-balance weeks"),
+        Savings.Cut(store: "Bean Coffee", category: "coffee", per_month: 60.67, value: 1,
+                    evidence: "bought in 13 of 13 weeks; 100% of usual in low-balance weeks"),
     ])
+}
+
+/// A store bought from only once, and one bought from in two months but last on April 30 (61 days
+/// before June 30), are never suggested, however low they would score. One bought last on May 1,
+/// exactly 60 days back, still is.
+@Test func oneOffAndStoppedStoresAreNeverSuggested() throws {
+    let ranked = try madeUpPerson(extra: [
+        ("once", "2026-06-20", "LAMP DEPOT", 54.43),
+        ("old1", "2026-03-31", "KITE SHACK", 8), ("old2", "2026-04-30", "KITE SHACK", 8),
+        ("edge1", "2026-04-02", "YARN BARN", 8), ("edge2", "2026-05-01", "YARN BARN", 8),
+    ])
+    #expect(ranked.map(\.store) == ["Yarn Barn", "Gadget Shop", "Bean Coffee"])
 }
 
 /// The tool through `Tool.named`, as a model would call it: the reply's shape, the cuts adding
@@ -158,13 +182,13 @@ func eachCutIsTheStoresAverageMonth(persona: String) throws {
     #expect(answer["goal_per_month"] as? Double == 200)
 }
 
-/// Daniel's flexible stores could reach $600 together, but his 5 least valued (308.72) can't.
+/// Daniel's flexible stores could reach $600 together, but his 5 least valued (324.85) can't.
 @Test func goalPastFiveCutsSaysSo() throws {
     let answer = try call("savings_options", ["goal_amount": 600], on: organizedPersona("daniel"))
     #expect(answer["reached"] as? Bool == false)
     #expect(rows(answer, "cuts").count == Savings.maxCuts)
-    #expect(answer["total_per_month"] as? Double == 308.72)
-    #expect(answer["short_by"] as? Double == 291.28)
+    #expect(answer["total_per_month"] as? Double == 324.85)
+    #expect(answer["short_by"] as? Double == 275.15)
     #expect(answer["note"] as? String == "Short of the goal within 5 cuts.")
 }
 

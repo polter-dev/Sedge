@@ -748,8 +748,8 @@ final class SedgeUITests: XCTestCase {
         // Each rank in turn, scrolling to it: the list only builds the rows in view, and at the
         // largest text sizes it starts below the fold.
         let cuts = app.descendants(matching: .any).matching(identifier: "cut")
-        let expected = ["1. Homegoods, $47.29 a month.", "2. Amazon, $70.60 a month.", "3. Netflix, $16.74 a month.",
-                        "4. Bean Street Coffee, $10.21 a month.", "5. Shell Service Station, $163.88 a month."]
+        let expected = ["1. Netflix, $16.74 a month.", "2. Homegoods, $47.29 a month.", "3. Amazon, $70.60 a month.",
+                        "4. Bean Street Coffee, $10.21 a month.", "5. Corner Cafe, $180.01 a month."]
         for start in expected {
             let cut = cuts.matching(NSPredicate(format: "label BEGINSWITH %@", start)).firstMatch
             for _ in 0..<6 where !cut.waitForExistence(timeout: 2) { app.swipeUp() }
@@ -757,7 +757,7 @@ final class SedgeUITests: XCTestCase {
         }
         let summary = app.staticTexts["savings-summary"]
         for _ in 0..<6 where !summary.exists { app.swipeUp() }
-        XCTAssertTrue(summary.label.hasPrefix("Together $308.72 a month, enough"), summary.label)
+        XCTAssertTrue(summary.label.hasPrefix("Together $324.85 a month, enough"), summary.label)
         XCTAssertFalse(cuts.matching(NSPredicate(format: "label BEGINSWITH '6. '")).firstMatch.exists)
         for _ in 0..<6 { app.swipeDown() }
         attachScreenshot(app, "ways-to-save")

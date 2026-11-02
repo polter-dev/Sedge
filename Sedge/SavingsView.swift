@@ -90,7 +90,7 @@ struct SavingsView: View {
         }
     }
 
-    /// "Together $308.72 a month, enough for the goal." or what is missing and why.
+    /// "Together $324.85 a month, enough for the goal." or what is missing and why.
     private func summary(_ plan: Savings.Plan) -> String {
         let together = "Together \(Self.money(plan.total_per_month)) a month"
         guard !plan.reached else { return together + ", enough for your goal." }

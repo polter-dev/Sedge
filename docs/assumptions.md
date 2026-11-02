@@ -98,12 +98,12 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A store with a recurring series of charges is a bill, never a cut, unless its category is subscriptions, coffee, dining, groceries, gas or shopping. — `Savings.swift` `everydayCategories`, `ranked`
 - A store's category for savings is the store's own, not a category the person moved one transaction to. — `Savings.swift` `ranked`
 - Weeks are 7-day blocks counted back from today; days before the oldest whole week count toward the monthly amount but not the weekly parts, and fewer than 4 whole weeks is too little data. — `Savings.swift` `ranked`
-- Tight weeks are the third of the weeks (rounded down) whose lowest end-of-day checking balance is lowest, a tie going to the earlier week; the balance is today's with every later posted transaction undone, on the account simulate_balance uses. — `Savings.swift` `tightWeeks`
-- The value score is the average of three parts from 0 to 1: kept up (spending in an average tight week over an average week, capped at 1; 0.5 with no bank balance), regular (weeks with a purchase over all weeks), and size (the store's spending over the biggest flexible store's), rounded to 2 places. — `Savings.swift` `ranked`
+- A store is a cut only if it was bought from in at least 2 different calendar months and at least once in the 60 days up to today (60 days back still counts); a one-off or stopped store saves nothing from now on. Its monthly amount is still its average month over all the data. — `Savings.swift` `ranked`
+- Tight stretches are found in each calendar month, not across all the data, because balances drift (every persona's rises over the half-year, so the lowest weeks overall were all early ones): in each month, the 7 days in a row inside that month whose end-of-day checking balances add up lowest, a tie going to the earlier stretch; a month with under 7 days of data has none. The balance is today's with every later posted transaction undone, on the account simulate_balance uses. — `Savings.swift` `tightDays`
+- The value score is the average of three parts from 0 to 1: kept up (spending per day in the tight stretches over the store's spending per day across all the data, capped at 1; 0.5 with no bank balance), regular (weeks with a purchase over all weeks), and size (the store's spending over the biggest flexible store's), rounded to 2 places. — `Savings.swift` `ranked`
 - Cuts go least valued first, a tie going to the bigger monthly amount and then the store name; they are taken in that order until they reach the goal, at most 5. — `Savings.swift` `ranked`, `plan`
 - When every flexible store together falls short of the goal, the answer says it can't be reached without cutting bills. — `Savings.swift` `plan`
 - A goal by a date is spread evenly with a month of 30 days ($300 in 45 days is $200 a month). — `Savings.swift` `savingsOptions`
-- Stores bought once long ago are still suggested; there is no check that the person still shops there. — `Savings.swift` `ranked`
 
 ## Tools and saved answers
 
