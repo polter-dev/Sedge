@@ -93,6 +93,22 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - The screen projects the same checking account as simulate_balance; its lowest balance is the first day of the minimum, labeled "Before payday" when the next day's balance is higher, else with a checking bill paid that day. — `Sedge/CashFlowView.swift` `CashFlow.lowest`, `CashFlow.lowReason`
 - Scenarios offer only recurring bills the projection charges; subscriptions are those whose store is in the subscriptions category, cancelled from tomorrow, and the saving shown is the simulator's end-balance difference. — `Sedge/CashFlowView.swift` `CashFlow.load`, `CashFlowView.load`
 
+## Savings
+
+- A cut is stopping all spending at one store, worth everything spent there (less refunds, pending left out) divided by the months the data covers, a part month counting as a whole one. — `Savings.swift` `ranked`
+- Only spending can be cut: transfers and card payments are never cuts, and neither is any store in the housing, utilities, phone_internet, insurance, loans, education or income category. — `Savings.swift` `fixedCategories`, `ranked`
+- The profile's rent, mortgage, tuition and loan stores, including the person's corrections, are never cuts, matched by store name. — `Savings.swift` `ranked`
+- A store with a recurring series of charges is a bill, never a cut, unless its category is subscriptions, coffee, dining, groceries, gas or shopping. — `Savings.swift` `everydayCategories`, `ranked`
+- A store's category for savings is the store's own, not a category the person moved one transaction to. — `Savings.swift` `ranked`
+- Weeks are 7-day blocks counted back from today; days before the oldest whole week count toward the monthly amount but not the weekly parts, and fewer than 4 whole weeks is too little data. — `Savings.swift` `ranked`
+- A store is a cut only if it was bought from in at least 2 different calendar months and at least once in the 60 days up to today (60 days back still counts); a one-off or stopped store saves nothing from now on. Its monthly amount is still its average month over all the data. — `Savings.swift` `ranked`
+- Tight stretches are found in each calendar month, not across all the data, because balances drift (every persona's rises over the half-year, so the lowest weeks overall were all early ones): in each month, the 7 days in a row inside that month whose end-of-day checking balances add up lowest, a tie going to the earlier stretch; a month with under 7 days of data has none. The balance is today's with every later posted transaction undone, on the account simulate_balance uses. — `Savings.swift` `tightDays`
+- The value score is the average of three parts from 0 to 1: kept up (spending per day in the tight stretches over the store's spending per day across all the data, capped at 1; 0.5 with no bank balance), regular (weeks with a purchase over all weeks), and size (the store's spending over the biggest flexible store's), rounded to 2 places. — `Savings.swift` `ranked`
+- A monthly charge, a store bought from at most once in any calendar month, gets the neutral 0.5 for kept up, and its evidence says so instead of a percentage: its one charge a month lands inside or outside the 7-day tight stretch by billing day alone, so two charges paid every month would otherwise score 0 or 1 by the calendar. — `Savings.swift` `ranked`
+- Cuts go least valued first, a tie going to the bigger monthly amount and then the store name; they are taken in that order until they reach the goal, at most 5. — `Savings.swift` `ranked`, `plan`
+- When every flexible store together falls short of the goal, the answer says it can't be reached without cutting bills. — `Savings.swift` `plan`
+- A goal by a date is spread evenly with a month of 30 days ($300 in 45 days is $200 a month). — `Savings.swift` `savingsOptions`
+
 ## Tools and saved answers
 
 - Transfers and card payments are never spending, bills or income. — `Tools.swift` `spendingFilter`, `recurringCharges`
@@ -119,6 +135,8 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Months are compared over the same first days: the day of the month of `as_of` (a shorter month just ends sooner), for `as_of`'s month and the three before it. — `Sedge/SpendingView.swift` `SpendingTotal.all`, `SpendingView.months`
 - The All months screen counts whole months, and money moved between the person's own accounts (transfers and card payments) counts only when its switch is on, as its own category bar, using only the side leaving an account so the arriving side doesn't cancel it. — `Sedge/SpendingView.swift` `SpendingTotal.all`; `Sedge/AllMonthsView.swift` `byMonth`, `byCategory`
 - The spending graph shows a category's three biggest stores this month and adds the rest up as "Other stores", or every store when there are four or fewer. — `Sedge/SpendingView.swift` `SpendingView.stores`
+
+- The Ways to save screen, opened from Spending, shows the same cuts savings_options gives for the monthly goal typed in. — `Sedge/SavingsView.swift` `load`
 
 ## Transaction screen
 

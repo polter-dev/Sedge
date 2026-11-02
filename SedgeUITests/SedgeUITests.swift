@@ -720,6 +720,51 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(try dollars(june), before)
     }
 
+    /// Ways to save opens from Spending; a $200 goal lists Daniel's cuts ranked least valued first
+    /// (the same list `savingsListsForAHandCheck` prints), and the goal row is a 44 pt target that
+    /// focuses from near its top. The screenshot is light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testWaysToSaveRanksCutsForAGoal() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "daniel"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let link = app.buttons["Ways to save →"]
+        XCTAssertTrue(link.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(link.frame.height, 44)
+        link.tap()
+
+        let field = app.textFields["Monthly goal in dollars"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(field.frame.height, 44)
+        // 6 pt below the top of the row: inside the 44 pt target, outside the text line.
+        field.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: field.frame.width / 2, dy: 6)).tap()
+        let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
+        XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 3), .completed)
+        field.typeText("200")
+
+        // Each rank in turn, scrolling to it: the list only builds the rows in view, and at the
+        // largest text sizes it starts below the fold.
+        let cuts = app.descendants(matching: .any).matching(identifier: "cut")
+        // Netflix is a monthly charge, so its evidence says the low weeks don't judge it (review R2-1).
+        let expected = ["1. Netflix, $16.74 a month. Subscriptions; bought in 5 of 25 weeks; once a month at most, so not judged on lowest-balance weeks.",
+                        "2. Homegoods, $47.29 a month. Shopping; bought in 8 of 25 weeks; 100% of usual",
+                        "3. Amazon, $70.60 a month.", "4. Bean Street Coffee, $10.21 a month.", "5. Corner Cafe, $180.01 a month."]
+        for start in expected {
+            let cut = cuts.matching(NSPredicate(format: "label BEGINSWITH %@", start)).firstMatch
+            for _ in 0..<6 where !cut.waitForExistence(timeout: 2) { app.swipeUp() }
+            XCTAssertTrue(cut.exists, "No row starting: \(start)")
+        }
+        let summary = app.staticTexts["savings-summary"]
+        for _ in 0..<6 where !summary.exists { app.swipeUp() }
+        XCTAssertTrue(summary.label.hasPrefix("Together $324.85 a month, enough"), summary.label)
+        XCTAssertFalse(cuts.matching(NSPredicate(format: "label BEGINSWITH '6. '")).firstMatch.exists)
+        for _ in 0..<6 { app.swipeDown() }
+        attachScreenshot(app, "ways-to-save")
+    }
+
     /// A chart bar's value, such as "$1,234", in whole dollars.
     @MainActor
     private func dollars(_ bar: XCUIElement) throws -> Int {
