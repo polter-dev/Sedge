@@ -183,6 +183,17 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(try profile(database)["income"] == nil)
 }
 
+/// With no earlier purchase at the store, a name ending in "REFUND" is money in, not a refund, so it
+/// doesn't make June's spending negative.
+@Test func refundWordAtTheEndWithNoPurchaseStaysIncome() throws {
+    let database = try housingData([("g1", "2026-06-10", "VALUE MART", 120), ("g2", "2026-06-20", "VALUE MART", 80),
+                                    ("tax", "2026-06-15", "STATE TAX REFUND", -800)])
+    let kind = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = 'tax'") }
+    #expect(kind == "income")
+    let spent = try call("total_spent", ["start_date": "2026-06-01", "end_date": "2026-06-30"], on: database)
+    #expect(spent["total"] as? Double == 200 && spent["count"] as? Int == 2)
+}
+
 /// Kept on purpose: a plain school-name line ("STATE U") merges the school's bookstore and
 /// tuition into one store, so a bookstore refund there counts as tuition refunded.
 @Test func bookstoreRefundAtAMergedSchoolStoreCountsAsTuition() throws {

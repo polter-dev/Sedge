@@ -21,7 +21,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - "amzn" means amazon and "st" means street. — `Organizer.swift` `aliases`
 - One to three letters or "paypal" before a "*", and a leading "pos", "pos debit" or "pos purchase", are a payment-processor tag, not the store, so a store with a name that short loses it. — `Organizer.swift` `processorPrefix`, `clean`
 - Words with a digit in them are store numbers or ids, not part of the store's name. — `Organizer.swift` `clean`
-- A statement name starting with "REFUND ", or ending in the word "REFUND" after a store name (a trailing reference number is ignored), is a refund. — `Organizer.swift` `clean`
+- A statement name starting with "REFUND " is a refund. Money in whose name ends in the word "REFUND" after a store name (a trailing reference number is ignored) is a refund only when the same store has a purchase on or before it; otherwise it stays income ("STATE TAX REFUND"). With the graph off each raw name is its own store, so such a name never finds its purchase and stays income. — `Organizer.swift` `clean`, `organize`
 - A store's category is the keyword list most of its names match; ties go to the earlier list, no match is "other". — `Organizer.swift` `category(of:)`
 - A subscription word beats a shopping word ("amazon prime membership" is a subscription). — `Organizer.swift` `categoryKeywords`
 - HOA dues are in the housing category. — `Organizer.swift` `categoryKeywords`
