@@ -97,7 +97,7 @@ public enum Organizer {
                 let startsWithRefund = { (line: Line) in line.raw.lowercased().hasPrefix("refund ") }
                 let purchases = merchantLines.filter { !startsWithRefund($0) && $0.amount > 0 }
                 // A name starting with "REFUND" is always a refund. Money back named with "REFUND" last is
-                // a refund only when this store has an earlier purchase, so "STATE TAX REFUND" stays income.
+                // a refund only when this store has a purchase on or before it, so "STATE TAX REFUND" stays income.
                 let refunds = merchantLines.filter { line in
                     startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund && purchases.contains { $0.date <= line.date }
                 }
