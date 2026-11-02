@@ -278,6 +278,40 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(spent["total"] as? Double == 200 && spent["count"] as? Int == 2)
 }
 
+/// A store whose category is housing is never tuition to the profile, so a refund naming only the
+/// school there stays income even though one of its lines says TUITION.
+@Test func shortRefundAtAHousingStoreWithATuitionLineStaysIncome() throws {
+    let database = try housingData([("a1", "2026-01-01", "STATE U APARTMENTS", 800), ("a2", "2026-02-01", "STATE U APARTMENTS", 800),
+                                    ("a3", "2026-03-01", "STATE U APARTMENTS", 800), ("p", "2026-01-05", "STATE U", 50),
+                                    ("t", "2026-01-10", "STATE U TUITION", 1500), ("r", "2026-02-10", "STATE U REFUND", -500)])
+    #expect(try profile(database)["tuition"] == nil)
+    #expect(try kindOf("r", database) == "income")
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 3950 && spent["count"] as? Int == 5)
+}
+
+/// A pending charge isn't paid yet: it neither raises the refund cap nor makes the store a school.
+@Test func pendingChargeIsNotPaidForTheRefundCap() throws {
+    let capped = try housingData([("a", "2026-06-01", "STATE U", 100), ("b", "2026-06-25", "STATE U", 400),
+                                  ("r", "2026-06-27", "STATE U REFUND", -300)], pending: ["b"])
+    #expect(try kindOf("r", capped) == "income")
+    let school = try housingData([("a", "2026-06-01", "STATE U BOOKS", 50), ("b", "2026-06-20", "STATE U TUITION", 1200),
+                                  ("r", "2026-06-27", "STATE U REFUND", -40)], pending: ["b"])
+    #expect(try profile(school)["tuition"] == nil)
+    #expect(try kindOf("r", school) == "income")
+}
+
+/// A refund named last counts when it is no more than the purchases it names and no more than what is
+/// left at the store: $590 paid, $500 back for "GEICO AUTO", then $90 back for "GEICO" is a refund too.
+@Test func refundCapUsesWhatIsLeftAtTheStore() throws {
+    let database = try housingData([("p1", "2026-01-05", "GEICO", 90), ("p2", "2026-01-10", "GEICO AUTO", 500),
+                                    ("r1", "2026-02-01", "GEICO AUTO REFUND", -500), ("r2", "2026-02-05", "GEICO REFUND", -90)])
+    #expect(try kindOf("r1", database) == "refund")
+    #expect(try kindOf("r2", database) == "refund")
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 0 && spent["count"] as? Int == 4)
+}
+
 /// One transaction's kind, as the organizer saved it.
 func kindOf(_ id: String, _ database: SedgeDatabase) throws -> String? {
     try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = ?", arguments: [id]) }

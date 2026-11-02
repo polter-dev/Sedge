@@ -67,9 +67,9 @@ public enum Organizer {
         try database.dbQueue.write { db in
             // Only the columns the organizer is allowed to use.
             let lines = try Row.fetchAll(db, sql: """
-                SELECT transaction_id, account_id, date, name, amount FROM transactions
+                SELECT transaction_id, account_id, date, name, amount, pending FROM transactions
                 ORDER BY date, transaction_id
-                """).map { Line(id: $0[0], account: $0[1], date: $0[2], raw: $0[3], amount: $0[4]) }
+                """).map { Line(id: $0[0], account: $0[1], date: $0[2], raw: $0[3], amount: $0[4], pending: $0[5]) }
 
             try db.execute(sql: "DELETE FROM edges")
             try db.execute(sql: "DELETE FROM entities")
@@ -95,12 +95,13 @@ public enum Organizer {
                                    arguments: [merchantID, line.id])
                 }
                 let startsWithRefund = { (line: Line) in line.raw.lowercased().hasPrefix("refund ") }
-                let purchases = merchantLines.filter { !startsWithRefund($0) && $0.amount > 0 }
+                // Only posted charges count as paid, as in the profile: a pending charge may never post.
+                let purchases = merchantLines.filter { !startsWithRefund($0) && $0.amount > 0 && !$0.pending }
                 let storeName = { (line: Line) in words(clean(line.raw).name).joined(separator: " ") }
                 // The profile's tuition rule (see `Profile.infer`), checked here because the profile is built only
-                // after refunds are decided: a name says tuition or bursar, or an education store has one charge
-                // of $1,000 or more.
-                let isSchool = purchases.contains { !Set(words(clean($0.raw).name)).isDisjoint(with: Profile.tuitionWords) }
+                // after refunds are decided: a store that isn't housing where a name says tuition or bursar, or an
+                // education store has one charge of $1,000 or more.
+                let isSchool = category != "housing" && purchases.contains { !Set(words(clean($0.raw).name)).isDisjoint(with: Profile.tuitionWords) }
                     || category == "education" && purchases.contains { $0.amount >= Profile.tuitionMinimum }
                 // The purchases on or before a refund that it can be for. A name starting with "REFUND" can be
                 // for any purchase at this store. A name ending in "REFUND" must name the purchase's whole store
@@ -117,11 +118,13 @@ public enum Organizer {
                     }
                 }
                 // A name starting with "REFUND" is always a refund. Money back named with "REFUND" last is a refund
-                // only up to what was paid for it less the refunds before it, so "STATE TAX REFUND", an
+                // only if it is no more than the purchases it names and no more than what is left at the store
+                // (everything paid on or before it less the refunds before it), so "STATE TAX REFUND", an
                 // "IRS TAX REFUND" larger than the tax paid, or a second $300 back on $500 paid, stays income.
                 var refunds: [Line] = [], refundedSoFar = 0.0
                 for line in merchantLines where startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund
-                    && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) - refundedSoFar + 0.005 {
+                    && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) + 0.005
+                    && -line.amount <= purchases.filter { $0.date <= line.date }.map(\.amount).reduce(0, +) - refundedSoFar + 0.005 {
                     refunds.append(line)
                     refundedSoFar += max(0, -line.amount)
                 }
@@ -247,6 +250,7 @@ public enum Organizer {
     struct Line {
         let id, account, date, raw: String
         let amount: Double
+        let pending: Bool
     }
 
     /// Lowercases a raw statement name and strips what isn't the store's name:
