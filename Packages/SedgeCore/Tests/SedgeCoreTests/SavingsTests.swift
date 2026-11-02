@@ -146,6 +146,12 @@ func eachCutIsTheStoresAverageMonth(persona: String) throws {
     }
 }
 
+/// A goal too big to hold in cents comes back as an error, not a crash (review R1-1).
+@Test func hugeGoalReturnsAnError() throws {
+    let text = try #require(Tool.named("savings_options")).call(Data(#"{"goal_amount": 1e307}"#.utf8), database: organizedPersona("maya"))
+    #expect(text.contains("error"))
+}
+
 /// $300 by a day 45 days from today is $200 a month (a month is 30 days).
 @Test func goalByADateIsSpreadOverItsMonths() throws {
     let answer = try call("savings_options", ["goal_amount": 300, "by_date": "2026-08-14"], on: organizedPersona("elena"))

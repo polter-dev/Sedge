@@ -191,15 +191,18 @@ extension Tool {
         inputs: [ToolInput(name: "goal_amount", kind: .number, description: "Dollars to save each month, or in total by by_date.", required: true),
                  dateInput("by_date", "Day to have saved goal_amount in total, after today. Leave out for a monthly goal", required: false)],
         run: { input, db in
-            let goal = input.number("goal_amount")!
-            guard goal > 0 else { throw ToolError("Bad value for \"goal_amount\".", hint: "A positive amount in dollars.") }
-            guard let byDate = input.text("by_date") else { return try Savings.plan(db, goalPerMonth: goal) }
-            guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'") else {
-                throw ToolError("No data has been loaded.")
+            var goal = input.number("goal_amount")!
+            if let byDate = input.text("by_date") {
+                guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'") else {
+                    throw ToolError("No data has been loaded.")
+                }
+                let days = Simulator.calendar.dateComponents([.day], from: try Simulator.date(asOf), to: try Simulator.date(byDate)).day!
+                guard days > 0 else { throw ToolError("by_date is not after today.", hint: "Pick a day after \(asOf), or leave it out.") }
+                // A goal by a date is spread evenly, a month being 30 days: $300 in 45 days is $200 a month.
+                goal = goal * 30 / Double(days)
             }
-            let days = Simulator.calendar.dateComponents([.day], from: try Simulator.date(asOf), to: try Simulator.date(byDate)).day!
-            guard days > 0 else { throw ToolError("by_date is not after today.", hint: "Pick a day after \(asOf), or leave it out.") }
-            // A goal by a date is spread evenly, a month being 30 days: $300 in 45 days is $200 a month.
-            return try Savings.plan(db, goalPerMonth: goal * 30 / Double(days))
+            // Checked after the spread: a huge goal becomes infinity once turned into cents, and the reply can't hold that.
+            guard goal > 0, cents(goal).isFinite else { throw ToolError("Bad value for \"goal_amount\".", hint: "A positive amount in dollars.") }
+            return try Savings.plan(db, goalPerMonth: goal)
         })
 }
