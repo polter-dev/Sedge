@@ -1,0 +1,18 @@
+{
+  "name": "sedge-plaid-server",
+  "version": "0.1.0",
+  "description": "The Plaid server Sedge uses, based on Plaid's quickstart.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "developers@plaid.com",
+  "repository": "https://github.com/plaid/quickstart",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "plaid": "^47.0.0"
+  }
+}

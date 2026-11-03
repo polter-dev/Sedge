@@ -35,11 +35,12 @@ Run these from `tools/`:
 - `uv run python plaid_sandbox.py dry-run` does the same on a made-up Plaid reply for the dev and validation personas.
 
 Plaid Sandbox rewrites `name` for stores it recognizes (NETFLIX.COM comes back as Netflix), so `check` matches on
-`original_description` when the reply has one. The quickstart's `/api/all_transactions` route must ask for it: its
+`original_description` when the reply has one. `plaid-server/`'s `/api/all_transactions` route asks for it: its
 `client.transactionsSync(...)` call passes `options: { include_original_description: true }`.
 
-To pull one persona (Plaid keys loaded in the shell, the quickstart server running; commit the pulled file; for jordan
-and elena, read only the PASS/FAIL lines):
+To pull one persona, first start the server: in `plaid-server/`, copy `.env.example` to `.env`, fill in your Sandbox
+keys, then `npm install && npm start`. Then, with the same keys loaded in the shell (`set -a; source ../plaid-server/.env;
+set +a`), run this from `tools/` (commit the pulled file; for jordan and elena, read only the PASS/FAIL lines):
 
 ```sh
 P=maya
