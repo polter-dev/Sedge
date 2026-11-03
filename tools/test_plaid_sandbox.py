@@ -41,6 +41,30 @@ class PlaidSandboxTest(unittest.TestCase):
     self.assertEqual(details["reasons"], {"sign flipped": 1})
     self.assertFalse(all(results.values()))
 
+  def test_a_second_copy_is_a_duplicate_row(self):
+    pulled = ps.fake_reply(ps.config("maya"))
+    pulled["transactions"].append(pulled["transactions"][0] | {"transaction_id": "copy"})
+    results, details = ps.check("maya", pulled)
+    self.assertEqual(details["reasons"], {"duplicate row": 1})
+    self.assertFalse(results["transactions matched"])
+
+  def test_a_renamed_row_matches_on_its_original_description(self):
+    # Sandbox rewrites `name` (NETFLIX.COM -> Netflix) but keeps the statement text in original_description.
+    pulled = ps.fake_reply(ps.config("maya"))
+    row = pulled["transactions"][0]
+    row["original_description"], row["name"] = row["name"], "Renamed By Plaid"
+    results, details = ps.check("maya", pulled)
+    self.assertTrue(all(results.values()), [k for k, ok in results.items() if not ok])
+    self.assertEqual(details["renamed by Plaid"], 1)
+
+  def test_a_renamed_row_without_its_original_description_fails(self):
+    pulled = ps.fake_reply(ps.config("maya"))
+    pulled["transactions"][0]["name"] = "Renamed By Plaid"
+    results, details = ps.check("maya", pulled)
+    self.assertEqual(details["reasons"], {"description differs": 1})
+    self.assertEqual(details["renamed by Plaid"], 0)
+    self.assertFalse(results["transactions matched"])
+
   def test_a_pending_row_breaks_the_balances(self):
     # Matched by key, but a pending row isn't in the balance yet, so the worked-back Jan 1 balance moves.
     pulled = ps.fake_reply(ps.config("maya"))

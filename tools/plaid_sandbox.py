@@ -122,6 +122,13 @@ def fake_reply(cfg, seed=0):
   return {"accounts": accounts, "transactions": transactions}
 
 
+def description(t):
+  """The bank's own statement text: Sandbox rewrites `name` for stores it knows (NETFLIX.COM comes back as Netflix),
+  so `original_description` is used whenever Plaid sends one."""
+  original = t.get("original_description")
+  return t["name"] if original is None else original
+
+
 def match(persona, pulled):
   """Map pulled ids back to fixture ids by (account, date, amount, description).
 
@@ -140,9 +147,11 @@ def match(persona, pulled):
 
   mapping, reasons = {}, Counter()
   for t in pulled["transactions"]:
-    account, day, amount, name = account_map.get(t["account_id"]), t["date"], cents(t["amount"]), t["name"]
+    account, day, amount, name = account_map.get(t["account_id"]), t["date"], cents(t["amount"]), description(t)
     if waiting.get((account, day, amount, name)):
       mapping[t["transaction_id"]] = waiting[(account, day, amount, name)].pop(0)
+    elif (account, day, amount, name) in waiting:  # the key exists, but every fixture row with it is claimed
+      reasons["duplicate row"] += 1
     elif account is None:
       reasons["unknown account"] += 1
     elif (account, day, -amount, name) in waiting:
@@ -164,7 +173,7 @@ def write_pulled_as_fixtures(persona, pulled, account_map, mapping, folder):
   key = copy.deepcopy(truth_db.load(persona, "answer_key"))
   transactions = [{f: t.get(f) for f in truth_db.TX_FIELDS}
                   | {"transaction_id": mapping[t["transaction_id"]], "account_id": account_map[t["account_id"]],
-                     "pending_transaction_id": mapping.get(t.get("pending_transaction_id"))}
+                     "pending_transaction_id": mapping.get(t.get("pending_transaction_id")), "name": description(t)}
                   for t in pulled["transactions"] if t["transaction_id"] in mapping]
   accounts = [{f: a.get(f) for f in ("name", "official_name", "mask", "type", "subtype", "balances")}
               | {"account_id": account_map[a["account_id"]]}
@@ -201,7 +210,8 @@ def check(persona, pulled):
   }
   details = {"matched": len(mapping), "unmatched pulled": sum(reasons.values()), "unmatched fixture": len(missing),
              "ambiguous (identical rows)": ambiguous, "pending": sum(bool(t["pending"]) for t in pulled["transactions"]),
-             "reasons": dict(reasons), "missing ids": missing[:10]}
+             "reasons": dict(reasons), "missing ids": missing[:10],
+             "renamed by Plaid": sum(description(t) != t["name"] for t in pulled["transactions"])}
 
   # Plaid only returns a limited history window (90 days unless more is asked for), so a short pull shows up as
   # whole months missing at the start rather than as scattered unmatched rows.
@@ -254,7 +264,7 @@ def report(persona, results, details):
   for name, ok in results.items():
     print(f"  {name}: {'pass' if ok else 'FAIL'}")
   counts = ("matched", "unmatched pulled", "unmatched fixture", "ambiguous (identical rows)", "pending",
-            "pending links dropped", "questions compared")
+            "pending links dropped", "renamed by Plaid", "questions compared")
   print("  " + ", ".join(f"{k} {details[k]}" for k in counts))
   if persona not in HELD_OUT:
     for k in ("dates pulled", "months short", "reasons", "missing ids", "fields Plaid added", "fields Plaid dropped", "questions differing", "question errors"):
@@ -267,7 +277,8 @@ def save(persona, raw, results, details):
   """Keep the reply exactly as Plaid sent it, plus what the check found, as the record that the run happened."""
   folder = truth_db.DATA / persona
   (folder / "plaid_pulled.json").write_bytes(raw)
-  counts = ("matched", "unmatched pulled", "unmatched fixture", "pending", "pending links dropped", "questions compared")
+  counts = ("matched", "unmatched pulled", "unmatched fixture", "pending", "pending links dropped", "renamed by Plaid",
+            "questions compared")
   record = {
     # When the pull was checked: provenance only, never used for data logic.
     "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),

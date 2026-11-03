@@ -80,4 +80,22 @@ struct SedgeTests {
                                             exchange: { _ in }, sync: { _ in })
         #expect(worked == nil)
     }
+
+    /// A Plaid download keeps the bank's statement text as the name, not Plaid's rewritten one,
+    /// and falls back to Plaid's name when the original is missing or null.
+    @Test func bankImportKeepsTheOriginalDescription() throws {
+        let json = """
+        {"accounts": [], "transactions": [
+          {"transaction_id": "a", "account_id": "x", "date": "2026-06-01", "amount": 15.49, "pending": false,
+           "name": "Netflix", "original_description": "NETFLIX.COM", "merchant_name": "Netflix"},
+          {"transaction_id": "b", "account_id": "x", "date": "2026-06-02", "amount": 4.5, "pending": false,
+           "name": "BEAN ST COFFEE", "original_description": null},
+          {"transaction_id": "c", "account_id": "x", "date": "2026-06-03", "amount": 9, "pending": false,
+           "name": "SHELL"}
+        ]}
+        """
+        let response = try JSONDecoder().decode(AllTransactionsResponse.self, from: Data(json.utf8))
+        #expect(response.transactions.map(\.name) == ["NETFLIX.COM", "BEAN ST COFFEE", "SHELL"])
+        #expect(response.transactions[0].merchant_name == "Netflix")
+    }
 }
