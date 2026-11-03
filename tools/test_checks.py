@@ -46,6 +46,10 @@ class ChecksTest(unittest.TestCase):
   def test_validation_question_mix_matches_dev(self):
     self.assertEqual(checks.mix_off(checks.type_mix()), [])
 
+  def test_only_the_known_questions_are_organizer_limited(self):
+    # Compares ids only, so a failure never shows a held-out question's text.
+    self.assertEqual(checks.organizer_limited(), checks.ORGANIZER_LIMITED)
+
 
 if __name__ == "__main__":
   unittest.main()
