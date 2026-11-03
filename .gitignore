@@ -5,6 +5,8 @@ milestones/
 Secrets.xcconfig
 .env
 .env.*
+# ...except the template that lists the variable names
+!.env.example
 
 # Apple signing and App Store Connect files (App Store track)
 *.p8
@@ -25,11 +27,14 @@ build/
 .claude/
 *.log
 
+# Node packages (plaid-server)
+node_modules/
+
 # Python (fake data generator)
 __pycache__/
 .venv/
 
-# Plaid quickstart (separate repository, cloned locally)
+# Plaid quickstart: optional local clone of Plaid's repository (Sedge runs plaid-server/ instead)
 quickstart/
 skills-lock.json
 

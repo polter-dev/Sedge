@@ -48,8 +48,17 @@ Bank sign-in (optional, simulator only):
 - `Secrets.xcconfig` holds local settings and is not included. The build reads it only if it
   exists, so the app builds and runs without it.
 - **Connect with Plaid** (Welcome) and **Connect bank** (in the data picker) use Plaid Sandbox through
-  Plaid's quickstart server on `localhost:8000`, which needs Plaid keys and is not included. Without it,
-  the bank screen shows "Bank server not running" and a **Use a sample person** button. Everything else works.
+  the small server in `plaid-server/` (based on Plaid's quickstart) on `localhost:8000`. It needs your own
+  Plaid Sandbox keys, which are not included. To run it (Node 20 or later):
+
+  ```sh
+  cd plaid-server
+  cp .env.example .env    # then fill in PLAID_CLIENT_ID and PLAID_SECRET
+  npm install && npm start
+  ```
+
+  Without it, the bank screen shows "Bank server not running" and a **Use a sample person** button.
+  Everything else works.
 
 ## Project layout
 
@@ -59,6 +68,7 @@ SedgeTests/          app unit tests (Swift Testing)
 SedgeUITests/        UI tests that tap through the app
 Packages/SedgeCore/  Swift package: database, organizer, profile, simulator, assistant tools
 tools/               Python: fake data generator, sample data and question bank
+plaid-server/        Node: the local Plaid Sandbox server the app's bank sign-in talks to
 docs/                database diagram and business rules
 ```
 
