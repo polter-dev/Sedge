@@ -25,7 +25,10 @@ Run these from `tools/`:
 - `uv run python plaid_sandbox.py configs` writes `data/<persona>/plaid_user.json`, one custom Sandbox user per
   persona, and says whether each fits Plaid's limits (250 transactions, 55 KB, 10 accounts).
 - `uv run python plaid_sandbox.py check <persona> <pulled.json>` matches a saved `/api/all_transactions` reply to the
-  persona's rows and checks transactions, totals, daily balances and every question's `expected` against the fixtures.
+  persona's rows and checks transactions, totals, daily balances, that every month came back (Plaid's history window)
+  and every question's `expected` against the fixtures. It saves Plaid's reply byte for byte as
+  `data/<persona>/plaid_pulled.json` and the result as `plaid_check.json` (time, hashes, pass/fail, counts); commit
+  both as the record that the data really came through Plaid.
 - `uv run python plaid_sandbox.py dry-run` does the same on a made-up Plaid reply for the dev and validation personas.
 
 To pull one persona (Plaid keys loaded in the shell, the quickstart server running; for jordan and elena, read only

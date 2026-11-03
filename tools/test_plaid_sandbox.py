@@ -50,6 +50,15 @@ class PlaidSandboxTest(unittest.TestCase):
     self.assertEqual(details["pending"], 1)
     self.assertFalse(results["balances every day"])
 
+  def test_a_short_history_window_is_named(self):
+    # Plaid's default is 90 days; a pull that misses January shows up as a short month, not a mystery.
+    pulled = ps.fake_reply(ps.config("maya"))
+    pulled["transactions"] = [t for t in pulled["transactions"] if not t["date"].startswith("2026-01")]
+    results, details = ps.check("maya", pulled)
+    self.assertFalse(results["every month present"])
+    self.assertEqual(list(details["months short"]), ["2026-01"])
+    self.assertTrue(details["dates pulled"].startswith("2026-02"))
+
 
 if __name__ == "__main__":
   unittest.main()

@@ -3,13 +3,15 @@
 Run from tools/:
   uv run python plaid_sandbox.py configs                        writes data/<persona>/plaid_user.json for every persona
   uv run python plaid_sandbox.py check <persona> <pulled.json>  matches a pulled /api/all_transactions reply to the
-                                                                persona's fixtures and checks every answer is unchanged
+                                                                persona's fixtures, checks every answer is unchanged, and
+                                                                saves the reply and result in data/<persona>/
   uv run python plaid_sandbox.py dry-run                        runs check on a made-up Plaid reply for the dev and
                                                                 validation personas, without calling Plaid
 Held-out personas (jordan, elena) print counts and pass/fail only, never their values.
 """
 import copy
 import csv
+import hashlib
 import json
 import random
 import sqlite3
@@ -17,6 +19,7 @@ import string
 import sys
 import tempfile
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
@@ -200,6 +203,17 @@ def check(persona, pulled):
              "ambiguous (identical rows)": ambiguous, "pending": sum(bool(t["pending"]) for t in pulled["transactions"]),
              "reasons": dict(reasons), "missing ids": missing[:10]}
 
+  # Plaid only returns a limited history window (90 days unless more is asked for), so a short pull shows up as
+  # whole months missing at the start rather than as scattered unmatched rows.
+  def per_month(dates):
+    return Counter(d[:7] for d in dates)
+  want_months = per_month(t["date"] for t in truth_db.load(persona, "transactions"))
+  got_months = per_month(t["date"] for t in pulled["transactions"])
+  results["every month present"] = got_months == want_months
+  pulled_dates = sorted(t["date"] for t in pulled["transactions"])
+  details["dates pulled"] = f"{pulled_dates[0]} to {pulled_dates[-1]}" if pulled_dates else "none"
+  details["months short"] = {m: f"{got_months[m]} of {n}" for m, n in sorted(want_months.items()) if got_months[m] != n}
+
   tx_keys = set().union(*(t.keys() for t in pulled["transactions"])) if pulled["transactions"] else set()
   details["fields Plaid added"] = sorted(tx_keys - TX_FIELDS)
   details["fields Plaid dropped"] = sorted(TX_FIELDS - tx_keys)
@@ -243,10 +257,28 @@ def report(persona, results, details):
             "pending links dropped", "questions compared")
   print("  " + ", ".join(f"{k} {details[k]}" for k in counts))
   if persona not in HELD_OUT:
-    for k in ("reasons", "missing ids", "fields Plaid added", "fields Plaid dropped", "questions differing", "question errors"):
+    for k in ("dates pulled", "months short", "reasons", "missing ids", "fields Plaid added", "fields Plaid dropped", "questions differing", "question errors"):
       if details[k]:
         print(f"  {k}: {details[k]}")
   return passed
+
+
+def save(persona, raw, results, details):
+  """Keep the reply exactly as Plaid sent it, plus what the check found, as the record that the run happened."""
+  folder = truth_db.DATA / persona
+  (folder / "plaid_pulled.json").write_bytes(raw)
+  counts = ("matched", "unmatched pulled", "unmatched fixture", "pending", "pending links dropped", "questions compared")
+  record = {
+    # When the pull was checked: provenance only, never used for data logic.
+    "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    "source": "Plaid Sandbox custom user (institution ins_109508) via /transactions/sync and /accounts/get",
+    "config_sha256": hashlib.sha256((folder / "plaid_user.json").read_bytes()).hexdigest(),
+    "reply_sha256": hashlib.sha256(raw).hexdigest(),
+    "passed": all(results.values()),
+    "results": results,
+    "counts": {k: details[k] for k in counts},
+  }
+  (folder / "plaid_check.json").write_text(json.dumps(record, indent=2) + "\n")
 
 
 def main(args):
@@ -256,8 +288,10 @@ def main(args):
     passed = [report(p, *check(p, fake_reply(config(p)))) for p in DEV_AND_VALIDATION]
     return 0 if all(passed) else 1
   if len(args) == 3 and args[0] == "check" and args[1] in PERSONAS:
-    pulled = json.loads(Path(args[2]).read_text())
-    return 0 if report(args[1], *check(args[1], pulled)) else 1
+    raw = Path(args[2]).read_bytes()
+    results, details = check(args[1], json.loads(raw))
+    save(args[1], raw, results, details)
+    return 0 if report(args[1], results, details) else 1
   print(__doc__, file=sys.stderr)
   return 2
 
