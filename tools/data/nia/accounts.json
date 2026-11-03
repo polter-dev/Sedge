@@ -1,0 +1,47 @@
+[
+  {
+    "account_id": "nia-checking",
+    "name": "Joint Checking",
+    "official_name": null,
+    "mask": null,
+    "type": "depository",
+    "subtype": "checking",
+    "balances": {
+      "current": 6152.67,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  },
+  {
+    "account_id": "nia-savings",
+    "name": "Personal Savings",
+    "official_name": null,
+    "mask": null,
+    "type": "depository",
+    "subtype": "savings",
+    "balances": {
+      "current": 5400.0,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  },
+  {
+    "account_id": "nia-card",
+    "name": "Credit Card",
+    "official_name": null,
+    "mask": null,
+    "type": "credit",
+    "subtype": "credit card",
+    "balances": {
+      "current": 1247.81,
+      "available": null,
+      "limit": null,
+      "iso_currency_code": "USD",
+      "unofficial_currency_code": null
+    }
+  }
+]

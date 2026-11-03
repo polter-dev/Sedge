@@ -18,9 +18,9 @@ QUESTIONS = EVAL / "questions.csv"
 COLUMNS = ["id", "persona", "type", "split", "as_of", "question", "answer_type", "truth_sql", "expected",
            "tolerance", "expected_tool", "needs_clarification", "clarify_reply", "notes"]
 ALLOWED = {
-  "persona": {"maya", "daniel", "jordan", "elena"},
+  "persona": {"maya", "daniel", "jordan", "elena", "nia", "otis"},
   "type": {"aggregation", "comparison", "recurring", "temporal", "whatif", "profile", "clarify", "out_of_scope"},
-  "split": {"dev", "test"},
+  "split": {"dev", "validation", "test"},
   "answer_type": {"number", "list", "yes_no", "text"},
 }
 

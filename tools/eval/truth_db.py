@@ -17,7 +17,7 @@ DATA = EVAL.parent / "data"
 DB_PATH = EVAL / "truth.db"
 CATEGORIES = EVAL / "categories.csv"
 
-PERSONAS = ["maya", "daniel", "jordan", "elena"]
+PERSONAS = ["maya", "daniel", "jordan", "elena", "nia", "otis"]
 FIRST_DAY = date(2026, 1, 1)
 LAST_DAY = date(2026, 6, 30)
 
@@ -29,7 +29,8 @@ SCHEMA = """
 CREATE TABLE tx (
   persona TEXT, transaction_id TEXT PRIMARY KEY, account_id TEXT, date TEXT, name TEXT,
   amount REAL, iso_currency_code TEXT, pending INTEGER, pending_transaction_id TEXT,
-  true_merchant TEXT, kind TEXT, recurring TEXT, linked_transaction_id TEXT, category TEXT
+  true_merchant TEXT, kind TEXT, recurring TEXT, linked_transaction_id TEXT, category TEXT,
+  income_type TEXT
 );
 -- "limit" is an SQL keyword, so the Plaid balances.limit field is stored as credit_limit.
 CREATE TABLE accounts (
@@ -91,6 +92,7 @@ def build(db_path=DB_PATH, personas=PERSONAS):
       label = labels[t["transaction_id"]]  # a KeyError here means the answer key is out of date
       row = [persona] + [t[f] for f in TX_FIELDS] + [label[f] for f in LABEL_FIELDS]
       row.append(categories.get(label["true_merchant"], ""))
+      row.append(label.get("income_type"))  # wages or household_contribution; only some personas label it
       db.execute(f"INSERT INTO tx VALUES ({','.join('?' * len(row))})", row)
 
     balances = {entry["account_id"]: entry for entry in key["accounts"]}

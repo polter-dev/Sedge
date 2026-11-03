@@ -1,0 +1,1812 @@
+[
+  {
+    "transaction_id": "nia-0001",
+    "account_id": "nia-checking",
+    "date": "2026-01-01",
+    "name": "ASTER COURT RENT",
+    "amount": 1300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0073",
+    "account_id": "nia-card",
+    "date": "2026-01-01",
+    "name": "MALLOW MARKET",
+    "amount": 121.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0078",
+    "account_id": "nia-card",
+    "date": "2026-01-02",
+    "name": "FABLE CINEMA",
+    "amount": 64.2,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0075",
+    "account_id": "nia-card",
+    "date": "2026-01-04",
+    "name": "THIMBLE GOODS",
+    "amount": 21.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0006",
+    "account_id": "nia-checking",
+    "date": "2026-01-05",
+    "name": "FERNWAY TRANSIT PASS",
+    "amount": 80.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0074",
+    "account_id": "nia-card",
+    "date": "2026-01-06",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 71.98,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0076",
+    "account_id": "nia-card",
+    "date": "2026-01-06",
+    "name": "VERVAIN APPAREL",
+    "amount": 130.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0007",
+    "account_id": "nia-card",
+    "date": "2026-01-07",
+    "name": "GLIMMER STREAMING",
+    "amount": 15.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0077",
+    "account_id": "nia-card",
+    "date": "2026-01-07",
+    "name": "QUINCE PHARMACY",
+    "amount": 45.67,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0079",
+    "account_id": "nia-card",
+    "date": "2026-01-09",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 98.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0003",
+    "account_id": "nia-checking",
+    "date": "2026-01-10",
+    "name": "CIRRUS MOBILE",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0005",
+    "account_id": "nia-checking",
+    "date": "2026-01-12",
+    "name": "ESTUARY WATER",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0080",
+    "account_id": "nia-card",
+    "date": "2026-01-13",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 71.37,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0182"
+  },
+  {
+    "transaction_id": "nia-0043",
+    "account_id": "nia-checking",
+    "date": "2026-01-15",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0002",
+    "account_id": "nia-checking",
+    "date": "2026-01-16",
+    "name": "BRAMBLE ELECTRIC",
+    "amount": 144.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0081",
+    "account_id": "nia-card",
+    "date": "2026-01-17",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 114.37,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0083",
+    "account_id": "nia-card",
+    "date": "2026-01-17",
+    "name": "SQ *VERVAIN APPAREL #526",
+    "amount": 151.29,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0084",
+    "account_id": "nia-card",
+    "date": "2026-01-17",
+    "name": "SQ *FABLE CINEMA #749",
+    "amount": 97.89,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0169",
+    "account_id": "nia-checking",
+    "date": "2026-01-17",
+    "name": "SPLITPAY PAYMENT TO TESSA ROWAN",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0004",
+    "account_id": "nia-checking",
+    "date": "2026-01-20",
+    "name": "DOVETAIL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0082",
+    "account_id": "nia-card",
+    "date": "2026-01-21",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 52.11,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0085",
+    "account_id": "nia-card",
+    "date": "2026-01-23",
+    "name": "MALLOW MARKET",
+    "amount": 113.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0088",
+    "account_id": "nia-card",
+    "date": "2026-01-24",
+    "name": "POS QUINCE PHARMACY #638",
+    "amount": 83.46,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0086",
+    "account_id": "nia-card",
+    "date": "2026-01-25",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 46.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0087",
+    "account_id": "nia-card",
+    "date": "2026-01-25",
+    "name": "THIMBLEGOODS #394",
+    "amount": 25.73,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0055",
+    "account_id": "nia-checking",
+    "date": "2026-01-27",
+    "name": "SPLITPAY TRANSFER FROM ARDEN VALE",
+    "amount": -900.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0061",
+    "account_id": "nia-checking",
+    "date": "2026-01-28",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0062",
+    "account_id": "nia-savings",
+    "date": "2026-01-28",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0090",
+    "account_id": "nia-card",
+    "date": "2026-01-29",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 46.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0044",
+    "account_id": "nia-checking",
+    "date": "2026-01-30",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0008",
+    "account_id": "nia-checking",
+    "date": "2026-02-01",
+    "name": "ASTER COURT RENT",
+    "amount": 1300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0089",
+    "account_id": "nia-card",
+    "date": "2026-02-04",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 112.06,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0091",
+    "account_id": "nia-card",
+    "date": "2026-02-04",
+    "name": "VERVAINAPPAREL STORE",
+    "amount": 184.14,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0092",
+    "account_id": "nia-card",
+    "date": "2026-02-04",
+    "name": "FABLECINEMA THEATER",
+    "amount": 66.53,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0013",
+    "account_id": "nia-checking",
+    "date": "2026-02-05",
+    "name": "FERNWAY TRANSIT PASS",
+    "amount": 80.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0094",
+    "account_id": "nia-card",
+    "date": "2026-02-05",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 57.25,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0183"
+  },
+  {
+    "transaction_id": "nia-0014",
+    "account_id": "nia-card",
+    "date": "2026-02-07",
+    "name": "GLIMMER STREAMING",
+    "amount": 15.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0093",
+    "account_id": "nia-card",
+    "date": "2026-02-09",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 107.44,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0010",
+    "account_id": "nia-checking",
+    "date": "2026-02-10",
+    "name": "CIRRUS MOBILE",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0012",
+    "account_id": "nia-checking",
+    "date": "2026-02-12",
+    "name": "ESTUARY WATER",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0045",
+    "account_id": "nia-checking",
+    "date": "2026-02-13",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0100",
+    "account_id": "nia-card",
+    "date": "2026-02-13",
+    "name": "FABLE CINEMA",
+    "amount": 99.85,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0099",
+    "account_id": "nia-card",
+    "date": "2026-02-15",
+    "name": "QUINCEPHARMACY STORE",
+    "amount": 70.31,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0009",
+    "account_id": "nia-checking",
+    "date": "2026-02-16",
+    "name": "BRAMBLE ELECTRIC",
+    "amount": 144.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0095",
+    "account_id": "nia-card",
+    "date": "2026-02-16",
+    "name": "MALLOW MARKET",
+    "amount": 101.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0097",
+    "account_id": "nia-card",
+    "date": "2026-02-17",
+    "name": "POS THIMBLE GOODS STORE",
+    "amount": 28.35,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0184"
+  },
+  {
+    "transaction_id": "nia-0096",
+    "account_id": "nia-card",
+    "date": "2026-02-18",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 48.31,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0098",
+    "account_id": "nia-card",
+    "date": "2026-02-18",
+    "name": "VERVAIN APPAREL",
+    "amount": 183.14,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0172",
+    "account_id": "nia-checking",
+    "date": "2026-02-18",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 1371.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0173",
+    "account_id": "nia-card",
+    "date": "2026-02-18",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -1371.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0011",
+    "account_id": "nia-checking",
+    "date": "2026-02-20",
+    "name": "DOVETAIL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0101",
+    "account_id": "nia-card",
+    "date": "2026-02-20",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 120.82,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0102",
+    "account_id": "nia-card",
+    "date": "2026-02-20",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 46.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0106",
+    "account_id": "nia-card",
+    "date": "2026-02-26",
+    "name": "SQ *FABLE CINEMA #749",
+    "amount": 66.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0046",
+    "account_id": "nia-checking",
+    "date": "2026-02-27",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0056",
+    "account_id": "nia-checking",
+    "date": "2026-02-27",
+    "name": "SPLITPAY TRANSFER FROM ARDEN VALE",
+    "amount": -900.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0063",
+    "account_id": "nia-checking",
+    "date": "2026-02-28",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0064",
+    "account_id": "nia-savings",
+    "date": "2026-02-28",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0015",
+    "account_id": "nia-checking",
+    "date": "2026-03-01",
+    "name": "ASTER COURT RENT",
+    "amount": 1300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0103",
+    "account_id": "nia-card",
+    "date": "2026-03-01",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 95.95,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0104",
+    "account_id": "nia-card",
+    "date": "2026-03-01",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 50.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0105",
+    "account_id": "nia-card",
+    "date": "2026-03-02",
+    "name": "SQ *VERVAIN APPAREL #526",
+    "amount": 155.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0020",
+    "account_id": "nia-checking",
+    "date": "2026-03-05",
+    "name": "FERNWAY TRANSIT PASS",
+    "amount": 80.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0107",
+    "account_id": "nia-card",
+    "date": "2026-03-05",
+    "name": "MALLOW MARKET",
+    "amount": 98.88,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0109",
+    "account_id": "nia-card",
+    "date": "2026-03-05",
+    "name": "THIMBLE GOODS",
+    "amount": 24.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0021",
+    "account_id": "nia-card",
+    "date": "2026-03-07",
+    "name": "GLIMMER STREAMING",
+    "amount": 15.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0110",
+    "account_id": "nia-card",
+    "date": "2026-03-09",
+    "name": "QUINCE PHARMACY",
+    "amount": 73.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0017",
+    "account_id": "nia-checking",
+    "date": "2026-03-10",
+    "name": "CIRRUS MOBILE",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0108",
+    "account_id": "nia-card",
+    "date": "2026-03-10",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 53.53,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0019",
+    "account_id": "nia-checking",
+    "date": "2026-03-12",
+    "name": "ESTUARY WATER",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0114",
+    "account_id": "nia-card",
+    "date": "2026-03-12",
+    "name": "FABLECINEMA THEATER",
+    "amount": 93.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0185"
+  },
+  {
+    "transaction_id": "nia-0047",
+    "account_id": "nia-checking",
+    "date": "2026-03-13",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0170",
+    "account_id": "nia-checking",
+    "date": "2026-03-14",
+    "name": "SPLITPAY PAYMENT TO TESSA ROWAN",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0112",
+    "account_id": "nia-card",
+    "date": "2026-03-15",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 63.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0016",
+    "account_id": "nia-checking",
+    "date": "2026-03-16",
+    "name": "BRAMBLE ELECTRIC",
+    "amount": 144.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0111",
+    "account_id": "nia-card",
+    "date": "2026-03-17",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 119.91,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0113",
+    "account_id": "nia-card",
+    "date": "2026-03-17",
+    "name": "VERVAINAPPAREL STORE",
+    "amount": 154.52,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0174",
+    "account_id": "nia-checking",
+    "date": "2026-03-18",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 1306.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0175",
+    "account_id": "nia-card",
+    "date": "2026-03-18",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -1306.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0018",
+    "account_id": "nia-checking",
+    "date": "2026-03-20",
+    "name": "DOVETAIL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0115",
+    "account_id": "nia-card",
+    "date": "2026-03-24",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 95.75,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0116",
+    "account_id": "nia-card",
+    "date": "2026-03-24",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 74.39,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0057",
+    "account_id": "nia-checking",
+    "date": "2026-03-27",
+    "name": "SPLITPAY TRANSFER FROM ARDEN VALE",
+    "amount": -900.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0121",
+    "account_id": "nia-card",
+    "date": "2026-03-27",
+    "name": "POS QUINCE PHARMACY #638",
+    "amount": 76.19,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0186"
+  },
+  {
+    "transaction_id": "nia-0065",
+    "account_id": "nia-checking",
+    "date": "2026-03-28",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0066",
+    "account_id": "nia-savings",
+    "date": "2026-03-28",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0120",
+    "account_id": "nia-card",
+    "date": "2026-03-28",
+    "name": "VERVAIN APPAREL",
+    "amount": 193.35,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0122",
+    "account_id": "nia-card",
+    "date": "2026-03-29",
+    "name": "FABLE CINEMA",
+    "amount": 65.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0117",
+    "account_id": "nia-card",
+    "date": "2026-03-30",
+    "name": "MALLOW MARKET",
+    "amount": 113.94,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0119",
+    "account_id": "nia-card",
+    "date": "2026-03-30",
+    "name": "THIMBLEGOODS #394",
+    "amount": 30.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0048",
+    "account_id": "nia-checking",
+    "date": "2026-03-31",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0118",
+    "account_id": "nia-card",
+    "date": "2026-03-31",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 70.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0022",
+    "account_id": "nia-checking",
+    "date": "2026-04-01",
+    "name": "ASTER COURT RENT",
+    "amount": 1300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0123",
+    "account_id": "nia-card",
+    "date": "2026-04-03",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 112.35,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0027",
+    "account_id": "nia-checking",
+    "date": "2026-04-05",
+    "name": "FERNWAY TRANSIT PASS",
+    "amount": 80.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0124",
+    "account_id": "nia-card",
+    "date": "2026-04-06",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 48.07,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0028",
+    "account_id": "nia-card",
+    "date": "2026-04-07",
+    "name": "GLIMMER STREAMING",
+    "amount": 15.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0126",
+    "account_id": "nia-card",
+    "date": "2026-04-09",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 64.77,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0024",
+    "account_id": "nia-checking",
+    "date": "2026-04-10",
+    "name": "CIRRUS MOBILE",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0127",
+    "account_id": "nia-card",
+    "date": "2026-04-10",
+    "name": "SQ *VERVAIN APPAREL #526",
+    "amount": 170.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0026",
+    "account_id": "nia-checking",
+    "date": "2026-04-12",
+    "name": "ESTUARY WATER",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0125",
+    "account_id": "nia-card",
+    "date": "2026-04-13",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 114.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0049",
+    "account_id": "nia-checking",
+    "date": "2026-04-15",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0128",
+    "account_id": "nia-card",
+    "date": "2026-04-15",
+    "name": "SQ *FABLE CINEMA #749",
+    "amount": 86.2,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0023",
+    "account_id": "nia-checking",
+    "date": "2026-04-16",
+    "name": "BRAMBLE ELECTRIC",
+    "amount": 144.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0130",
+    "account_id": "nia-card",
+    "date": "2026-04-17",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 79.98,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0132",
+    "account_id": "nia-card",
+    "date": "2026-04-17",
+    "name": "QUINCEPHARMACY STORE",
+    "amount": 54.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0176",
+    "account_id": "nia-checking",
+    "date": "2026-04-18",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 1719.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0177",
+    "account_id": "nia-card",
+    "date": "2026-04-18",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -1719.34,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0129",
+    "account_id": "nia-card",
+    "date": "2026-04-19",
+    "name": "MALLOW MARKET",
+    "amount": 115.69,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0131",
+    "account_id": "nia-card",
+    "date": "2026-04-19",
+    "name": "POS THIMBLE GOODS STORE",
+    "amount": 21.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0025",
+    "account_id": "nia-checking",
+    "date": "2026-04-20",
+    "name": "DOVETAIL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0136",
+    "account_id": "nia-card",
+    "date": "2026-04-23",
+    "name": "FABLECINEMA THEATER",
+    "amount": 89.37,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0133",
+    "account_id": "nia-card",
+    "date": "2026-04-24",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 101.33,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0134",
+    "account_id": "nia-card",
+    "date": "2026-04-24",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 75.06,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0058",
+    "account_id": "nia-checking",
+    "date": "2026-04-27",
+    "name": "SPLITPAY TRANSFER FROM ARDEN VALE",
+    "amount": -900.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0135",
+    "account_id": "nia-card",
+    "date": "2026-04-27",
+    "name": "VERVAINAPPAREL STORE",
+    "amount": 183.91,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0067",
+    "account_id": "nia-checking",
+    "date": "2026-04-28",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0068",
+    "account_id": "nia-savings",
+    "date": "2026-04-28",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0050",
+    "account_id": "nia-checking",
+    "date": "2026-04-30",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0029",
+    "account_id": "nia-checking",
+    "date": "2026-05-01",
+    "name": "ASTER COURT RENT",
+    "amount": 1300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0138",
+    "account_id": "nia-card",
+    "date": "2026-05-04",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 69.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0034",
+    "account_id": "nia-checking",
+    "date": "2026-05-05",
+    "name": "FERNWAY TRANSIT PASS",
+    "amount": 80.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0137",
+    "account_id": "nia-card",
+    "date": "2026-05-05",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 96.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0035",
+    "account_id": "nia-card",
+    "date": "2026-05-07",
+    "name": "GLIMMER STREAMING",
+    "amount": 15.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0142",
+    "account_id": "nia-card",
+    "date": "2026-05-07",
+    "name": "VERVAIN APPAREL",
+    "amount": 189.36,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0140",
+    "account_id": "nia-card",
+    "date": "2026-05-08",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 61.79,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0187"
+  },
+  {
+    "transaction_id": "nia-0143",
+    "account_id": "nia-card",
+    "date": "2026-05-09",
+    "name": "QUINCE PHARMACY",
+    "amount": 67.5,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0031",
+    "account_id": "nia-checking",
+    "date": "2026-05-10",
+    "name": "CIRRUS MOBILE",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0144",
+    "account_id": "nia-card",
+    "date": "2026-05-10",
+    "name": "FABLE CINEMA",
+    "amount": 69.02,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0139",
+    "account_id": "nia-card",
+    "date": "2026-05-11",
+    "name": "MALLOW MARKET",
+    "amount": 110.92,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0033",
+    "account_id": "nia-checking",
+    "date": "2026-05-12",
+    "name": "ESTUARY WATER",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0141",
+    "account_id": "nia-card",
+    "date": "2026-05-12",
+    "name": "THIMBLE GOODS",
+    "amount": 24.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0145",
+    "account_id": "nia-card",
+    "date": "2026-05-14",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 123.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0051",
+    "account_id": "nia-checking",
+    "date": "2026-05-15",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0030",
+    "account_id": "nia-checking",
+    "date": "2026-05-16",
+    "name": "BRAMBLE ELECTRIC",
+    "amount": 144.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0171",
+    "account_id": "nia-checking",
+    "date": "2026-05-16",
+    "name": "SPLITPAY PAYMENT TO TESSA ROWAN",
+    "amount": 60.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0146",
+    "account_id": "nia-card",
+    "date": "2026-05-17",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 46.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0188"
+  },
+  {
+    "transaction_id": "nia-0178",
+    "account_id": "nia-checking",
+    "date": "2026-05-18",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 1333.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0179",
+    "account_id": "nia-card",
+    "date": "2026-05-18",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -1333.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0032",
+    "account_id": "nia-checking",
+    "date": "2026-05-20",
+    "name": "DOVETAIL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0150",
+    "account_id": "nia-card",
+    "date": "2026-05-21",
+    "name": "SQ *FABLE CINEMA #749",
+    "amount": 95.94,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0148",
+    "account_id": "nia-card",
+    "date": "2026-05-24",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 66.46,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0149",
+    "account_id": "nia-card",
+    "date": "2026-05-25",
+    "name": "SQ *VERVAIN APPAREL #526",
+    "amount": 155.35,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0059",
+    "account_id": "nia-checking",
+    "date": "2026-05-27",
+    "name": "SPLITPAY TRANSFER FROM ARDEN VALE",
+    "amount": -900.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0147",
+    "account_id": "nia-card",
+    "date": "2026-05-27",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 101.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0069",
+    "account_id": "nia-checking",
+    "date": "2026-05-28",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0070",
+    "account_id": "nia-savings",
+    "date": "2026-05-28",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0152",
+    "account_id": "nia-card",
+    "date": "2026-05-28",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 72.16,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0154",
+    "account_id": "nia-card",
+    "date": "2026-05-28",
+    "name": "POS QUINCE PHARMACY #638",
+    "amount": 52.02,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0052",
+    "account_id": "nia-checking",
+    "date": "2026-05-29",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0151",
+    "account_id": "nia-card",
+    "date": "2026-05-29",
+    "name": "MALLOW MARKET",
+    "amount": 110.11,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0189"
+  },
+  {
+    "transaction_id": "nia-0153",
+    "account_id": "nia-card",
+    "date": "2026-05-29",
+    "name": "THIMBLEGOODS #394",
+    "amount": 24.18,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0036",
+    "account_id": "nia-checking",
+    "date": "2026-06-01",
+    "name": "ASTER COURT RENT",
+    "amount": 1300.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0156",
+    "account_id": "nia-card",
+    "date": "2026-06-04",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 54.17,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0158",
+    "account_id": "nia-card",
+    "date": "2026-06-04",
+    "name": "FABLECINEMA THEATER",
+    "amount": 87.82,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0041",
+    "account_id": "nia-checking",
+    "date": "2026-06-05",
+    "name": "FERNWAY TRANSIT PASS",
+    "amount": 80.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0155",
+    "account_id": "nia-card",
+    "date": "2026-06-06",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 107.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0042",
+    "account_id": "nia-card",
+    "date": "2026-06-07",
+    "name": "GLIMMER STREAMING",
+    "amount": 15.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0157",
+    "account_id": "nia-card",
+    "date": "2026-06-08",
+    "name": "VERVAINAPPAREL STORE",
+    "amount": 190.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0038",
+    "account_id": "nia-checking",
+    "date": "2026-06-10",
+    "name": "CIRRUS MOBILE",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0040",
+    "account_id": "nia-checking",
+    "date": "2026-06-12",
+    "name": "ESTUARY WATER",
+    "amount": 40.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0159",
+    "account_id": "nia-card",
+    "date": "2026-06-12",
+    "name": "MALLOWMARKET GROCERY",
+    "amount": 100.01,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0053",
+    "account_id": "nia-checking",
+    "date": "2026-06-15",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0037",
+    "account_id": "nia-checking",
+    "date": "2026-06-16",
+    "name": "BRAMBLE ELECTRIC",
+    "amount": 144.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0160",
+    "account_id": "nia-card",
+    "date": "2026-06-17",
+    "name": "TST* JUNIPER STREET KITCHEN RESTAURANT",
+    "amount": 49.33,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0163",
+    "account_id": "nia-card",
+    "date": "2026-06-18",
+    "name": "POS THIMBLE GOODS STORE",
+    "amount": 23.76,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0164",
+    "account_id": "nia-card",
+    "date": "2026-06-18",
+    "name": "VERVAIN APPAREL",
+    "amount": 139.55,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0180",
+    "account_id": "nia-checking",
+    "date": "2026-06-18",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 1552.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0181",
+    "account_id": "nia-card",
+    "date": "2026-06-18",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -1552.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0039",
+    "account_id": "nia-checking",
+    "date": "2026-06-20",
+    "name": "DOVETAIL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0166",
+    "account_id": "nia-card",
+    "date": "2026-06-20",
+    "name": "FABLE CINEMA",
+    "amount": 69.63,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0165",
+    "account_id": "nia-card",
+    "date": "2026-06-22",
+    "name": "QUINCEPHARMACY STORE",
+    "amount": 64.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0191"
+  },
+  {
+    "transaction_id": "nia-0161",
+    "account_id": "nia-card",
+    "date": "2026-06-23",
+    "name": "MALLOW MARKET",
+    "amount": 115.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0190"
+  },
+  {
+    "transaction_id": "nia-0162",
+    "account_id": "nia-card",
+    "date": "2026-06-23",
+    "name": "JUNIPER STREET KITCHEN",
+    "amount": 55.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0168",
+    "account_id": "nia-card",
+    "date": "2026-06-25",
+    "name": "SQ *JUNIPER ST KITCHEN #287",
+    "amount": 54.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0060",
+    "account_id": "nia-checking",
+    "date": "2026-06-27",
+    "name": "SPLITPAY TRANSFER FROM ARDEN VALE",
+    "amount": -900.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0071",
+    "account_id": "nia-checking",
+    "date": "2026-06-28",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0072",
+    "account_id": "nia-savings",
+    "date": "2026-06-28",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -400.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0054",
+    "account_id": "nia-checking",
+    "date": "2026-06-30",
+    "name": "KESTREL LEDGER PAYROLL",
+    "amount": -1550.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "nia-0167",
+    "account_id": "nia-card",
+    "date": "2026-06-30",
+    "name": "SQ *MALLOW MARKET #163",
+    "amount": 119.67,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "nia-0192"
+  }
+]

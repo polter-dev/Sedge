@@ -1,0 +1,1314 @@
+{
+  "as_of": "2026-06-30",
+  "accounts": [
+    {
+      "account_id": "nia-checking",
+      "starting_balance": 2000.0,
+      "ending_balance": 6152.67,
+      "owner": "shared"
+    },
+    {
+      "account_id": "nia-savings",
+      "starting_balance": 3000.0,
+      "ending_balance": 5400.0,
+      "owner": "mine"
+    },
+    {
+      "account_id": "nia-card",
+      "starting_balance": 0.0,
+      "ending_balance": 1247.81,
+      "owner": "mine"
+    }
+  ],
+  "totals": {
+    "income": 24000.0,
+    "spending": 18695.14
+  },
+  "transactions": [
+    {
+      "transaction_id": "nia-0001",
+      "true_merchant": "Aster Court",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0073",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0078",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0075",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0006",
+      "true_merchant": "Fernway Transit",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0074",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0076",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0007",
+      "true_merchant": "Glimmer Streaming",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0077",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0079",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0003",
+      "true_merchant": "Cirrus Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0005",
+      "true_merchant": "Estuary Water",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0080",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0043",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0002",
+      "true_merchant": "Bramble Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0081",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0083",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0084",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0169",
+      "true_merchant": "Tessa Rowan",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0004",
+      "true_merchant": "Dovetail Internet",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0082",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0085",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0088",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0086",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0087",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0055",
+      "true_merchant": "Arden Vale",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null,
+      "income_type": "household_contribution"
+    },
+    {
+      "transaction_id": "nia-0061",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0062"
+    },
+    {
+      "transaction_id": "nia-0062",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0061"
+    },
+    {
+      "transaction_id": "nia-0090",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0044",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0008",
+      "true_merchant": "Aster Court",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0089",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0091",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0092",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0013",
+      "true_merchant": "Fernway Transit",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0094",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0014",
+      "true_merchant": "Glimmer Streaming",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0093",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0010",
+      "true_merchant": "Cirrus Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0012",
+      "true_merchant": "Estuary Water",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0045",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0100",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0099",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0009",
+      "true_merchant": "Bramble Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0095",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0097",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0096",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0098",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0172",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0173"
+    },
+    {
+      "transaction_id": "nia-0173",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0172"
+    },
+    {
+      "transaction_id": "nia-0011",
+      "true_merchant": "Dovetail Internet",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0101",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0102",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0106",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0046",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0056",
+      "true_merchant": "Arden Vale",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null,
+      "income_type": "household_contribution"
+    },
+    {
+      "transaction_id": "nia-0063",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0064"
+    },
+    {
+      "transaction_id": "nia-0064",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0063"
+    },
+    {
+      "transaction_id": "nia-0015",
+      "true_merchant": "Aster Court",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0103",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0104",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0105",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0020",
+      "true_merchant": "Fernway Transit",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0107",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0109",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0021",
+      "true_merchant": "Glimmer Streaming",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0110",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0017",
+      "true_merchant": "Cirrus Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0108",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0019",
+      "true_merchant": "Estuary Water",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0114",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0047",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0170",
+      "true_merchant": "Tessa Rowan",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0112",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0016",
+      "true_merchant": "Bramble Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0111",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0113",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0174",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0175"
+    },
+    {
+      "transaction_id": "nia-0175",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0174"
+    },
+    {
+      "transaction_id": "nia-0018",
+      "true_merchant": "Dovetail Internet",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0115",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0116",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0057",
+      "true_merchant": "Arden Vale",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null,
+      "income_type": "household_contribution"
+    },
+    {
+      "transaction_id": "nia-0121",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0065",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0066"
+    },
+    {
+      "transaction_id": "nia-0066",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0065"
+    },
+    {
+      "transaction_id": "nia-0120",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0122",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0117",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0119",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0048",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0118",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0022",
+      "true_merchant": "Aster Court",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0123",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0027",
+      "true_merchant": "Fernway Transit",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0124",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0028",
+      "true_merchant": "Glimmer Streaming",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0126",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0024",
+      "true_merchant": "Cirrus Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0127",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0026",
+      "true_merchant": "Estuary Water",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0125",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0049",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0128",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0023",
+      "true_merchant": "Bramble Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0130",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0132",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0176",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0177"
+    },
+    {
+      "transaction_id": "nia-0177",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0176"
+    },
+    {
+      "transaction_id": "nia-0129",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0131",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0025",
+      "true_merchant": "Dovetail Internet",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0136",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0133",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0134",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0058",
+      "true_merchant": "Arden Vale",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null,
+      "income_type": "household_contribution"
+    },
+    {
+      "transaction_id": "nia-0135",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0067",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0068"
+    },
+    {
+      "transaction_id": "nia-0068",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0067"
+    },
+    {
+      "transaction_id": "nia-0050",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0029",
+      "true_merchant": "Aster Court",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0138",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0034",
+      "true_merchant": "Fernway Transit",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0137",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0035",
+      "true_merchant": "Glimmer Streaming",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0142",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0140",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0143",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0031",
+      "true_merchant": "Cirrus Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0144",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0139",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0033",
+      "true_merchant": "Estuary Water",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0141",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0145",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0051",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0030",
+      "true_merchant": "Bramble Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0171",
+      "true_merchant": "Tessa Rowan",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0146",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0178",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0179"
+    },
+    {
+      "transaction_id": "nia-0179",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0178"
+    },
+    {
+      "transaction_id": "nia-0032",
+      "true_merchant": "Dovetail Internet",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0150",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0148",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0149",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0059",
+      "true_merchant": "Arden Vale",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null,
+      "income_type": "household_contribution"
+    },
+    {
+      "transaction_id": "nia-0147",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0069",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0070"
+    },
+    {
+      "transaction_id": "nia-0070",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0069"
+    },
+    {
+      "transaction_id": "nia-0152",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0154",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0052",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0151",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0153",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0036",
+      "true_merchant": "Aster Court",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0156",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0158",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0041",
+      "true_merchant": "Fernway Transit",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0155",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0042",
+      "true_merchant": "Glimmer Streaming",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0157",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0038",
+      "true_merchant": "Cirrus Mobile",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0040",
+      "true_merchant": "Estuary Water",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0159",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0053",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0037",
+      "true_merchant": "Bramble Electric",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0160",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0163",
+      "true_merchant": "Thimble Goods",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0164",
+      "true_merchant": "Vervain Apparel",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0180",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0181"
+    },
+    {
+      "transaction_id": "nia-0181",
+      "true_merchant": null,
+      "kind": "card_payment",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0180"
+    },
+    {
+      "transaction_id": "nia-0039",
+      "true_merchant": "Dovetail Internet",
+      "kind": "spending",
+      "recurring": "monthly",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0166",
+      "true_merchant": "Fable Cinema",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0165",
+      "true_merchant": "Quince Pharmacy",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0161",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0162",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0168",
+      "true_merchant": "Juniper Street Kitchen",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    },
+    {
+      "transaction_id": "nia-0060",
+      "true_merchant": "Arden Vale",
+      "kind": "income",
+      "recurring": "monthly",
+      "linked_transaction_id": null,
+      "income_type": "household_contribution"
+    },
+    {
+      "transaction_id": "nia-0071",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0072"
+    },
+    {
+      "transaction_id": "nia-0072",
+      "true_merchant": null,
+      "kind": "transfer",
+      "recurring": "monthly",
+      "linked_transaction_id": "nia-0071"
+    },
+    {
+      "transaction_id": "nia-0054",
+      "true_merchant": "Kestrel Ledger",
+      "kind": "income",
+      "recurring": "twice_monthly",
+      "linked_transaction_id": null,
+      "income_type": "wages"
+    },
+    {
+      "transaction_id": "nia-0167",
+      "true_merchant": "Mallow Market",
+      "kind": "spending",
+      "recurring": "none",
+      "linked_transaction_id": null
+    }
+  ]
+}

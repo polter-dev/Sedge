@@ -1,0 +1,1392 @@
+[
+  {
+    "transaction_id": "otis-0001",
+    "account_id": "otis-checking",
+    "date": "2026-01-01",
+    "name": "HEMLOCK COURT RENT",
+    "amount": 1100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0045",
+    "account_id": "otis-checking",
+    "date": "2026-01-01",
+    "name": "ORIEL FOUNDRY PENSION DEPOSIT",
+    "amount": -600.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0065",
+    "account_id": "otis-card",
+    "date": "2026-01-01",
+    "name": "RILL PHARMACY",
+    "amount": 24.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0006",
+    "account_id": "otis-checking",
+    "date": "2026-01-05",
+    "name": "MEADOWLINE TRANSIT PASS",
+    "amount": 30.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0063",
+    "account_id": "otis-card",
+    "date": "2026-01-05",
+    "name": "PLOVER MARKET",
+    "amount": 61.98,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0002",
+    "account_id": "otis-checking",
+    "date": "2026-01-06",
+    "name": "IRIS ELECTRIC",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0064",
+    "account_id": "otis-card",
+    "date": "2026-01-07",
+    "name": "CEDAR CAFE",
+    "amount": 11.08,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0140"
+  },
+  {
+    "transaction_id": "otis-0007",
+    "account_id": "otis-checking",
+    "date": "2026-01-08",
+    "name": "NACRE WATER",
+    "amount": 90.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0003",
+    "account_id": "otis-checking",
+    "date": "2026-01-10",
+    "name": "JASPER MOBILE",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0067",
+    "account_id": "otis-card",
+    "date": "2026-01-10",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 11.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0004",
+    "account_id": "otis-checking",
+    "date": "2026-01-12",
+    "name": "KEEL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0039",
+    "account_id": "otis-checking",
+    "date": "2026-01-14",
+    "name": "XXSOC SEC",
+    "amount": -1868.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0066",
+    "account_id": "otis-card",
+    "date": "2026-01-14",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 66.41,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0005",
+    "account_id": "otis-checking",
+    "date": "2026-01-15",
+    "name": "LUPINE RETIREE HEALTH",
+    "amount": 150.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0069",
+    "account_id": "otis-card",
+    "date": "2026-01-16",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 11.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0068",
+    "account_id": "otis-card",
+    "date": "2026-01-17",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 58.31,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0122",
+    "account_id": "otis-card",
+    "date": "2026-01-18",
+    "name": "CEDAR #041",
+    "amount": 42.5,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0123",
+    "account_id": "otis-card",
+    "date": "2026-01-21",
+    "name": "REFUND CEDAR #041",
+    "amount": -42.5,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0051",
+    "account_id": "otis-checking",
+    "date": "2026-01-22",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0052",
+    "account_id": "otis-savings",
+    "date": "2026-01-22",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0071",
+    "account_id": "otis-card",
+    "date": "2026-01-23",
+    "name": "CEDAR CAFE",
+    "amount": 18.47,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0070",
+    "account_id": "otis-card",
+    "date": "2026-01-25",
+    "name": "PLOVER MARKET",
+    "amount": 62.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0008",
+    "account_id": "otis-checking",
+    "date": "2026-02-01",
+    "name": "HEMLOCK COURT RENT",
+    "amount": 1100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0046",
+    "account_id": "otis-checking",
+    "date": "2026-02-01",
+    "name": "ORIEL FOUNDRY PENSION DEPOSIT",
+    "amount": -600.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0073",
+    "account_id": "otis-card",
+    "date": "2026-02-01",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 14.97,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0072",
+    "account_id": "otis-card",
+    "date": "2026-02-02",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 62.73,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0074",
+    "account_id": "otis-card",
+    "date": "2026-02-04",
+    "name": "SQ *RILL PHARMACY #175",
+    "amount": 33.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0013",
+    "account_id": "otis-checking",
+    "date": "2026-02-05",
+    "name": "MEADOWLINE TRANSIT PASS",
+    "amount": 30.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0009",
+    "account_id": "otis-checking",
+    "date": "2026-02-06",
+    "name": "IRIS ELECTRIC",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0075",
+    "account_id": "otis-card",
+    "date": "2026-02-06",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 69.14,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0076",
+    "account_id": "otis-card",
+    "date": "2026-02-06",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 16.12,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0124",
+    "account_id": "otis-card",
+    "date": "2026-02-07",
+    "name": "CEDAR #041",
+    "amount": 119.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0150"
+  },
+  {
+    "transaction_id": "otis-0010",
+    "account_id": "otis-checking",
+    "date": "2026-02-10",
+    "name": "JASPER MOBILE",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0040",
+    "account_id": "otis-checking",
+    "date": "2026-02-11",
+    "name": "XXSOC SEC",
+    "amount": -1868.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0011",
+    "account_id": "otis-checking",
+    "date": "2026-02-12",
+    "name": "KEEL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0078",
+    "account_id": "otis-card",
+    "date": "2026-02-14",
+    "name": "CEDAR CAFE",
+    "amount": 10.61,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0012",
+    "account_id": "otis-checking",
+    "date": "2026-02-15",
+    "name": "LUPINE RETIREE HEALTH",
+    "amount": 150.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0077",
+    "account_id": "otis-card",
+    "date": "2026-02-18",
+    "name": "PLOVER MARKET",
+    "amount": 74.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0130",
+    "account_id": "otis-checking",
+    "date": "2026-02-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 325.6,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0131",
+    "account_id": "otis-card",
+    "date": "2026-02-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -325.6,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0079",
+    "account_id": "otis-card",
+    "date": "2026-02-21",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 74.98,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0053",
+    "account_id": "otis-checking",
+    "date": "2026-02-22",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0054",
+    "account_id": "otis-savings",
+    "date": "2026-02-22",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0080",
+    "account_id": "otis-card",
+    "date": "2026-02-23",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 19.42,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0083",
+    "account_id": "otis-card",
+    "date": "2026-02-27",
+    "name": "RILLPHARMACY STORE",
+    "amount": 34.64,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0081",
+    "account_id": "otis-card",
+    "date": "2026-02-28",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 71.46,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0014",
+    "account_id": "otis-checking",
+    "date": "2026-03-01",
+    "name": "HEMLOCK COURT RENT",
+    "amount": 1100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0047",
+    "account_id": "otis-checking",
+    "date": "2026-03-01",
+    "name": "ORIEL FOUNDRY PENSION DEPOSIT",
+    "amount": -600.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0082",
+    "account_id": "otis-card",
+    "date": "2026-03-04",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 16.73,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0019",
+    "account_id": "otis-checking",
+    "date": "2026-03-05",
+    "name": "MEADOWLINE TRANSIT PASS",
+    "amount": 30.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0015",
+    "account_id": "otis-checking",
+    "date": "2026-03-06",
+    "name": "IRIS ELECTRIC",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0085",
+    "account_id": "otis-card",
+    "date": "2026-03-08",
+    "name": "CEDAR CAFE",
+    "amount": 19.56,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0016",
+    "account_id": "otis-checking",
+    "date": "2026-03-10",
+    "name": "JASPER MOBILE",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0041",
+    "account_id": "otis-checking",
+    "date": "2026-03-11",
+    "name": "XXSOC SEC",
+    "amount": -1868.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0084",
+    "account_id": "otis-card",
+    "date": "2026-03-11",
+    "name": "PLOVER MARKET",
+    "amount": 69.72,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0141"
+  },
+  {
+    "transaction_id": "otis-0017",
+    "account_id": "otis-checking",
+    "date": "2026-03-12",
+    "name": "KEEL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0018",
+    "account_id": "otis-checking",
+    "date": "2026-03-15",
+    "name": "LUPINE RETIREE HEALTH",
+    "amount": 150.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0086",
+    "account_id": "otis-card",
+    "date": "2026-03-16",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 66.36,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0087",
+    "account_id": "otis-card",
+    "date": "2026-03-17",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 16.26,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0132",
+    "account_id": "otis-checking",
+    "date": "2026-03-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 601.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0133",
+    "account_id": "otis-card",
+    "date": "2026-03-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -601.68,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0055",
+    "account_id": "otis-checking",
+    "date": "2026-03-22",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0056",
+    "account_id": "otis-savings",
+    "date": "2026-03-22",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0089",
+    "account_id": "otis-card",
+    "date": "2026-03-22",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 15.9,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0125",
+    "account_id": "otis-card",
+    "date": "2026-03-23",
+    "name": "CEDAR #041",
+    "amount": 67.25,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0088",
+    "account_id": "otis-card",
+    "date": "2026-03-25",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 67.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0092",
+    "account_id": "otis-card",
+    "date": "2026-03-26",
+    "name": "RILL PHARMACY",
+    "amount": 28.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0143"
+  },
+  {
+    "transaction_id": "otis-0091",
+    "account_id": "otis-card",
+    "date": "2026-03-30",
+    "name": "CEDAR CAFE",
+    "amount": 16.99,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0142"
+  },
+  {
+    "transaction_id": "otis-0126",
+    "account_id": "otis-card",
+    "date": "2026-03-30",
+    "name": "CEDAR #041 REFUND",
+    "amount": -67.25,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0020",
+    "account_id": "otis-checking",
+    "date": "2026-04-01",
+    "name": "HEMLOCK COURT RENT",
+    "amount": 1100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0048",
+    "account_id": "otis-checking",
+    "date": "2026-04-01",
+    "name": "ORIEL FOUNDRY PENSION DEPOSIT",
+    "amount": -600.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0090",
+    "account_id": "otis-card",
+    "date": "2026-04-01",
+    "name": "PLOVER MARKET",
+    "amount": 71.27,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0093",
+    "account_id": "otis-card",
+    "date": "2026-04-04",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 60.81,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0094",
+    "account_id": "otis-card",
+    "date": "2026-04-04",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 15.65,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0127",
+    "account_id": "otis-card",
+    "date": "2026-04-04",
+    "name": "CEDAR HOME #041",
+    "amount": 24.8,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0025",
+    "account_id": "otis-checking",
+    "date": "2026-04-05",
+    "name": "MEADOWLINE TRANSIT PASS",
+    "amount": 30.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0021",
+    "account_id": "otis-checking",
+    "date": "2026-04-06",
+    "name": "IRIS ELECTRIC",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0026",
+    "account_id": "otis-checking",
+    "date": "2026-04-08",
+    "name": "NACRE WATER",
+    "amount": 90.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0042",
+    "account_id": "otis-checking",
+    "date": "2026-04-08",
+    "name": "XXSOC SEC",
+    "amount": -1868.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0095",
+    "account_id": "otis-card",
+    "date": "2026-04-09",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 66.04,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0144"
+  },
+  {
+    "transaction_id": "otis-0022",
+    "account_id": "otis-checking",
+    "date": "2026-04-10",
+    "name": "JASPER MOBILE",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0023",
+    "account_id": "otis-checking",
+    "date": "2026-04-12",
+    "name": "KEEL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0024",
+    "account_id": "otis-checking",
+    "date": "2026-04-15",
+    "name": "LUPINE RETIREE HEALTH",
+    "amount": 150.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0096",
+    "account_id": "otis-card",
+    "date": "2026-04-15",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 17.83,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0145"
+  },
+  {
+    "transaction_id": "otis-0134",
+    "account_id": "otis-checking",
+    "date": "2026-04-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 317.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0135",
+    "account_id": "otis-card",
+    "date": "2026-04-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -317.43,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0057",
+    "account_id": "otis-checking",
+    "date": "2026-04-22",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0058",
+    "account_id": "otis-savings",
+    "date": "2026-04-22",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0097",
+    "account_id": "otis-card",
+    "date": "2026-04-22",
+    "name": "PLOVER MARKET",
+    "amount": 62.13,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0098",
+    "account_id": "otis-card",
+    "date": "2026-04-22",
+    "name": "CEDAR CAFE",
+    "amount": 15.82,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0099",
+    "account_id": "otis-card",
+    "date": "2026-04-23",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 65.96,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0100",
+    "account_id": "otis-card",
+    "date": "2026-04-24",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 10.57,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0101",
+    "account_id": "otis-card",
+    "date": "2026-04-29",
+    "name": "SQ *RILL PHARMACY #175",
+    "amount": 22.78,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0027",
+    "account_id": "otis-checking",
+    "date": "2026-05-01",
+    "name": "HEMLOCK COURT RENT",
+    "amount": 1100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0049",
+    "account_id": "otis-checking",
+    "date": "2026-05-01",
+    "name": "ORIEL FOUNDRY PENSION DEPOSIT",
+    "amount": -600.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0103",
+    "account_id": "otis-card",
+    "date": "2026-05-03",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 17.78,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0032",
+    "account_id": "otis-checking",
+    "date": "2026-05-05",
+    "name": "MEADOWLINE TRANSIT PASS",
+    "amount": 30.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0028",
+    "account_id": "otis-checking",
+    "date": "2026-05-06",
+    "name": "IRIS ELECTRIC",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0102",
+    "account_id": "otis-card",
+    "date": "2026-05-06",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 69.47,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0029",
+    "account_id": "otis-checking",
+    "date": "2026-05-10",
+    "name": "JASPER MOBILE",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0104",
+    "account_id": "otis-card",
+    "date": "2026-05-11",
+    "name": "PLOVER MARKET",
+    "amount": 72.03,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0030",
+    "account_id": "otis-checking",
+    "date": "2026-05-12",
+    "name": "KEEL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0105",
+    "account_id": "otis-card",
+    "date": "2026-05-12",
+    "name": "CEDAR CAFE",
+    "amount": 10.32,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0043",
+    "account_id": "otis-checking",
+    "date": "2026-05-13",
+    "name": "XXSOC SEC",
+    "amount": -1868.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0031",
+    "account_id": "otis-checking",
+    "date": "2026-05-15",
+    "name": "LUPINE RETIREE HEALTH",
+    "amount": 150.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0107",
+    "account_id": "otis-card",
+    "date": "2026-05-16",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 15.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0146"
+  },
+  {
+    "transaction_id": "otis-0106",
+    "account_id": "otis-card",
+    "date": "2026-05-19",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 67.7,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0136",
+    "account_id": "otis-checking",
+    "date": "2026-05-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 433.66,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0137",
+    "account_id": "otis-card",
+    "date": "2026-05-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -433.66,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0059",
+    "account_id": "otis-checking",
+    "date": "2026-05-22",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0060",
+    "account_id": "otis-savings",
+    "date": "2026-05-22",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0109",
+    "account_id": "otis-card",
+    "date": "2026-05-22",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 16.51,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0108",
+    "account_id": "otis-card",
+    "date": "2026-05-23",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 60.35,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0110",
+    "account_id": "otis-card",
+    "date": "2026-05-23",
+    "name": "RILLPHARMACY STORE",
+    "amount": 26.21,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0111",
+    "account_id": "otis-card",
+    "date": "2026-05-28",
+    "name": "PLOVER MARKET",
+    "amount": 72.27,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0112",
+    "account_id": "otis-card",
+    "date": "2026-05-28",
+    "name": "CEDAR CAFE",
+    "amount": 19.19,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0147"
+  },
+  {
+    "transaction_id": "otis-0033",
+    "account_id": "otis-checking",
+    "date": "2026-06-01",
+    "name": "HEMLOCK COURT RENT",
+    "amount": 1100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0050",
+    "account_id": "otis-checking",
+    "date": "2026-06-01",
+    "name": "ORIEL FOUNDRY PENSION DEPOSIT",
+    "amount": -600.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0038",
+    "account_id": "otis-checking",
+    "date": "2026-06-05",
+    "name": "MEADOWLINE TRANSIT PASS",
+    "amount": 30.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0034",
+    "account_id": "otis-checking",
+    "date": "2026-06-06",
+    "name": "IRIS ELECTRIC",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0113",
+    "account_id": "otis-card",
+    "date": "2026-06-07",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 70.93,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0114",
+    "account_id": "otis-card",
+    "date": "2026-06-07",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 18.66,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0035",
+    "account_id": "otis-checking",
+    "date": "2026-06-10",
+    "name": "JASPER MOBILE",
+    "amount": 25.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0044",
+    "account_id": "otis-checking",
+    "date": "2026-06-10",
+    "name": "XXSOC SEC",
+    "amount": -1868.1,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0036",
+    "account_id": "otis-checking",
+    "date": "2026-06-12",
+    "name": "KEEL INTERNET",
+    "amount": 50.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0115",
+    "account_id": "otis-card",
+    "date": "2026-06-13",
+    "name": "PLOVERMARKET GROCERY",
+    "amount": 56.74,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0037",
+    "account_id": "otis-checking",
+    "date": "2026-06-15",
+    "name": "LUPINE RETIREE HEALTH",
+    "amount": 150.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0116",
+    "account_id": "otis-card",
+    "date": "2026-06-17",
+    "name": "CEDAR CAFE RESTAURANT",
+    "amount": 10.44,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0148"
+  },
+  {
+    "transaction_id": "otis-0128",
+    "account_id": "otis-card",
+    "date": "2026-06-17",
+    "name": "CEDAR HOME #041",
+    "amount": 86.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0118",
+    "account_id": "otis-card",
+    "date": "2026-06-18",
+    "name": "CEDAR CAFE",
+    "amount": 18.62,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0117",
+    "account_id": "otis-card",
+    "date": "2026-06-19",
+    "name": "PLOVER MARKET",
+    "amount": 59.71,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": "otis-0149"
+  },
+  {
+    "transaction_id": "otis-0119",
+    "account_id": "otis-card",
+    "date": "2026-06-19",
+    "name": "RILL PHARMACY",
+    "amount": 30.5,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0138",
+    "account_id": "otis-checking",
+    "date": "2026-06-20",
+    "name": "PAYMENT CREDIT CARD",
+    "amount": 447.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0139",
+    "account_id": "otis-card",
+    "date": "2026-06-20",
+    "name": "PAYMENT RECEIVED THANK YOU",
+    "amount": -447.54,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0061",
+    "account_id": "otis-checking",
+    "date": "2026-06-22",
+    "name": "ONLINE TRANSFER TO SAVINGS",
+    "amount": 100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0062",
+    "account_id": "otis-savings",
+    "date": "2026-06-22",
+    "name": "ONLINE TRANSFER FROM CHECKING",
+    "amount": -100.0,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0129",
+    "account_id": "otis-card",
+    "date": "2026-06-22",
+    "name": "CEDAR HOME CREDIT",
+    "amount": -86.4,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0120",
+    "account_id": "otis-card",
+    "date": "2026-06-29",
+    "name": "POS PLOVER MARKET #852",
+    "amount": 59.22,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  },
+  {
+    "transaction_id": "otis-0121",
+    "account_id": "otis-card",
+    "date": "2026-06-29",
+    "name": "TST* CEDAR CAFE #963",
+    "amount": 18.3,
+    "iso_currency_code": "USD",
+    "pending": false,
+    "pending_transaction_id": null
+  }
+]
