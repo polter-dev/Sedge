@@ -9,6 +9,9 @@ shared between the splits, and compares the validation questions' type mix with 
 ## The question bank
 
 `eval/questions.csv` holds the questions, one per row. Add rows by copying one of the examples.
+The last column, `organizer_limited`, is `yes` for a question the organizer can't answer right by design (the note
+says why) and empty otherwise, so scoring can leave those out or report them apart. `checks.py` and its test fail if
+the `yes` rows differ from `ORGANIZER_LIMITED` in `checks.py`.
 
 Run these from `tools/`:
 
