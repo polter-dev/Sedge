@@ -31,8 +31,8 @@ Run these from `tools/`:
   both as the record that the data really came through Plaid.
 - `uv run python plaid_sandbox.py dry-run` does the same on a made-up Plaid reply for the dev and validation personas.
 
-To pull one persona (Plaid keys loaded in the shell, the quickstart server running; for jordan and elena, read only
-the PASS/FAIL lines and keep the pulled file outside the repo):
+To pull one persona (Plaid keys loaded in the shell, the quickstart server running; commit the pulled file; for jordan
+and elena, read only the PASS/FAIL lines):
 
 ```sh
 P=maya

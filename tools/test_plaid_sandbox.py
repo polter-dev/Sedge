@@ -41,6 +41,13 @@ class PlaidSandboxTest(unittest.TestCase):
     self.assertEqual(details["reasons"], {"sign flipped": 1})
     self.assertFalse(all(results.values()))
 
+  def test_a_second_copy_is_a_duplicate_row(self):
+    pulled = ps.fake_reply(ps.config("maya"))
+    pulled["transactions"].append(pulled["transactions"][0] | {"transaction_id": "copy"})
+    results, details = ps.check("maya", pulled)
+    self.assertEqual(details["reasons"], {"duplicate row": 1})
+    self.assertFalse(results["transactions matched"])
+
   def test_a_pending_row_breaks_the_balances(self):
     # Matched by key, but a pending row isn't in the balance yet, so the worked-back Jan 1 balance moves.
     pulled = ps.fake_reply(ps.config("maya"))

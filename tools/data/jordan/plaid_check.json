@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-11-03T20:06:16+00:00",
+  "source": "Plaid Sandbox custom user (institution ins_109508) via /transactions/sync and /accounts/get",
+  "config_sha256": "9f90440a96ec356e263b61985a3e11074a15250a9b6de42f470314cbb6c59511",
+  "reply_sha256": "d23fff617c5521e4070cd81bdcbf62507e617a9aab388988963064543c3ddfae",
+  "passed": false,
+  "results": {
+    "accounts matched": true,
+    "transactions matched": false,
+    "every month present": true,
+    "transactions identical": false,
+    "totals": false,
+    "balances every day": false,
+    "current balances": true,
+    "questions": false
+  },
+  "counts": {
+    "matched": 172,
+    "unmatched pulled": 36,
+    "unmatched fixture": 36,
+    "pending": 0,
+    "pending links dropped": 6,
+    "questions compared": 23
+  }
+}

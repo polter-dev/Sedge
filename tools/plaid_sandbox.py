@@ -143,6 +143,8 @@ def match(persona, pulled):
     account, day, amount, name = account_map.get(t["account_id"]), t["date"], cents(t["amount"]), t["name"]
     if waiting.get((account, day, amount, name)):
       mapping[t["transaction_id"]] = waiting[(account, day, amount, name)].pop(0)
+    elif (account, day, amount, name) in waiting:  # the key exists, but every fixture row with it is claimed
+      reasons["duplicate row"] += 1
     elif account is None:
       reasons["unknown account"] += 1
     elif (account, day, -amount, name) in waiting:
