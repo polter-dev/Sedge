@@ -38,7 +38,8 @@ public struct Tool: Sendable {
     /// v7 = recurring_charges and get_profile can report the twice_monthly cadence, with housing's monthly cost (#53).
     /// v8 = account_balances reports each account's owner, and transaction rows the person's familiar and category answers (#76).
     /// v9 added savings_options (in Savings.swift) (#19).
-    public static let version = "v9"
+    /// v10 = simulate_balance takes on_date and reports the balance at the end of that day (#110).
+    public static let version = "v10"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
@@ -414,11 +415,14 @@ extension Tool {
         name: "simulate_balance",
         description: "Project the checking balance day by day from today, with upcoming paychecks, bills, card payments "
             + "and typical daily spending, optionally after one extra purchase. Says whether every bill is covered "
-            + "and how much room is left.",
+            + "and how much room is left. Give on_date for the balance on one day.",
         inputs: [ToolInput(name: "days", kind: .integer(1...60), description: "How many days ahead to look, 1 to 60.", required: true),
                  ToolInput(name: "extra_amount", kind: .number, description: "An extra purchase in dollars. Leave out for none.", required: false),
                  ToolInput(name: "extra_date", kind: .date,
                            description: "Day of the extra purchase (YYYY-MM-DD), from tomorrow to the last day looked at. Leave out for tomorrow.",
+                           required: false),
+                 ToolInput(name: "on_date", kind: .date,
+                           description: "A day (YYYY-MM-DD), from today to the last day looked at, to report the balance at its end. Leave out for none.",
                            required: false)],
         run: { input, db in
             struct BillDay: Encodable { let date: String; let bills: [String]; let balance: Double }
@@ -433,11 +437,14 @@ extension Tool {
                 let room_left: Double
                 let bill_days: [BillDay]
                 let total_count: Int?
+                /// The balance at the end of on_date. Left out of the JSON when on_date isn't given,
+                /// so answers without it stay exactly as before.
+                let balance_on_date: Double?
             }
             // shortcut: the bank account bills come out of is taken to be the checking account (or the
             // first bank account); let the model pick an account if someone has two checking accounts.
             guard let checking = try Row.fetchOne(db, sql: """
-                SELECT account_id, name FROM accounts
+                SELECT account_id, name, json_extract(balances, '$.current') FROM accounts
                 WHERE type = 'depository' AND json_extract(balances, '$.current') IS NOT NULL
                 ORDER BY subtype = 'checking' DESC, name LIMIT 1
                 """) else { throw ToolError("There is no bank account with a balance.") }
@@ -461,6 +468,11 @@ extension Tool {
             } else if input.text("extra_date") != nil {
                 throw ToolError("extra_date needs extra_amount.", hint: "Send extra_amount too, or leave out both.")
             }
+            let onDate = input.text("on_date")
+            // "YYYY-MM-DD" text sorts in date order, so plain string comparison checks the window.
+            if let onDate, onDate < asOf || onDate > last {
+                throw ToolError("on_date is outside the days looked at.", hint: "Pick a day from \(asOf) to \(last), or raise days.")
+            }
 
             let projection = try Simulator.simulate(db, days: days, purchases: purchases)
             let balances = projection.map { (date: $0.date, balance: $0.balances[account]!) }
@@ -471,8 +483,11 @@ extension Tool {
                 let names = day.bills.filter { $0.account == account }.map(\.name)
                 return names.isEmpty ? nil : BillDay(date: day.date, bills: names, balance: day.balances[account]!)
             }
+            // The projection starts tomorrow, so today's end-of-day balance is the current one.
+            let onDateBalance = onDate.map { day in day == asOf ? cents(checking[2]) : balances.first { $0.date == day }!.balance }
             return Result(account: checking[1], lowest_balance: lowest.balance, lowest_date: lowest.date,
                           can_cover_bills: lowest.balance >= 0, room_left: room,
-                          bill_days: Array(billDays.prefix(maxRows)), total_count: billDays.count > maxRows ? billDays.count : nil)
+                          bill_days: Array(billDays.prefix(maxRows)), total_count: billDays.count > maxRows ? billDays.count : nil,
+                          balance_on_date: onDateBalance)
         })
 }

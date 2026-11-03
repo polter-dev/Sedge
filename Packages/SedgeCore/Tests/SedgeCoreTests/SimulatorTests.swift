@@ -121,6 +121,44 @@ func simulate(_ database: SedgeDatabase, days: Int, purchases: [Simulator.Purcha
     #expect(tooMuch["room_left"] as? Double == -156.55)
 }
 
+// MARK: - on_date (#110)
+
+/// "What will my checking balance be on July 8?" July 8 is not one of maya's bill days, and the
+/// answer is the same end-of-day balance the projection holds. Today's is the current balance.
+@Test func mayaBalanceOnDate() throws {
+    let database = try organizedPersona("maya")
+    let projected = try #require(simulate(database, days: 14).first { $0.date == "2026-07-08" }?.balances["maya-checking"])
+    let answer = try call("simulate_balance", ["days": 14, "on_date": "2026-07-08"], on: database)
+    #expect(!rows(answer, "bill_days").contains { $0["date"] as? String == "2026-07-08" })
+    #expect(answer["balance_on_date"] as? Double == projected)
+
+    // With a purchase that day, the balance is the projection with the purchase in it.
+    let purchase = Simulator.Purchase(amount: 400, date: "2026-07-08", account: "maya-checking")
+    let withPurchase = try #require(simulate(database, days: 14, purchases: [purchase]).first { $0.date == "2026-07-08" }?.balances["maya-checking"])
+    let afterBuying = try call("simulate_balance", ["days": 14, "extra_amount": 400, "extra_date": "2026-07-08", "on_date": "2026-07-08"], on: database)
+    #expect(afterBuying["balance_on_date"] as? Double == withPurchase)
+    #expect(withPurchase == cents(projected - 400))
+
+    let current = try database.dbQueue.read { db in
+        try Double.fetchOne(db, sql: "SELECT json_extract(balances, '$.current') FROM accounts WHERE account_id = 'maya-checking'")
+    }
+    let today = try call("simulate_balance", ["days": 14, "on_date": "2026-06-30"], on: database)
+    #expect(today["balance_on_date"] as? Double == current)
+}
+
+/// Without on_date the answer is byte for byte what v9 returned (captured before on_date existed).
+@Test(arguments: [
+    ("maya", #"{"days": 14}"#, #"{"account":"Checking","bill_days":[{"balance":1343.45,"bills":["Oakwood Apartments Rent"],"date":"2026-07-01"},{"balance":1845.46,"bills":["Netflix"],"date":"2026-07-03"},{"balance":1805.46,"bills":["City Transit Pass"],"date":"2026-07-05"},{"balance":1770.46,"bills":["Tmobile"],"date":"2026-07-10"}],"can_cover_bills":true,"lowest_balance":1343.45,"lowest_date":"2026-07-01","room_left":1343.45}"#),
+    ("maya", #"{"days": 30, "extra_amount": 400, "extra_date": "2026-07-10"}"#, #"{"account":"Checking","bill_days":[{"balance":1343.45,"bills":["Oakwood Apartments Rent"],"date":"2026-07-01"},{"balance":1845.46,"bills":["Netflix"],"date":"2026-07-03"},{"balance":1805.46,"bills":["City Transit Pass"],"date":"2026-07-05"},{"balance":1370.46,"bills":["Tmobile"],"date":"2026-07-10"},{"balance":1310.46,"bills":["City Utilities Pmt"],"date":"2026-07-15"},{"balance":1667.45,"bills":["Comcast Xfinity","Credit Card payment"],"date":"2026-07-20"}],"can_cover_bills":true,"lowest_balance":1310.46,"lowest_date":"2026-07-15","room_left":1310.46}"#),
+    ("maya", #"{"days": 60}"#, #"{"account":"Checking","bill_days":[{"balance":1343.45,"bills":["Oakwood Apartments Rent"],"date":"2026-07-01"},{"balance":1845.46,"bills":["Netflix"],"date":"2026-07-03"},{"balance":1805.46,"bills":["City Transit Pass"],"date":"2026-07-05"},{"balance":1770.46,"bills":["Tmobile"],"date":"2026-07-10"},{"balance":1710.46,"bills":["City Utilities Pmt"],"date":"2026-07-15"},{"balance":2067.45,"bills":["Comcast Xfinity","Credit Card payment"],"date":"2026-07-20"},{"balance":1937.45,"bills":["Oakwood Apartments Rent"],"date":"2026-08-01"},{"balance":1919.46,"bills":["Netflix"],"date":"2026-08-03"},{"balance":1879.46,"bills":["City Transit Pass"],"date":"2026-08-05"},{"balance":1844.46,"bills":["Tmobile"],"date":"2026-08-10"}],"can_cover_bills":true,"lowest_balance":1343.45,"lowest_date":"2026-07-01","room_left":1343.45,"total_count":12}"#),
+    ("daniel", #"{"days": 14}"#, #"{"account":"Checking","bill_days":[{"balance":10384.05,"bills":["Home Mortgage"],"date":"2026-07-01"},{"balance":9866.06,"bills":["Netflix"],"date":"2026-07-03"},{"balance":9541.06,"bills":["Auto Loan Payment"],"date":"2026-07-07"},{"balance":9416.06,"bills":["Auto Insurance"],"date":"2026-07-12"}],"can_cover_bills":true,"lowest_balance":9416.06,"lowest_date":"2026-07-12","room_left":9416.06}"#),
+    ("daniel", #"{"days": 30, "extra_amount": 400, "extra_date": "2026-07-10"}"#, #"{"account":"Checking","bill_days":[{"balance":10384.05,"bills":["Home Mortgage"],"date":"2026-07-01"},{"balance":9866.06,"bills":["Netflix"],"date":"2026-07-03"},{"balance":9541.06,"bills":["Auto Loan Payment"],"date":"2026-07-07"},{"balance":9016.06,"bills":["Auto Insurance"],"date":"2026-07-12"},{"balance":8906.06,"bills":["City Electric"],"date":"2026-07-16"},{"balance":8836.06,"bills":["Comcast Xfinity"],"date":"2026-07-20"},{"balance":7984.36,"bills":["Card A payment","Card B payment"],"date":"2026-07-25"}],"can_cover_bills":true,"lowest_balance":7984.36,"lowest_date":"2026-07-25","room_left":7984.36}"#),
+    ("daniel", #"{"days": 60}"#, #"{"account":"Checking","bill_days":[{"balance":10384.05,"bills":["Home Mortgage"],"date":"2026-07-01"},{"balance":9866.06,"bills":["Netflix"],"date":"2026-07-03"},{"balance":9541.06,"bills":["Auto Loan Payment"],"date":"2026-07-07"},{"balance":9416.06,"bills":["Auto Insurance"],"date":"2026-07-12"},{"balance":9306.06,"bills":["City Electric"],"date":"2026-07-16"},{"balance":9236.06,"bills":["Comcast Xfinity"],"date":"2026-07-20"},{"balance":8384.36,"bills":["Card A payment","Card B payment"],"date":"2026-07-25"},{"balance":11734.36,"bills":["Home Mortgage"],"date":"2026-08-01"},{"balance":11216.37,"bills":["Netflix"],"date":"2026-08-03"},{"balance":10891.37,"bills":["Auto Loan Payment"],"date":"2026-08-07"}],"can_cover_bills":true,"lowest_balance":8384.36,"lowest_date":"2026-07-25","room_left":8384.36,"total_count":14}"#),
+])
+func simulateBalanceWithoutOnDateIsUnchanged(persona: String, input: String, expected: String) throws {
+    #expect(try #require(Tool.named("simulate_balance")).call(Data(input.utf8), database: organizedPersona(persona)) == expected)
+}
+
 // MARK: - Month-end series and late charges
 
 /// Checking and a card, today `asOf`: rent of 500 on each of `rent`, a paycheck of `paycheck`

@@ -117,6 +117,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A store whose refunds cancel out its spending isn't a top store. — `Tools.swift` `topMerchants`
 - A series that stopped is still listed by recurring_charges, with a next date before today. — `Tools.swift` `recurringCharges`
 - simulate_balance reports the checking account (or the first bank account with a balance) and takes the extra purchase from it; bills there are the ones whose series last used it. — `Tools.swift` `simulateBalance`
+- simulate_balance's balance on a day is that account's projected balance at the end of the day, after any extra purchase that day; on today it is the current balance. — `Tools.swift` `simulateBalance`
 - An answer shows at most 10 rows. — `Tools.swift` `maxRows`
 - A fact the person answered is never asked again; a skipped question may be asked next time. — `AskUser.swift` `run`
 - A profile correction answers a question about the same kind of fact ("housing" covers "housing_type"). — `AskUser.swift` `remembered`, `covers`
