@@ -22,6 +22,25 @@ struct LinkTokenResponse: Decodable {
 struct AllTransactionsResponse: Decodable {
     let accounts: [SedgeCore.Account]
     let transactions: [SedgeCore.Transaction]
+
+    /// The one extra field read from each transaction: the bank's own statement text.
+    private struct Original: Decodable { let original_description: String? }
+    private enum CodingKeys: String, CodingKey { case accounts, transactions }
+
+    /// Plaid rewrites `name` for stores it recognizes (NETFLIX.COM becomes Netflix), so the
+    /// bank's original description is stored as the name whenever Plaid sends one. The
+    /// organizer then groups the same raw statement text the fake personas carry.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accounts = try container.decode([SedgeCore.Account].self, forKey: .accounts)
+        var transactions = try container.decode([SedgeCore.Transaction].self, forKey: .transactions)
+        // The same array decoded a second time, keeping only original_description, in the same order.
+        let originals = try container.decode([Original].self, forKey: .transactions)
+        for (i, original) in originals.enumerated() {
+            if let description = original.original_description { transactions[i].name = description }
+        }
+        self.transactions = transactions
+    }
 }
 
 //function to grab link token and returns it as as tring

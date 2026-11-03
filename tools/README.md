@@ -31,6 +31,10 @@ Run these from `tools/`:
   both as the record that the data really came through Plaid.
 - `uv run python plaid_sandbox.py dry-run` does the same on a made-up Plaid reply for the dev and validation personas.
 
+Plaid Sandbox rewrites `name` for stores it recognizes (NETFLIX.COM comes back as Netflix), so `check` matches on
+`original_description` when the reply has one. The quickstart's `/api/all_transactions` route must ask for it: its
+`client.transactionsSync(...)` call passes `options: { include_original_description: true }`.
+
 To pull one persona (Plaid keys loaded in the shell, the quickstart server running; commit the pulled file; for jordan
 and elena, read only the PASS/FAIL lines):
 

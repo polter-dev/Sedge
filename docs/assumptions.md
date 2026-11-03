@@ -12,6 +12,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Dates are calendar days with no time zone. — `Organizer.swift` `calendar`
 - A positive amount is money out; a credit card's balance is what is owed. — `Simulator.swift` `simulate`, `Tools.swift` `accountBalances`
 - Plaid data's today is its newest transaction date. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`
+- A Plaid transaction's name is the bank's original description when Plaid sends one, else Plaid's `name` (which Plaid rewrites for stores it recognizes, e.g. NETFLIX.COM to Netflix). — `Sedge/BankConnection/ConnectBankView.swift` `AllTransactionsResponse.init(from:)`
 - Plaid data is saved only into the bank database, never a persona's, and is organized again after every sync. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`, `ConnectBankView`
 
 ## Organizer
