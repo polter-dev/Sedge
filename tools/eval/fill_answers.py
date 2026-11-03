@@ -16,12 +16,15 @@ DB_PATH = EVAL / "truth.db"
 QUESTIONS = EVAL / "questions.csv"
 
 COLUMNS = ["id", "persona", "type", "split", "as_of", "question", "answer_type", "truth_sql", "expected",
-           "tolerance", "expected_tool", "needs_clarification", "clarify_reply", "notes"]
+           "tolerance", "expected_tool", "needs_clarification", "clarify_reply", "notes",
+           "organizer_limited"]
 ALLOWED = {
   "persona": {"maya", "daniel", "jordan", "elena", "nia", "otis"},
   "type": {"aggregation", "comparison", "recurring", "temporal", "whatif", "profile", "clarify", "out_of_scope"},
   "split": {"dev", "validation", "test"},
   "answer_type": {"number", "list", "yes_no", "text"},
+  # "yes" marks a question the organizer can't get right by design; empty means it can.
+  "organizer_limited": {"yes", ""},
 }
 
 
