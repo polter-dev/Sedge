@@ -1,5 +1,11 @@
 For python fake data generation
 
+`uv run python fake_gen.py` writes every persona under `data/`: maya and daniel (dev), jordan and elena (held-out test),
+and nia and otis (validation, used to choose models and settings before the single test run; see `personas.md`).
+It checks each answer key's invariants before writing and then records seeds and file hashes in `data/manifest.json`.
+`uv run python checks.py` regenerates the data in memory and checks it against that manifest, counts merchant names
+shared between the splits, and compares the validation questions' type mix with dev's. `uv run pytest` runs all the tests.
+
 ## The question bank
 
 `eval/questions.csv` holds the questions, one per row. Add rows by copying one of the examples.

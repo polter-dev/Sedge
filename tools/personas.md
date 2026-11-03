@@ -106,11 +106,89 @@ Money moving between accounts:
 - On the 25th, pays the credit card in full from checking. Each payment equals the total charged to that card in the previous calendar month. Checking shows "PAYMENT CREDIT CARD"; the credit card shows the corresponding amount as "PAYMENT RECEIVED THANK YOU" on the same date.
 - On the 16th, moves $300 from checking to savings. Checking shows "ONLINE TRANSFER TO SAVINGS"; savings shows "ONLINE TRANSFER FROM CHECKING", with the same amount and date.
 
+## Validation personas
+
+Nia and Otis are the validation split: models and settings are chosen on them so the held-out test set (Jordan and Elena) is scored once at the end. They are not in the app's persona list, and the organizer is not tuned on them: a mistake they expose is logged, not fixed. † means an authored amount, approximate and unverified; a linked source supports its scale, not the fictional person's exact finances.
+
+## Nia — Bookkeeper with a Shared Household Account
+
+Nia works full time as a bookkeeper and lives with her partner, Arden. They pay rent, household bills and groceries from a joint checking account. Arden adds his share from his own account, which isn't connected. Nia also has personal savings and a personal credit card. She buys clothes, pays for pharmacy and health items, has one streaming subscription, eats out and goes to the movies, and pays a friend back for outings now and then while building a moving buffer.
+
+Income: $1,550† on the 15th and the last business day of each month, from "KESTREL LEDGER PAYROLL". A weekend payday moves to the Friday before: Jan 15 and 30, Feb 13 and 27, Mar 13 and 31, Apr 15 and 30, May 15 and 29, Jun 15 and 30. None of these is a [federal holiday](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026). $37,200 a year take-home is about 73% of the [BLS bookkeeper median of $50,670 (May 2025)](https://www.bls.gov/ooh/office-and-administrative-support/bookkeeping-accounting-and-auditing-clerks.htm).
+
+Arden contributes $900† on the 27th, as "SPLITPAY TRANSFER FROM ARDEN VALE". It is income (`kind: "income"`), but the answer key labels it `income_type: "household_contribution"` and her pay `income_type: "wages"`, so "total income" needs clarifying: $18,600 of wages or $24,000 with Arden's share.
+
+Accounts: joint checking ("Joint Checking"), personal savings, one credit card. The answer key records the owners: checking shared, savings and card hers.
+
+Starting balances (Jan 1): checking [$2,000†], savings [$3,000†], credit card [$0†]
+
+Example charges:
+
+- Rent ("ASTER COURT RENT"), $1,300†, the 1st. With electricity and water it is $1,484, close to the [Census 2024 median gross rent of $1,487, utilities included](https://www.census.gov/newsroom/press-releases/2025/acs-1-year-estimates.html).
+- Electricity ("BRAMBLE ELECTRIC", budget billing), $144, the 16th: the [EIA 2024 national average](https://www.eia.gov/todayinenergy/detail.php?id=65244).
+- Two phone lines ("CIRRUS MOBILE"), $50, the 10th: two lines at [Visible's regular $25](https://www.visible.com/plans) (taxes and fees included; $19 with a promotion).
+- Internet ("DOVETAIL INTERNET"), $50†, the 20th
+- Water ("ESTUARY WATER"), $40†, the 12th
+- Transit pass ("FERNWAY TRANSIT PASS"), $80†, the 5th
+- Streaming ("GLIMMER STREAMING"), $15†, the 7th, on the credit card
+- Pays her friend Tessa back, $60† from checking on Jan 17, Mar 14 and May 16 ("SPLITPAY PAYMENT TO TESSA ROWAN"). This is spending, not a transfer: nothing arrives in another of her accounts.
+
+Everyday spending on the card: groceries $95–$125† weekly ("MALLOW MARKET"; [BLS food at home $6,224 a year per household, 2024](https://www.bls.gov/opub/ted/2026/the-new-year-and-household-spending.htm)), eating out $45–$80† weekly ("JUNIPER STREET KITCHEN"; [BLS food away from home $3,945](https://www.bls.gov/opub/ted/2026/the-new-year-and-household-spending.htm)), household supplies $15–$35† every three weeks ("THIMBLE GOODS"), clothes $120–$200† every two weeks ("VERVAIN APPAREL"), pharmacy $45–$85† every three weeks ("QUINCE PHARMACY"), movies $60–$100† every two weeks ("FABLE CINEMA"). Their spellings use the same tricks as the dev and test sets: `SQ *` and `TST*` tags, "ST" for STREET, run-together names and store numbers.
+
+Money moving between accounts:
+
+- On the 18th, pays the credit card in full from joint checking for the previous month's charges. Checking shows "PAYMENT CREDIT CARD"; the card shows "PAYMENT RECEIVED THANK YOU".
+- On the 28th, moves $400† from joint checking to personal savings ("ONLINE TRANSFER TO SAVINGS" / "ONLINE TRANSFER FROM CHECKING").
+
+Data generation check (seed 104): 181 transactions. Checking never goes below $530 (Jan 12) and ends at $6,152.67; savings $5,400; card owes $1,247.81. Spending is $18,695.14.
+
+## Otis — Retiree with Social Security, a Pension, and a Few Returns
+
+Otis is a retired foundry worker who rents an older apartment. He lives on Social Security and a small pension. His checking runs low at the start of January but stays positive; his savings is at the same bank and isn't set up to cover an overdraft. He shops at a housewares store, Cedar, and returns some of what he buys, and he eats at an unrelated diner, Cedar Cafe.
+
+Income:
+
+- Social Security, $1,868.10 on the second Wednesday (birthday on the 7th†): Jan 14, Feb 11, Mar 11, Apr 8, May 13, Jun 10; next Jul 8, per the [SSA 2026 schedule](https://www.ssa.gov/pubs/EN-05-10031-2026.pdf). It is the [SSA's estimated average retired-worker benefit of $2,071 (January 2026)](https://www.ssa.gov/cola/factsheets/2026.html) less the [2026 Part B premium of $202.90](https://www.cms.gov/newsroom/fact-sheets/2026-medicare-parts-b-premiums-deductibles). The statement says "XXSOC SEC", the [generic Social Security descriptor](https://fiscal.treasury.gov/payment-integrity/payment-integrity-resolution-services-pirs/i-want-to).
+- Pension, $600†, the 1st, from "ORIEL FOUNDRY PENSION DEPOSIT". Like every fixed-day flow here it posts on its calendar day, even a weekend or Jan 1.
+
+Accounts: checking, savings (same bank, no overdraft protection), one credit card.
+
+Starting balances (Jan 1): checking [$1,175†], savings [$1,000†], credit card [$0†]
+
+Example charges:
+
+- Rent ("HEMLOCK COURT RENT"), $1,100†, the 1st. With electricity and water averaged monthly it is $1,230, below the [Census median gross rent](https://www.census.gov/newsroom/press-releases/2025/acs-1-year-estimates.html).
+- Electricity ("IRIS ELECTRIC", budget billing), $100†, the 6th, below the [EIA average](https://www.eia.gov/todayinenergy/detail.php?id=65244)
+- Phone ("JASPER MOBILE"), $25, the 10th: [Visible's regular price](https://www.visible.com/plans)
+- Internet ("KEEL INTERNET"), $50†, the 12th
+- Retiree health plan ("LUPINE RETIREE HEALTH"), $150†, the 15th, on top of Part B
+- Reduced-fare transit pass ("MEADOWLINE TRANSIT PASS"), $30†, the 5th
+- Water ("NACRE WATER"), $90†, every three months: Jan 8 and Apr 8, next Jul 8. The answer key labels it `recurring: "quarterly"`, a label the organizer has no cadence for.
+
+Everyday spending on the card: groceries $55–$75† weekly ("PLOVER MARKET"), the diner $10–$20† weekly ("CEDAR CAFE"), pharmacy $20–$35† every four weeks ("RILL PHARMACY").
+
+Cedar, on the card. Its statement name changes from "CEDAR #041" to "CEDAR HOME #041" in April. Three of five purchases are returned in full, and the June return says CREDIT, not REFUND:
+
+| Purchase | Return |
+|---|---|
+| Jan 18, $42.50† | Jan 21, "REFUND CEDAR #041" |
+| Feb 7, $119.00† | kept |
+| Mar 23, $67.25† | Mar 30, "CEDAR #041 REFUND" |
+| Apr 4, $24.80† | kept |
+| Jun 17, $86.40† | Jun 22, "CEDAR HOME CREDIT" |
+
+Money moving between accounts:
+
+- On the 20th, pays the credit card in full from checking for the previous month's charges less returns ("PAYMENT CREDIT CARD" / "PAYMENT RECEIVED THANK YOU").
+- On the 22nd, moves $100† from checking to savings ("ONLINE TRANSFER TO SAVINGS" / "ONLINE TRANSFER FROM CHECKING").
+
+Data generation check (seed 105): 139 transactions. Checking's lowest is $75 on Jan 1, after rent and before the pension the same day, and it ends at $4,347.69; savings $1,600; card owes $343.12. Income is $14,808.60 and spending $11,379.03; Cedar comes to $143.80 after returns.
+
 ## Generated data conventions
 
 Run `python3 fake_gen.py` from `tools/`. The script writes each person's
 `transactions.json`, `answer_key.json`, and `accounts.json` under `tools/data/`.
-The seed is 42, and IDs restart for each person. Maya's bills alone produce 36
+The seed is 42 (Nia and Otis each reseed: 104 and 105), and IDs restart for each person. Maya's bills alone produce 36
 records; adding only her paycheck produces 49. Everyday spending, transfers,
 card payments, and refunds increase the final counts.
 
@@ -161,3 +239,7 @@ and `ending_balance` on June 30, keyed by `account_id`. `totals.income` is posit
 net income; `totals.spending` is posted spending minus refunds. Both exclude
 transfers and card payments, and exclude pending records. These are the expected
 scorecard totals for the complete January–June period.
+Only Nia's and Otis's answer keys have two extra fields: each account's `owner`
+(`mine` or `shared`) and, on Nia's income, `income_type` (`wages` or
+`household_contribution`). `tools/data/manifest.json` records the seeds and the
+SHA-256 of every data file; `uv run python checks.py` checks them.

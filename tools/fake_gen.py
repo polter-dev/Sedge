@@ -112,6 +112,94 @@ PERSONAS = {
       {"name": "BEAN STREET COFFEE", "true_merchant": "Bean Street Coffee", "low": 3.00, "high": 5.00, "every_weeks": 2},
       {"name": "HOME GOODS", "true_merchant": "Home Goods", "low": 12.00, "high": 30.00, "every_weeks": 4}
     ]
+  },
+  # validation personas (see personas.md): each has its own seed, so adding them leaves the four above unchanged
+  "nia": {
+    "seed": 104,
+    "accounts": [
+      {"account_id": "nia-checking", "name": "Joint Checking", "type": "depository", "subtype": "checking", "starting_balance": 2000.00},
+      {"account_id": "nia-savings", "name": "Personal Savings", "type": "depository", "subtype": "savings", "starting_balance": 3000.00},
+      {"account_id": "nia-card", "name": "Credit Card", "type": "credit", "subtype": "credit card", "starting_balance": 0.00}
+    ],
+    "owners": {"nia-checking": "shared", "nia-savings": "mine", "nia-card": "mine"},
+    "bills": [
+      {"name": "ASTER COURT RENT", "true_merchant": "Aster Court", "amount": 1300.00, "day": 1},
+      {"name": "BRAMBLE ELECTRIC", "true_merchant": "Bramble Electric", "amount": 144.00, "day": 16},
+      {"name": "CIRRUS MOBILE", "true_merchant": "Cirrus Mobile", "amount": 50.00, "day": 10},
+      {"name": "DOVETAIL INTERNET", "true_merchant": "Dovetail Internet", "amount": 50.00, "day": 20},
+      {"name": "ESTUARY WATER", "true_merchant": "Estuary Water", "amount": 40.00, "day": 12},
+      {"name": "FERNWAY TRANSIT PASS", "true_merchant": "Fernway Transit", "amount": 80.00, "day": 5},
+      {"name": "GLIMMER STREAMING", "true_merchant": "Glimmer Streaming", "amount": 15.00, "day": 7, "account": "card"}
+    ],
+    # pay on the 15th and the last business day, a weekend date moving to the Friday before
+    "paycheck": {"type": "scheduled", "deposits": [
+      {"name": "KESTREL LEDGER PAYROLL", "true_merchant": "Kestrel Ledger", "amount": 1550.00, "recurring": "twice_monthly", "income_type": "wages",
+       "dates": [date(2026, 1, 15), date(2026, 1, 30), date(2026, 2, 13), date(2026, 2, 27), date(2026, 3, 13), date(2026, 3, 31),
+                 date(2026, 4, 15), date(2026, 4, 30), date(2026, 5, 15), date(2026, 5, 29), date(2026, 6, 15), date(2026, 6, 30)]},
+      # her partner's share of the household bills, from an account Nia doesn't own
+      {"name": "SPLITPAY TRANSFER FROM ARDEN VALE", "true_merchant": "Arden Vale", "amount": 900.00, "recurring": "monthly", "income_type": "household_contribution",
+       "dates": [date(2026, month, 27) for month in range(1, 7)]}
+    ]},
+    "transfer": {"amount": 400.00, "day": 28, "account": "savings"},
+    "payment_day": 18,
+    "spending": [
+      {"name": "MALLOW MARKET", "true_merchant": "Mallow Market", "low": 95.00, "high": 125.00, "every_weeks": 1},
+      {"name": "JUNIPER STREET KITCHEN", "true_merchant": "Juniper Street Kitchen", "low": 45.00, "high": 80.00, "every_weeks": 1},
+      {"name": "THIMBLE GOODS", "true_merchant": "Thimble Goods", "low": 15.00, "high": 35.00, "every_weeks": 3},
+      {"name": "VERVAIN APPAREL", "true_merchant": "Vervain Apparel", "low": 120.00, "high": 200.00, "every_weeks": 2},
+      {"name": "QUINCE PHARMACY", "true_merchant": "Quince Pharmacy", "low": 45.00, "high": 85.00, "every_weeks": 3},
+      {"name": "FABLE CINEMA", "true_merchant": "Fable Cinema", "low": 60.00, "high": 100.00, "every_weeks": 2}
+    ],
+    "refund_months": [],
+    # paying a friend back is spending, though the name says payment and nothing matches it in her accounts
+    "events": [
+      {"date": date(2026, month, day), "account": "checking", "name": "SPLITPAY PAYMENT TO TESSA ROWAN", "true_merchant": "Tessa Rowan", "amount": 60.00, "kind": "spending", "recurring": "none"}
+      for month, day in [(1, 17), (3, 14), (5, 16)]
+    ]
+  },
+  "otis": {
+    "seed": 105,
+    "accounts": [
+      {"account_id": "otis-checking", "name": "Checking", "type": "depository", "subtype": "checking", "starting_balance": 1175.00},
+      {"account_id": "otis-savings", "name": "Savings", "type": "depository", "subtype": "savings", "starting_balance": 1000.00},
+      {"account_id": "otis-card", "name": "Credit Card", "type": "credit", "subtype": "credit card", "starting_balance": 0.00}
+    ],
+    "owners": {"otis-checking": "mine", "otis-savings": "mine", "otis-card": "mine"},
+    "bills": [
+      {"name": "HEMLOCK COURT RENT", "true_merchant": "Hemlock Court", "amount": 1100.00, "day": 1},
+      {"name": "IRIS ELECTRIC", "true_merchant": "Iris Electric", "amount": 100.00, "day": 6},
+      {"name": "JASPER MOBILE", "true_merchant": "Jasper Mobile", "amount": 25.00, "day": 10},
+      {"name": "KEEL INTERNET", "true_merchant": "Keel Internet", "amount": 50.00, "day": 12},
+      {"name": "LUPINE RETIREE HEALTH", "true_merchant": "Lupine Retiree Health", "amount": 150.00, "day": 15},
+      {"name": "MEADOWLINE TRANSIT PASS", "true_merchant": "Meadowline Transit", "amount": 30.00, "day": 5},
+      {"name": "NACRE WATER", "true_merchant": "Nacre Water", "amount": 90.00, "day": 8, "months": [1, 4], "recurring": "quarterly"}
+    ],
+    # Social Security on the second Wednesday (birthday on the 7th), a pension on the 1st
+    "paycheck": {"type": "scheduled", "deposits": [
+      {"name": "XXSOC SEC", "true_merchant": "Social Security", "amount": 1868.10, "recurring": "monthly",
+       "dates": [date(2026, 1, 14), date(2026, 2, 11), date(2026, 3, 11), date(2026, 4, 8), date(2026, 5, 13), date(2026, 6, 10)]},
+      {"name": "ORIEL FOUNDRY PENSION DEPOSIT", "true_merchant": "Oriel Foundry Pension", "amount": 600.00, "recurring": "monthly",
+       "dates": [date(2026, month, 1) for month in range(1, 7)]}
+    ]},
+    "transfer": {"amount": 100.00, "day": 22, "account": "savings"},
+    "payment_day": 20,
+    "spending": [
+      {"name": "PLOVER MARKET", "true_merchant": "Plover Market", "low": 55.00, "high": 75.00, "every_weeks": 1},
+      {"name": "CEDAR CAFE", "true_merchant": "Cedar Cafe", "low": 10.00, "high": 20.00, "every_weeks": 1},
+      {"name": "RILL PHARMACY", "true_merchant": "Rill Pharmacy", "low": 20.00, "high": 35.00, "every_weeks": 4}
+    ],
+    "refund_months": [],
+    # Cedar (housewares) is not Cedar Cafe; its name changes in April, and one return says CREDIT, not REFUND
+    "events": [
+      {"ref": "cedar-1", "date": date(2026, 1, 18), "account": "card", "name": "CEDAR #041", "true_merchant": "Cedar", "amount": 42.50, "kind": "spending", "recurring": "none"},
+      {"refund_of": "cedar-1", "date": date(2026, 1, 21), "account": "card", "name": "REFUND CEDAR #041", "true_merchant": "Cedar", "amount": -42.50, "kind": "spending", "recurring": "none"},
+      {"ref": "cedar-2", "date": date(2026, 2, 7), "account": "card", "name": "CEDAR #041", "true_merchant": "Cedar", "amount": 119.00, "kind": "spending", "recurring": "none"},
+      {"ref": "cedar-3", "date": date(2026, 3, 23), "account": "card", "name": "CEDAR #041", "true_merchant": "Cedar", "amount": 67.25, "kind": "spending", "recurring": "none"},
+      {"refund_of": "cedar-3", "date": date(2026, 3, 30), "account": "card", "name": "CEDAR #041 REFUND", "true_merchant": "Cedar", "amount": -67.25, "kind": "spending", "recurring": "none"},
+      {"ref": "cedar-4", "date": date(2026, 4, 4), "account": "card", "name": "CEDAR HOME #041", "true_merchant": "Cedar", "amount": 24.80, "kind": "spending", "recurring": "none"},
+      {"ref": "cedar-5", "date": date(2026, 6, 17), "account": "card", "name": "CEDAR HOME #041", "true_merchant": "Cedar", "amount": 86.40, "kind": "spending", "recurring": "none"},
+      {"refund_of": "cedar-5", "date": date(2026, 6, 22), "account": "card", "name": "CEDAR HOME CREDIT", "true_merchant": "Cedar", "amount": -86.40, "kind": "spending", "recurring": "none"}
+    ]
   }
 }
 
@@ -123,7 +211,16 @@ SPELLINGS = {
   "HOME GOODS": ["HOME GOODS", "HOMEGOODS #081", "HOME GOODS STORE"],
   "AMAZON": ["AMAZON", "AMZN Mktp US", "AMAZON.COM*ORDER"],
   "CAMPUS BOOKSTORE": ["CAMPUS BOOKSTORE", "CAMPUS BOOKS", "UNIVERSITY BOOK STORE"],
-  "CAMERA SHOP": ["CAMERA SHOP", "CAMERA SHOP ONLINE", "THE CAMERA STORE"]
+  "CAMERA SHOP": ["CAMERA SHOP", "CAMERA SHOP ONLINE", "THE CAMERA STORE"],
+  "MALLOW MARKET": ["MALLOW MARKET", "SQ *MALLOW MARKET #163", "MALLOWMARKET GROCERY"],
+  "JUNIPER STREET KITCHEN": ["JUNIPER STREET KITCHEN", "SQ *JUNIPER ST KITCHEN #287", "TST* JUNIPER STREET KITCHEN RESTAURANT"],
+  "THIMBLE GOODS": ["THIMBLE GOODS", "THIMBLEGOODS #394", "POS THIMBLE GOODS STORE"],
+  "VERVAIN APPAREL": ["VERVAIN APPAREL", "SQ *VERVAIN APPAREL #526", "VERVAINAPPAREL STORE"],
+  "QUINCE PHARMACY": ["QUINCE PHARMACY", "POS QUINCE PHARMACY #638", "QUINCEPHARMACY STORE"],
+  "FABLE CINEMA": ["FABLE CINEMA", "SQ *FABLE CINEMA #749", "FABLECINEMA THEATER"],
+  "PLOVER MARKET": ["PLOVER MARKET", "POS PLOVER MARKET #852", "PLOVERMARKET GROCERY"],
+  "CEDAR CAFE": ["CEDAR CAFE", "TST* CEDAR CAFE #963", "CEDAR CAFE RESTAURANT"],
+  "RILL PHARMACY": ["RILL PHARMACY", "SQ *RILL PHARMACY #175", "RILLPHARMACY STORE"]
 }
 
 
@@ -198,6 +295,13 @@ def generate(person_name, person, answer_key=None):
         while day.weekday() >= 5:
           day = day - timedelta(days=1)
         add_transaction(data, answer_key, person_name, "checking", day, paycheck["name"], -paycheck["amount"], "income", "monthly", paycheck["true_merchant"])
+    elif paycheck["type"] == "scheduled":
+      # each source lists its real deposit dates, so pay on fixed days or a benefit calendar needs no rule here
+      for source in paycheck["deposits"]:
+        for day in source["dates"]:
+          add_transaction(data, answer_key, person_name, "checking", day, source["name"], -source["amount"], "income", source["recurring"], source["true_merchant"])
+          if "income_type" in source:
+            answer_key[-1]["income_type"] = source["income_type"]
     elif paycheck["type"] in ("biweekly", "gig"):
       day = paycheck["first_day"]
       while day <= end_day:
@@ -248,8 +352,20 @@ def generate(person_name, person, answer_key=None):
     week = week + timedelta(days=7)
     week_num += 1
 
+  # one-off dated records, after everyday spending so the random draws above stay the same
+  # a refund names its purchase by "ref", and the purchase must come first in the list
+  refs = {}
+  for event in person.get("events", []):
+    res = add_transaction(data, answer_key, person_name, event["account"], event["date"], event["name"], event["amount"], event["kind"], event["recurring"], event["true_merchant"])
+    if "ref" in event:
+      refs[event["ref"]] = res["transaction_id"]
+    if "refund_of" in event:
+      answer_key[-1]["linked_transaction_id"] = refs[event["refund_of"]]
+    if "income_type" in event:
+      answer_key[-1]["income_type"] = event["income_type"]
+
   # a small purchase returned in February and April, before the month ends
-  for month in (2, 4):
+  for month in person.get("refund_months", (2, 4)):
     purchases = [res for res in data if res["date"][5:7] == f"{month:02d}" and res["date"][8:10] <= "20" and res["amount"] > 0 and "-card" in res["account_id"]]
     if not purchases:
       continue
@@ -360,6 +476,8 @@ def make_answer_key(person, data, answer_key, balances):
     "as_of": "2026-06-30",
     "accounts": [
       {"account_id": account["account_id"], "starting_balance": account["starting_balance"], "ending_balance": balances[account["account_id"]]}
+      # only personas with "owners" get the key, so the other answer keys keep their bytes
+      | ({"owner": person["owners"][account["account_id"]]} if "owners" in person else {})
       for account in person["accounts"]
     ],
     "totals": {kind: amount / 100 for kind, amount in totals.items()},
@@ -367,18 +485,39 @@ def make_answer_key(person, data, answer_key, balances):
   }
 
 
-if __name__ == "__main__":
+# the exact text written to each data file, also hashed by checks.py
+def serialize(contents):
+  return json.dumps(contents, indent=2) + "\n"
+
+
+# builds every persona's files in memory, in PERSONAS order
+def build_all():
+  global global_counter
   rng.seed(42)
+  built = {}
   for person_name, person in PERSONAS.items():
+    # a persona with its own seed starts a fresh random stream, so adding it never changes the ones before it
+    if "seed" in person:
+      rng.seed(person["seed"])
     global_counter = 0
     answer_key = []
     data = generate(person_name, person, answer_key)
     balances = summarize(person_name, person, data)
     accounts = make_accounts(person, balances)
     answer_key = make_answer_key(person, data, answer_key, balances)
+    built[person_name] = {"transactions": data, "answer_key": answer_key, "accounts": accounts}
+  return built
+
+
+if __name__ == "__main__":
+  import checks
+  built = build_all()
+  # nothing is written when an invariant fails, so a broken answer key never lands on disk
+  if checks.report_invariants(built):
+    raise SystemExit("an invariant failed; no files were written")
+  for person_name, files in built.items():
     folder = Path(__file__).resolve().parent / "data" / person_name
     folder.mkdir(parents=True, exist_ok=True)
-    for name, contents in [("transactions", data), ("answer_key", answer_key), ("accounts", accounts)]:
-      with open(folder / f"{name}.json", "w") as f:
-        json.dump(contents, f, indent=2)
-        f.write("\n")
+    for name, contents in files.items():
+      (folder / f"{name}.json").write_text(serialize(contents))
+  checks.write_manifest(built)

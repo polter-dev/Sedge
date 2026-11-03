@@ -1,0 +1,34 @@
+{
+  "note": "Personas without their own seed share one random stream seeded 42, in PERSONAS order.",
+  "python": "3.12.13",
+  "generator_sha256": "6b56b540a7e2e25d07ce8c311f86bd61d95fbed86fac2a067488bfac5058db51",
+  "uv_lock_sha256": "32349a829648953f7da3fe83392dfdf7f0c5ac3580172c9e07ff746bb272c2d0",
+  "seeds": {
+    "maya": 42,
+    "daniel": 42,
+    "jordan": 42,
+    "elena": 42,
+    "nia": 104,
+    "otis": 105
+  },
+  "files": {
+    "maya/transactions.json": "cbabe085ab8833f917722b751521f1e9c5408d4dc2a03f6c11c19b566b0c4c4d",
+    "maya/answer_key.json": "103a1f79fbd7512a40ced65d21508edd4bdf045738735c9f83278b3af3efae21",
+    "maya/accounts.json": "9cab2e954b745551774cf2df75b8fb751f8eded486e92bd40532f2eccda12a8c",
+    "daniel/transactions.json": "a38fb39191c92a5b761f4873831c3cd4cf61eaecb5efcf3dd4c7c6506cc529bc",
+    "daniel/answer_key.json": "46e9a7ba341303b98dd737b5167d87947fbfcab716c1b31f69fa8bc52a0c99ed",
+    "daniel/accounts.json": "263c6ad190d90a1aa3190538da7a440efb233a5abaad6f72f892fee8bedcb9d9",
+    "jordan/transactions.json": "d0b50da2a4cc6314cc91d7f96a38cbf6d5624ff0cb0569b7de2bda91d230809f",
+    "jordan/answer_key.json": "35cc9df101570857615767d5a5fab2010b87de903c051ae297ffac58aaf85a46",
+    "jordan/accounts.json": "8ab742b0e3e2666588e86452f8f203f31718db7629a92f58c3c21d5ebbe1447b",
+    "elena/transactions.json": "029335812ec2ebd9678a6cfd7659cec0d6d52a755d8dc55101b41726c2fc1956",
+    "elena/answer_key.json": "f440ab058b1951eb6ecff9a0515f3fdf3ef34bd1ce28a1def8fe419896f42d17",
+    "elena/accounts.json": "71b29a1075bc83735d66132e8a598e21319902c3b1a7011ad37b8ae6bd5f4c50",
+    "nia/transactions.json": "a26fd3cbc05efff1bb492d737236f28da1c53af05dbb4df209cea24218a255aa",
+    "nia/answer_key.json": "e93b3a69a591b3ea9a1ba99e81cfb9579d1118484e0837d5eabd590ade93153e",
+    "nia/accounts.json": "35a6065be69abdd59cee07b17db64c60df3c112565d5f009ab4c80e40bdbc2ad",
+    "otis/transactions.json": "dc101386783951dc5b555a796b5666e6466ed7f7d0cce7c9c7fc0c23f1278a5f",
+    "otis/answer_key.json": "f790a17156c565c5e013a0449c04027ff1750c59c4003a2812303064368a7c21",
+    "otis/accounts.json": "62fcb52f0e8f13b3d4e181927315168369f1cf930420a54b6770a9c8792ea27c"
+  }
+}
