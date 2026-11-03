@@ -1,8 +1,9 @@
 """Checks that truth.db agrees with each persona's answer key.
 
-Run from tools/:  uv run python eval/test_truth_db.py
-Only the personas already in eval/truth.db are checked (all four if it is missing),
-so a truth.db built with --personas never makes this open another persona's data.
+Run from tools/:  uv run pytest  (or uv run python eval/test_truth_db.py)
+Only the personas already in eval/truth.db are checked. If it is missing (a fresh
+clone), only the dev personas maya and daniel are, so the held-out jordan and elena
+data is never opened unless a truth.db was deliberately built with them.
 """
 import sqlite3
 import tempfile
@@ -12,12 +13,15 @@ from pathlib import Path
 import fill_answers
 import truth_db
 
+# jordan and elena are the held-out test set, so a plain test run must never open their files.
+DEV_PERSONAS = ["maya", "daniel"]
+
 
 class TruthDbTest(unittest.TestCase):
   @classmethod
   def setUpClass(cls):
     # Build into a temp folder so the test never touches the real truth.db.
-    cls.personas = truth_db.PERSONAS
+    cls.personas = DEV_PERSONAS
     if truth_db.DB_PATH.exists():
       real = sqlite3.connect(truth_db.DB_PATH)
       cls.personas = [p for (p,) in real.execute("SELECT DISTINCT persona FROM accounts")]
