@@ -1,25 +1,26 @@
 {
-  "checked_at": "2026-11-03T20:06:27+00:00",
+  "checked_at": "2026-11-03T20:21:06+00:00",
   "source": "Plaid Sandbox custom user (institution ins_109508) via /transactions/sync and /accounts/get",
   "config_sha256": "455dc91adfb314cb4ed7a3ad2f185862b919a393e60be20d7205d1cb9f7a6ccd",
-  "reply_sha256": "99fa1feba31d3be7966cb7887323d8b98fa0c5822b2e83122c6151a444b5fc35",
-  "passed": false,
+  "reply_sha256": "626dd85274b1422424d53fb963cd53cd2ba4d22b0f3bd8e2f2cf5cb5a555bd77",
+  "passed": true,
   "results": {
     "accounts matched": true,
-    "transactions matched": false,
+    "transactions matched": true,
     "every month present": true,
-    "transactions identical": false,
-    "totals": false,
-    "balances every day": false,
+    "transactions identical": true,
+    "totals": true,
+    "balances every day": true,
     "current balances": true,
-    "questions": false
+    "questions": true
   },
   "counts": {
-    "matched": 112,
-    "unmatched pulled": 42,
-    "unmatched fixture": 42,
+    "matched": 154,
+    "unmatched pulled": 0,
+    "unmatched fixture": 0,
     "pending": 0,
-    "pending links dropped": 3,
+    "pending links dropped": 6,
+    "renamed by Plaid": 42,
     "questions compared": 24
   }
 }
