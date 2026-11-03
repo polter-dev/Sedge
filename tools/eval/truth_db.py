@@ -46,9 +46,9 @@ CREATE TABLE daily_balance (
 """
 
 
-def load(persona, name):
-  """Read one JSON file from tools/data/<persona>/."""
-  with open(DATA / persona / f"{name}.json") as f:
+def load(persona, name, data=DATA):
+  """Read one JSON file from <data>/<persona>/, tools/data/ unless another folder is given."""
+  with open(data / persona / f"{name}.json") as f:
     return json.load(f)
 
 
@@ -78,15 +78,18 @@ def daily_balances(account, start_balance, posted):
     day += timedelta(days=1)
 
 
-def build(db_path=DB_PATH, personas=PERSONAS):
-  """Delete and rebuild the truth database at db_path from the given personas only."""
+def build(db_path=DB_PATH, personas=PERSONAS, data=DATA):
+  """Delete and rebuild the truth database at db_path from the given personas only.
+
+  data is the folder holding <persona>/*.json; plaid_sandbox.py points it at data pulled back from Plaid.
+  """
   db_path.unlink(missing_ok=True)
   categories = load_categories()
   db = sqlite3.connect(db_path)
   db.executescript(SCHEMA)
   for persona in personas:
-    transactions = load(persona, "transactions")
-    key = load(persona, "answer_key")
+    transactions = load(persona, "transactions", data)
+    key = load(persona, "answer_key", data)
     labels = {entry["transaction_id"]: entry for entry in key["transactions"]}
     for t in transactions:
       label = labels[t["transaction_id"]]  # a KeyError here means the answer key is out of date
@@ -96,7 +99,7 @@ def build(db_path=DB_PATH, personas=PERSONAS):
       db.execute(f"INSERT INTO tx VALUES ({','.join('?' * len(row))})", row)
 
     balances = {entry["account_id"]: entry for entry in key["accounts"]}
-    for a in load(persona, "accounts"):
+    for a in load(persona, "accounts", data):
       b = a["balances"]
       start = balances[a["account_id"]]["starting_balance"]
       db.execute(

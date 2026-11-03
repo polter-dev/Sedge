@@ -243,3 +243,16 @@ Only Nia's and Otis's answer keys have two extra fields: each account's `owner`
 (`mine` or `shared`) and, on Nia's income, `income_type` (`wages` or
 `household_contribution`). `tools/data/manifest.json` records the seeds and the
 SHA-256 of every data file; `uv run python checks.py` checks them.
+
+## Plaid Sandbox round trip
+
+Each persona also exists as a Plaid custom Sandbox user, `data/<persona>/plaid_user.json`, built by
+`plaid_sandbox.py configs` from `accounts.json` and `transactions.json`: same accounts (type, subtype, name; the
+mask is the account's position, so it can be found again), each `starting_balance` is the June 30 `current` balance
+(Plaid shows it as today's balance), and every transaction keeps its date (as both `date_transacted` and
+`date_posted`), amount, description and currency. `roll_dates_forward` is off, so the 2026 dates come back unchanged
+and posted. Both sides use the same sign: a positive amount is money leaving the account. Plaid gives everything new
+ids, so `plaid_sandbox.py check` matches each returned row to ours by account, date, amount and description, then
+requires the same transactions, totals, daily balances and `expected` answers as the fixtures. Two known
+differences: Plaid adds fields of its own (such as `merchant_name` and `personal_finance_category`), and it cannot
+carry `pending_transaction_id` links, which the check counts but does not fail on.
