@@ -100,15 +100,6 @@
 			);
 			sourceTree = "<group>";
 		};
-		3BC0FF03306B4636003E35C6 /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				3BC0FF01306B4636003E35C6 /* Sedge-Debug.xcconfig */,
-				3BC0FF02306B4636003E35C6 /* Sedge-Release.xcconfig */,
-			);
-			path = Config;
-			sourceTree = "<group>";
-		};
 		3BBCF15C306B4636003E35C6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -117,6 +108,15 @@
 				3BBCF174306B4636003E35C6 /* SedgeUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		3BC0FF03306B4636003E35C6 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				3BC0FF01306B4636003E35C6 /* Sedge-Debug.xcconfig */,
+				3BC0FF02306B4636003E35C6 /* Sedge-Release.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
