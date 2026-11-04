@@ -230,22 +230,33 @@ struct AccountsView: View {
                 } label: {
                     Label("About you", systemImage: "person.text.rectangle")
                 }
+                if !accounts.isEmpty {
+                    let unanswered = accounts.count { $0.owner == nil }
+                    NavigationLink {
+                        YourAccountsView(database: database)
+                            .navigationTitle("Your accounts")
+                            .navigationSubtitle(dataName)
+                    } label: {
+                        LabeledContent {
+                            Text("\(accounts.count)").foregroundStyle(.secondary)
+                        } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Your accounts")
+                                    if unanswered > 0 {
+                                        Text("\(unanswered) still to answer").font(.row).foregroundStyle(.secondary)
+                                    }
+                                }
+                            } icon: {
+                                Image(systemName: "creditcard")
+                            }
+                        }
+                    }
+                    .accessibilityLabel("Your accounts")
+                    .accessibilityValue(unanswered > 0 ? "\(accounts.count), \(unanswered) still to answer" : "\(accounts.count)")
+                }
             }
             .listRowBackground(Color.group)
-            if !accounts.isEmpty {
-                Section("Your accounts") {
-                    ForEach(accounts) { account in
-                        NavigationLink {
-                            AccountCheckView(database: database, account: account)
-                        } label: {
-                            LabeledContent(accountTitle(account.name, account.mask), value: account.ownerLabel)
-                        }
-                        .accessibilityLabel(accountTitle(account.name, account.mask, spoken: true))
-                        .accessibilityValue(account.ownerLabel)
-                    }
-                }
-                .listRowBackground(Color.group)
-            }
             Section {
                 NavigationLink {
                     SavedAnswersView(database: database)
