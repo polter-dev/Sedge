@@ -172,7 +172,7 @@ struct TransactionDetailView: View {
             .accessibilityValue(SpendingView.title(detail.category))
             if detail.merchant_id != nil {
                 NavigationLink {
-                    TransactionsView(rows: history, database: database)
+                    MerchantHistoryView(rows: history, database: database)
                         .navigationTitle(detail.store)
                         .navigationSubtitle("Merchant history")
                 } label: {
@@ -242,11 +242,6 @@ struct TransactionDetailView: View {
     }
 
     private var rule: some View { Rectangle().fill(Color.line).frame(height: 1) }
-
-    /// Money out as "$48.00", money in as "+$2,140.55".
-    private func amountText(_ amount: Double) -> String {
-        amount < 0 ? (-amount).formatted(.currency(code: "USD").sign(strategy: .always())) : amount.formatted(.currency(code: "USD"))
-    }
 
     private func reload() {
         do {

@@ -10,6 +10,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - The fake personas' today is 2026-06-30. — `Persona.swift` `asOf`
 - One database is one person, so every account in it belongs to the same person. — `Organizer.swift` `reconcile`
 - Dates are calendar days with no time zone. — `Organizer.swift` `calendar`
+- A week runs Monday to Sunday; in the month-by-month transactions list, a week that crosses into another month shows only the shown month's days. — `Sedge/TransactionsView.swift` `TransactionGroups.monday(of:)`, `TransactionGroups.parts`
 - A positive amount is money out; a credit card's balance is what is owed. — `Simulator.swift` `simulate`, `Tools.swift` `accountBalances`
 - Plaid data's today is its newest transaction date. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`
 - A Plaid transaction's name is the bank's original description when Plaid sends one, else Plaid's `name` (which Plaid rewrites for stores it recognizes, e.g. NETFLIX.COM to Netflix). — `Sedge/BankConnection/ConnectBankView.swift` `AllTransactionsResponse.init(from:)`
