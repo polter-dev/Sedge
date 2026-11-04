@@ -18,8 +18,8 @@ struct ChatTurn: Identifiable {
     let id = UUID()
     /// What the person asked.
     var question: String
-    /// Sedge's reply.
-    var answer: ChatAnswer
+    /// Sedge's reply, or nil while it is still being worked out.
+    var answer: ChatAnswer?
 }
 
 /// Sedge's reply: a lead, an optional bold point, a smaller detail line, and optional extras.
@@ -75,20 +75,26 @@ struct QuickCheck {
 // MARK: - The screen
 
 /// Ask a question about the chosen data, as a chat. No model is wired in yet, so a typed
-/// question is answered with "The assistant isn't connected yet." Debug builds launched with
-/// `-sampleChat YES` show the design's sample conversation, worked out from this data.
+/// question shows the thinking row briefly, then "The assistant isn't connected yet." Debug
+/// builds launched with `-sampleChat YES` show the design's sample conversation, worked out from
+/// this data; `-demoThinking YES` and `-demoTokenLimit YES` show the thinking row and the limit turn.
 struct AskView: View {
     let database: SedgeDatabase
     /// The question box's text, owned by the tabs so Trends can type a question in for the person.
     @Binding var question: String
     /// Switches the main tab, for the toolbar buttons and the card's trends link.
     var open: (MainTab) -> Void = { _ in }
-    @State private var turns: [ChatTurn] = []
-    /// True when the turns are the sample, so the screen says it is demo state.
+    @State private var session = ChatSession()
+    /// True when the turns are demo content, so the screen says it is demo state.
     @State private var isDemo = false
+    /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
+    @State private var demoLoaded = false
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private var blank: Bool { question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var limited: Bool { session.status == .tokenLimitReached }
+    /// One question at a time: sending waits until the last answer is in.
+    private var canSend: Bool { !blank && session.status == .idle }
 
     /// The person's Reduce Motion setting. Debug builds launched with `-reduceMotion YES` act as
     /// if it were on, because a UI test can't switch the setting itself.
@@ -102,15 +108,29 @@ struct AskView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(turns) { TurnView(turn: $0, database: database, open: open) }
+                ForEach(session.turns) { TurnView(turn: $0, database: database, open: open) }
+                // Both fade in over 0.25 seconds like any answer; Reduce Motion keeps the fade.
+                if session.status == .thinking {
+                    ThinkingRow(phrase: session.phrase, breathes: !reduceMotion)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                        .transition(.opacity)
+                }
+                if limited {
+                    LimitTurn { session.startNewSession(); isDemo = false }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 24)
+                        .transition(.opacity)
+                }
             }
+            .animation(.easeOut(duration: 0.25), value: session.status)
             .padding(.bottom, 16)
         }
         // A new answer pushes the conversation up, so the newest turn stays in view.
         .defaultScrollAnchor(.bottom, for: .sizeChanges)
         .scrollDismissesKeyboard(.interactively)
         .overlay {
-            if turns.isEmpty {
+            if session.turns.isEmpty && session.status == .idle {
                 ContentUnavailableView {
                     Label("Ask about your money", image: "tab-ask")
                 } description: {
@@ -131,13 +151,27 @@ struct AskView: View {
         }
         .task {
             #if DEBUG
-            // `.task` runs each time the tab shows, so the sample is only made once.
-            guard turns.isEmpty, UserDefaults.standard.bool(forKey: "sampleChat") else { return }
-            do {
-                turns = [try ChatTurn.sample(in: database)]
+            // `.task` runs each time the tab shows, so the demo state is only set up once.
+            guard !demoLoaded else { return }
+            demoLoaded = true
+            let defaults = UserDefaults.standard
+            if defaults.bool(forKey: "sampleChat") {
+                do {
+                    session.turns = [try ChatTurn.sample(in: database)]
+                    isDemo = true
+                } catch {
+                    print("Could not make the sample conversation:", error)
+                }
+            }
+            if defaults.bool(forKey: "demoThinking") {
+                // A question still being worked out, held there for screenshots and UI tests.
+                session.turns.append(ChatTurn(question: "What about coffee?", answer: nil))
+                session.report(.thinking)
                 isDemo = true
-            } catch {
-                print("Could not make the sample conversation:", error)
+            }
+            if defaults.bool(forKey: "demoTokenLimit") {
+                session.report(.tokenLimitReached)
+                isDemo = true
             }
             #endif
         }
@@ -149,27 +183,31 @@ struct AskView: View {
         VStack(spacing: 9) {
             HStack(alignment: .bottom, spacing: 2) {
                 TextField("Question", text: $question,
-                          prompt: Text("Ask about your money…").foregroundStyle(Color.muted), axis: .vertical)
+                          prompt: Text(limited ? "Start a new session to keep asking" : "Ask about your money…")
+                              .foregroundStyle(Color.muted),
+                          axis: .vertical)
                     .font(.subheadline)
                     .lineLimit(1...5)
                     .padding(.vertical, 12)
                     .onSubmit(send)
+                    // At the limit the box stays in place but takes no typing until a new session.
+                    .disabled(limited)
                 Button("Send", image: .chatSend, action: send)
                     .labelStyle(.iconOnly)
-                    .foregroundStyle(blank ? Color.muted : Color.contrast)
+                    .foregroundStyle(canSend ? Color.contrast : Color.muted)
                     // The glow: an accent circle with a soft accent shadow fades in behind the arrow.
                     .background {
                         Circle()
                             .fill(Color.accent)
                             .frame(width: 34, height: 34)
                             .shadow(color: Color.accent.opacity(0.35), radius: 8)
-                            .opacity(blank ? 0 : 1)
+                            .opacity(canSend ? 1 : 0)
                     }
-                    .animation(.easeInOut(duration: 0.25), value: blank)
+                    .animation(.easeInOut(duration: 0.25), value: canSend)
                     // Apple's minimum tap area, around the 20-point arrow.
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
-                    .disabled(blank)
+                    .disabled(!canSend)
             }
             .padding(.leading, 16)
             .padding(.trailing, 2)
@@ -201,9 +239,19 @@ struct AskView: View {
 
     private func send() {
         let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        turns.append(ChatTurn(question: text, answer: ChatAnswer(lead: "The assistant isn't connected yet.")))
+        guard canSend else { return }
+        let turn = ChatTurn(question: text, answer: nil)
+        session.turns.append(turn)
+        session.report(.thinking)
         question = ""
+        // Nothing answers yet, so show the thinking row briefly, then say so.
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            // The turn is gone if "Start new session" cleared the chat in the meantime.
+            guard let index = session.turns.firstIndex(where: { $0.id == turn.id }) else { return }
+            session.turns[index].answer = ChatAnswer(lead: "The assistant isn't connected yet.")
+            session.report(.idle)
+        }
     }
 }
 
@@ -245,6 +293,83 @@ private struct ExampleQuestion: View {
     }
 }
 
+/// "Sedge" with its sprout, above each of Sedge's replies.
+private struct SedgeHeader: View {
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(.chatSedge).accessibilityHidden(true)
+            Text("Sedge").font(.row.weight(.semibold))
+        }
+        .foregroundStyle(Color.chartNow)
+    }
+}
+
+/// Shown while an answer is worked out: the sprout breathing next to one phrase. Side by side as
+/// in the design; when the phrase doesn't fit beside it (largest text sizes) it wraps underneath.
+struct ThinkingRow: View {
+    /// Seconds for one half of a breath (1.0 to 1.08, or back). The animation below runs once per
+    /// half, so a full breath takes twice this: 1.2 seconds, as in the design's key frames.
+    static let halfBreath = 0.6
+
+    let phrase: String
+    /// False with Reduce Motion, so the sprout stays still and the phrase alone shows.
+    let breathes: Bool
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { sprout; words }
+            VStack(alignment: .leading, spacing: 4) { sprout; words }
+        }
+        .frame(minHeight: 28)
+    }
+
+    private var sprout: some View {
+        Image(.chatSedge)
+            .foregroundStyle(Color.accent)
+            .accessibilityHidden(true)
+            // Grows to 1.08 and back over 1.2 seconds, for as long as the row shows.
+            .phaseAnimator(breathes ? [1.0, 1.08] : [1.0]) { sprout, scale in
+                sprout.scaleEffect(scale)
+            } animation: { _ in .easeInOut(duration: Self.halfBreath) }
+    }
+
+    private var words: some View {
+        Text(phrase)
+            .font(.footnote)
+            .foregroundStyle(Color.muted)
+            .accessibilityIdentifier("thinkingRow")
+    }
+}
+
+/// The turn shown when the chat reaches its length limit: an ordinary reply, not an error,
+/// with a button that clears the chat so the person can keep asking.
+private struct LimitTurn: View {
+    let startNewSession: () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SedgeHeader()
+            Text("This chat has reached its limit.").font(.answer.weight(.semibold))
+            Text("Sedge keeps each chat short so answers stay sharp.")
+                .font(.row)
+                .foregroundStyle(Color.muted)
+            Button(action: startNewSession) {
+                Text("Start new session")
+                    .font(.link)
+                    .padding(.horizontal, 16)
+                    // Full width at the largest text sizes, as the design notes ask.
+                    .frame(maxWidth: typeSize.isAccessibilitySize ? .infinity : nil, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.contrast)
+            .background(Color.accent, in: RoundedRectangle(cornerRadius: 10))
+            .padding(.top, 2)
+        }
+    }
+}
+
 /// One turn as the design draws it: the breakdown card, the question, the answer, then the quick check.
 private struct TurnView: View {
     let turn: ChatTurn
@@ -262,9 +387,8 @@ private struct TurnView: View {
     private var dark: Bool { colorScheme == .dark }
 
     var body: some View {
-        let answer = turn.answer
         VStack(alignment: .leading, spacing: 0) {
-            if let breakdown = answer.breakdown {
+            if let breakdown = turn.answer?.breakdown {
                 breakdownCard(breakdown)
                     .padding(.horizontal, 18)
                     .padding(.top, 15)
@@ -280,49 +404,47 @@ private struct TurnView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
 
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 7) {
-                    Image(.chatSedge).accessibilityHidden(true)
-                    Text("Sedge").font(.row.weight(.semibold))
-                }
-                .foregroundStyle(Color.chartNow)
-                .padding(.bottom, 10)
+            // Until the answer is in, the screen shows the thinking row below the question instead.
+            if let answer = turn.answer {
+                VStack(alignment: .leading, spacing: 0) {
+                    SedgeHeader().padding(.bottom, 10)
 
-                if let point = answer.point {
-                    Text("\(answer.lead) \(Text(point).fontWeight(.semibold))").font(.answer)
-                } else {
-                    Text(answer.lead).font(.answer)
-                }
-                if let detail = answer.detail {
-                    Text(detail)
-                        .font(.row)
-                        .foregroundStyle(Color.muted)
-                        .padding(.top, 14)
-                }
-                if let chart = answer.chart {
-                    Chart(chart) { BarMark(x: .value("Label", $0.label), y: .value("Amount", $0.amount)) }
-                        // `second` is only for chart marks: it is too light for text in Paper.
-                        .foregroundStyle(Color.second)
-                        .chartYAxis { AxisMarks(format: .currency(code: "USD").precision(.fractionLength(0))) }
-                        .frame(height: 120)
-                        .padding(.top, 14)
-                }
-                if let link = answer.whatIfLink {
-                    NavigationLink {
-                        CashFlowView(database: database).navigationTitle("Cash flow")
-                    } label: {
-                        Text(link).font(.link).frame(minHeight: 44)
+                    if let point = answer.point {
+                        Text("\(answer.lead) \(Text(point).fontWeight(.semibold))").font(.answer)
+                    } else {
+                        Text(answer.lead).font(.answer)
                     }
-                    .padding(.top, 4)
+                    if let detail = answer.detail {
+                        Text(detail)
+                            .font(.row)
+                            .foregroundStyle(Color.muted)
+                            .padding(.top, 14)
+                    }
+                    if let chart = answer.chart {
+                        Chart(chart) { BarMark(x: .value("Label", $0.label), y: .value("Amount", $0.amount)) }
+                            // `second` is only for chart marks: it is too light for text in Paper.
+                            .foregroundStyle(Color.second)
+                            .chartYAxis { AxisMarks(format: .currency(code: "USD").precision(.fractionLength(0))) }
+                            .frame(height: 120)
+                            .padding(.top, 14)
+                    }
+                    if let link = answer.whatIfLink {
+                        NavigationLink {
+                            CashFlowView(database: database).navigationTitle("Cash flow")
+                        } label: {
+                            Text(link).font(.link).frame(minHeight: 44)
+                        }
+                        .padding(.top, 4)
+                    }
                 }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 29)
+                .padding(.horizontal, 20)
+                .padding(.top, 29)
 
-            if let check = answer.quickCheck {
-                quickCheckCard(check)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
+                if let check = answer.quickCheck {
+                    quickCheckCard(check)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                }
             }
         }
     }
