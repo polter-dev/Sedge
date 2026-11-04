@@ -740,7 +740,7 @@ final class SedgeUITests: XCTestCase {
         // A run stopped halfway may have left the note hidden; start with it shown.
         if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
 
-        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
         let note = app.staticTexts["This is a spending observation, not a fraud determination."]
         let undoLine = app.staticTexts["Spending note hidden on every transaction."]
         openTransaction(app, corner)
@@ -787,7 +787,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
         let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
         /// Goes back to the transactions list and opens the same transaction again, which reloads it.
         func reopen() {
@@ -839,12 +839,19 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(notSure.isSelected)
     }
 
-    /// From the Accounts tab, opens the transaction whose row reads `label`.
+    /// From the Accounts tab, opens the transaction whose row reads `label`. The list shows one
+    /// month at a time and opens on the data's latest month, so this steps back a month at a time
+    /// until the row turns up or there is no earlier month.
     @MainActor
     private func openTransaction(_ app: XCUIApplication, _ label: String) {
         app.buttons["Transactions"].tap()
-        let row = app.buttons[label]
-        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        let row = app.buttons[label], previous = app.buttons["Previous month"]
+        XCTAssertTrue(previous.waitForExistence(timeout: 10))
+        while true {
+            for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+            if (row.exists && row.isHittable) || !previous.isEnabled { break }
+            previous.tap()
+        }
         row.tap()
     }
 
