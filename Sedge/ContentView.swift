@@ -139,7 +139,7 @@ struct MainView: View {
     /// The open tab. It lives in ContentView, so picking other data from Accounts comes back to Accounts.
     @Binding var tab: MainTab
     let changeData: () -> Void
-    /// The Ask box's text. It lives here so Trends can type a question into it before switching tabs.
+    /// The Ask box's text. It lives here so a typed question stays when the tab changes.
     @State private var question = ""
 
     private var dataName: String { choice == SedgeDatabase.bankChoice ? "Bank" : choice.capitalized }
@@ -157,10 +157,7 @@ struct MainView: View {
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
-                    SpendingView(database: database) {
-                        question = $0
-                        tab = .ask
-                    }
+                    SpendingView(database: database)
                         .navigationTitle("Spending")
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
