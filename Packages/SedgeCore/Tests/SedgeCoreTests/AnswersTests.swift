@@ -26,6 +26,47 @@ func balanceRow(_ name: String, _ answer: [String: Any]) -> [String: Any]? {
     #expect(throws: Answers.Failure.notFound("nope")) { try Answers.setOwner(.mine, account: "nope", in: database) }
 }
 
+/// A nickname is saved, read back and cleared (blank counts as none), and reloading the data
+/// with `Persona.load` and organizing again (every launch, and the same `save` a bank sync uses) keeps it.
+@Test func nicknameIsSavedKeptAndCleared() throws {
+    let database = try organizedPersona("maya")
+    func nickname() throws -> String? {
+        try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT nickname FROM accounts WHERE account_id = 'maya-checking'") }
+    }
+    #expect(try nickname() == nil)
+    try Answers.setNickname("  Everyday  ", account: "maya-checking", in: database)
+    #expect(try nickname() == "Everyday")
+    try loadPersona("maya", into: database)
+    try Organizer.organize(database)
+    #expect(try nickname() == "Everyday")
+    try Answers.setNickname("   ", account: "maya-checking", in: database)
+    #expect(try nickname() == nil)
+    try Answers.setNickname("Everyday", account: "maya-checking", in: database)
+    try Answers.setNickname(nil, account: "maya-checking", in: database)
+    #expect(try nickname() == nil)
+    #expect(throws: Answers.Failure.notFound("nope")) { try Answers.setNickname("x", account: "nope", in: database) }
+}
+
+/// The tools keep reporting the bank's name: every tool's answer is byte-for-byte the same after
+/// every account gets a nickname.
+@Test func nicknameLeavesToolOutputUnchanged() throws {
+    let database = try organizedPersona("maya")
+    let inputs: [(Tool, String)] = [
+        (.accountBalances, "{}"),
+        (.findTransactions, #"{"start_date":"2026-06-01","end_date":"2026-06-30"}"#),
+        (.simulateBalance, #"{"days":14,"extra_amount":400}"#),
+        (.totalSpent, #"{"start_date":"2026-01-01","end_date":"2026-06-30"}"#),
+        (.topMerchants, #"{"start_date":"2026-01-01","end_date":"2026-06-30","limit":10}"#),
+        (.recurringCharges, #"{"kind":"all"}"#),
+    ]
+    func answers() -> [String] { inputs.map { tool, input in tool.call(Data(input.utf8), database: database) } }
+    let before = answers()
+    #expect(before.allSatisfy { !$0.hasPrefix(#"{"error""#) })
+    for id in ["maya-checking", "maya-card"] { try Answers.setNickname("Mine \(id)", account: id, in: database) }
+    #expect(answers() == before)
+    #expect(before[0].contains("Checking") && !before[0].contains("Mine"))
+}
+
 /// The familiar and category answers come back on the transaction's row, and clearing removes them.
 @Test func transactionAnswersAreReturnedAndCleared() throws {
     let database = try organizedPersona("daniel")
