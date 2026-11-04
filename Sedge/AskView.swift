@@ -23,7 +23,8 @@ struct ChatTurn: Identifiable {
 }
 
 /// Sedge's reply: a lead, an optional bold point, a smaller detail line, and optional extras.
-struct ChatAnswer {
+/// Codable so a saved chat keeps each answer whole (`Chats` stores it as JSON).
+struct ChatAnswer: Codable {
     /// The opening words, e.g. "More than usual."
     var lead: String
     /// The main point, shown in bold after the lead.
@@ -41,14 +42,14 @@ struct ChatAnswer {
 }
 
 /// One labeled dollar amount: a bar in a breakdown card or a chart.
-struct ChatBar: Identifiable {
+struct ChatBar: Identifiable, Codable {
     var label: String
     var amount: Double
     var id: String { label }
 }
 
 /// A spending card: a title and period, the total, how it compares, and a bar per part.
-struct Breakdown {
+struct Breakdown: Codable {
     /// E.g. "Food & dining".
     var title: String
     /// E.g. "Jun 1–30".
@@ -61,7 +62,7 @@ struct Breakdown {
 
 /// A short question for the person. A tap is sent through `ask_user`, so the reply is saved
 /// (and shown in Saved answers) exactly like one the assistant asked for.
-struct QuickCheck {
+struct QuickCheck: Codable {
     var question: String
     /// Small lines under the question, e.g. the store and date.
     var details: [String]
@@ -78,17 +79,20 @@ struct QuickCheck {
 /// question shows the thinking row briefly, then "The assistant isn't connected yet." Debug
 /// builds launched with `-sampleChat YES` show the design's sample conversation, worked out from
 /// this data; `-demoThinking YES` and `-demoTokenLimit YES` show the thinking row and the limit turn.
+/// Each settled question is saved to the dataset's own file (`Chats`), so Previous chats can
+/// reopen it; nothing hands the saved turns to whatever answers questions.
 struct AskView: View {
     let database: SedgeDatabase
     /// The question box's text, owned by the tabs so Trends can type a question in for the person.
     @Binding var question: String
-    /// Switches the main tab, for the toolbar buttons and the card's trends link.
+    /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
     @State private var session = ChatSession()
     /// True when the turns are demo content, so the screen says it is demo state.
     @State private var isDemo = false
     /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
     @State private var demoLoaded = false
+    @State private var showingChats = false
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private var blank: Bool { question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -108,6 +112,11 @@ struct AskView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
+                if session.reopenedTitle != nil {
+                    NewChatBanner(newChat: newChat)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                }
                 ForEach(session.turns) { TurnView(turn: $0, database: database, open: open) }
                 // Both fade in over 0.25 seconds like any answer; Reduce Motion keeps the fade.
                 if session.status == .thinking {
@@ -117,7 +126,7 @@ struct AskView: View {
                         .transition(.opacity)
                 }
                 if limited {
-                    LimitTurn { session.startNewSession(); isDemo = false }
+                    LimitTurn(startNewSession: newChat)
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
                         .transition(.opacity)
@@ -140,14 +149,27 @@ struct AskView: View {
         }
         .safeAreaInset(edge: .bottom) { composer }
         .background(Color.background)
+        // An older chat shows its own title, as in the design.
+        .navigationTitle(session.reopenedTitle ?? "Ask Sedge")
         .toolbar {
-            // The design's own drawings, the same ones as the Trends and Accounts tabs.
             ToolbarItem(placement: .topBarLeading) {
-                Button("Explore spending", image: .tabTrends) { open(.trends) }
+                Button("Previous chats", systemImage: "clock.arrow.circlepath") { showingChats = true }
+                    // Opening another chat mid-answer would save that answer into the wrong chat.
+                    .disabled(session.status == .thinking)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Accounts", image: .tabAccounts) { open(.accounts) }
+                Button("New chat", systemImage: "square.and.pencil", action: newChat)
             }
+        }
+        .sheet(isPresented: $showingChats) {
+            // Deleting the chat on screen starts a new one, so the next question isn't saved
+            // into a chat that is gone.
+            PreviousChatsView(database: database, open: openChat) { if $0 == session.chatID { newChat() } }
+        }
+        // A turn is saved once it settles: its answer came in, or the chat hit its limit. Watching
+        // the status means whatever answers questions only has to report it.
+        .onChange(of: session.status) { old, _ in
+            if old == .thinking { saveNewestTurn() }
         }
         .task {
             #if DEBUG
@@ -237,6 +259,40 @@ struct AskView: View {
         .background(Color.background)
     }
 
+    /// New chat (toolbar, banner and "Start new session"): an empty screen, ready for a question.
+    private func newChat() {
+        session.startNewSession()
+        isDemo = false
+    }
+
+    /// Saves the newest turn to the open chat, starting a saved chat on its first turn.
+    /// Demo content is never saved.
+    private func saveNewestTurn() {
+        guard !isDemo, let turn = session.turns.last else { return }
+        let answer = turn.answer.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }
+        do {
+            // The clock's time is only the label Previous chats shows.
+            session.chatID = try Chats.append(question: turn.question, answer: answer, to: session.chatID,
+                                              at: .now, in: database)
+        } catch {
+            print("Could not save the chat:", error)
+        }
+    }
+
+    /// Shows a chat picked in Previous chats, with its saved answers.
+    private func openChat(_ chat: Chats.Chat) {
+        do {
+            let turns = try Chats.turns(of: chat.id, in: database).map { saved in
+                ChatTurn(question: saved.question,
+                         answer: saved.answer.flatMap { try? JSONDecoder().decode(ChatAnswer.self, from: Data($0.utf8)) })
+            }
+            session.open(chat.id, titled: chat.title, turns: turns)
+            isDemo = false
+        } catch {
+            print("Could not open the chat:", error)
+        }
+    }
+
     private func send() {
         let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canSend else { return }
@@ -290,6 +346,41 @@ private struct ExampleQuestion: View {
                 withAnimation { index = (index + 1) % Self.questions.count }
             }
         }
+    }
+}
+
+/// The card at the top of an older chat: it can be continued, but a new chat answers best.
+/// Side by side as in the design; at the largest text sizes the button goes under the words.
+private struct NewChatBanner: View {
+    let newChat: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { words; Spacer(minLength: 0); button }
+            VStack(alignment: .leading, spacing: 0) { words.padding(.top, 12); button }
+        }
+        .padding(.leading, 13)
+        .padding(.trailing, 3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.group, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var words: some View {
+        Text("Sedge answers best in a new chat.").font(.footnote)
+    }
+
+    private var button: some View {
+        Button(action: newChat) {
+            Text("New chat")
+                .font(.link)
+                .padding(.horizontal, 10)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accent)
+        // The toolbar has a "New chat" button too, so UI tests find this one by its id.
+        .accessibilityIdentifier("bannerNewChat")
     }
 }
 
@@ -351,7 +442,7 @@ private struct LimitTurn: View {
         VStack(alignment: .leading, spacing: 10) {
             SedgeHeader()
             Text("This chat has reached its limit.").font(.answer.weight(.semibold))
-            Text("Sedge keeps each chat short so answers stay sharp.")
+            Text("Sedge keeps each chat short so answers stay sharp. Your questions so far stay in Previous chats.")
                 .font(.row)
                 .foregroundStyle(Color.muted)
             Button(action: startNewSession) {
@@ -648,7 +739,6 @@ extension ChatTurn {
 #Preview {
     NavigationStack {
         AskView(database: try! SedgeDatabase(), question: .constant(""))
-            .navigationTitle("Ask Sedge")
             .navigationBarTitleDisplayMode(.inline)
     }
 }

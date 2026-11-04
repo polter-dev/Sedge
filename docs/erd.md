@@ -4,7 +4,8 @@ Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase
 `v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
 `transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`),
 `v4` (profile_facts and profile_corrections), `v5` (saved_answers), `v6` (`accounts.owner`,
-`transactions.familiar` and `transactions.category_override`) and `v7` (`accounts.nickname`).
+`transactions.familiar` and `transactions.category_override`), `v7` (`accounts.nickname`) and
+`v8` (chats and chat_turns).
 
 ```mermaid
 erDiagram
@@ -18,6 +19,7 @@ erDiagram
     transactions |o--o{ edges : "target (refund_of: original purchase)"
     transactions }o--o{ profile_facts : "evidence (JSON list of transaction ids)"
     profile_corrections |o--o| profile_facts : "id (a correction replaces the fact with its id)"
+    chats ||--o{ chat_turns : "chat_id (deleting a chat deletes its turns)"
 
     accounts {
         text account_id PK
@@ -90,10 +92,24 @@ erDiagram
         text answer "not null, the reply the person tapped"
         text date "not null, the dataset's as_of when it was answered"
     }
+
+    chats {
+        integer id PK "auto-incremented"
+        text title "not null, the first question, shortened"
+        datetime created "not null, clock time, a Previous chats label only"
+        datetime updated "not null, clock time of the last saved turn, a label and the list's order"
+    }
+
+    chat_turns {
+        integer id PK "auto-incremented, also the turns' order"
+        integer chat_id FK "not null, indexed, references chats, on delete cascade"
+        text question "not null, as the person typed it"
+        text answer "JSON: the Ask screen's answer, null if none came"
+    }
 ```
 
 - **accounts** and **transactions** keep Plaid's field names. A transaction belongs to one
-  account (the only foreign key SQLite enforces).
+  account (one of the two foreign keys SQLite enforces; the other is `chat_turns.chat_id`).
 - **Pending to posted:** when a charge posts, Plaid sends a new row whose
   `pending_transaction_id` names the pending copy. `save` deletes that pending copy, so the
   link usually points at a row that is gone. It only records which pending copy was replaced.
@@ -143,6 +159,12 @@ erDiagram
   and saved by `Answers.setNickname` (a blank name is stored as null). The app's screens show
   it in place of `name`; the tools keep reporting `name`. Like `owner`, reloading the data or a
   bank sync keeps it.
+- **chats** and **chat_turns** are the Ask screen's saved chats (`Chats`), listed in Previous
+  chats and reopened for display. A turn is saved once its answer is in (or the chat hit its
+  limit); continuing an older chat adds turns to it. They live in the open dataset's file, so
+  each persona and the bank file keep their own chats, and reloading the data or organizing
+  again leaves them alone. Their times come from the clock and are labels only: no data logic
+  reads them, and nothing hands saved turns to whatever answers questions.
 
 ## Database files
 

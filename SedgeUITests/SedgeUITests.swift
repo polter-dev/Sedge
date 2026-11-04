@@ -99,6 +99,69 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Local analysis"].exists)
     }
 
+    /// A question is saved as a chat: New chat clears the screen, Previous chats lists it, and
+    /// opening it shows its turn under the "answers best in a new chat" banner. A question asked
+    /// there is added to it. The chat is deleted at the end so Maya's file keeps no test chats.
+    /// Screenshots: the toolbar, the sheet and the continued chat; for dark ones, run it after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testPreviousChatsReopenAndContinueAChat() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        // A question no other test asks, so its row is easy to find among older chats.
+        let question = "Previous chats test \(Int.random(in: 1000...9999))"
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText(question)
+        app.buttons["Send"].tap()
+        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
+        attachScreenshot(app, "ask-toolbar")
+
+        app.navigationBars.buttons["New chat"].tap()
+        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "New chat didn't clear")
+
+        app.navigationBars.buttons["Previous chats"].tap()
+        // In the list only: once the chat is reopened, the bar's title is a button with the same text.
+        let row = app.collectionViews.buttons.containing(NSPredicate(format: "label CONTAINS %@", question)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "The chat isn't in Previous chats")
+        XCTAssertTrue(row.label.contains("Today"), "Row was: \(row.label)")
+        attachScreenshot(app, "previous-chats-sheet")
+        row.tap()
+
+        XCTAssertTrue(app.staticTexts["Sedge answers best in a new chat."].waitForExistence(timeout: 5), "No banner")
+        XCTAssertTrue(app.staticTexts["You · \(question)"].exists)
+        // The bar is named by its title; the title itself is a button because it opens the Rename menu.
+        XCTAssertTrue(app.navigationBars[question].exists, "The title isn't the chat's")
+        field.tap()
+        field.typeText("And coffee?")
+        app.buttons["Send"].tap()
+        XCTAssertTrue(app.staticTexts["You · And coffee?"].waitForExistence(timeout: 2))
+        let replies = app.staticTexts.matching(NSPredicate(format: "label == %@", "The assistant isn't connected yet."))
+        XCTAssertTrue(replies.element(boundBy: 1).waitForExistence(timeout: 5), "No reply to the new question")
+        attachScreenshot(app, "continued-chat")
+
+        // The banner's New chat leaves the old chat; reopening shows both turns were saved.
+        app.buttons["bannerNewChat"].tap()
+        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2))
+        app.navigationBars.buttons["Previous chats"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.staticTexts["You · And coffee?"].waitForExistence(timeout: 5), "The new turn wasn't saved")
+
+        // Swipe to delete removes it from the list. It was the chat on screen, so Ask starts a
+        // new one instead of saving the next question into a chat that is gone.
+        app.navigationBars.buttons["Previous chats"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.swipeLeft()
+        app.buttons["Delete"].tap()
+        XCTAssertFalse(row.waitForExistence(timeout: 2), "The chat wasn't deleted")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "Still showing the deleted chat")
+    }
+
     /// The empty Ask screen's example question changes every few seconds, and typing brings up
     /// the composer's underlay. Screenshots: two moments of the rotation, then typing. For dark
     /// screenshots, run it after `xcrun simctl ui <device> appearance dark`.

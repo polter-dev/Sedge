@@ -181,7 +181,6 @@ struct MainView: View {
             Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
                     AskView(database: database, question: $question) { tab = $0 }
-                        .navigationTitle("Ask Sedge")
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                         .toolbarTitleMenu { renameMenu }

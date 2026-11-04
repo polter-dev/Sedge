@@ -23,7 +23,8 @@ public struct SedgeDatabase: Sendable {
 
     /// Each migration runs once per file, in order. To change a table later,
     /// add a new migration instead of editing an old one, so existing files upgrade.
-    private static var migrator: DatabaseMigrator {
+    // Not private so a test can stop a file at an older version and check it upgrades.
+    static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1") { db in
             try db.create(table: "accounts") { t in
@@ -128,6 +129,23 @@ public struct SedgeDatabase: Sendable {
         // of the bank's name. NULL means none; the tools keep reporting the bank's name.
         migrator.registerMigration("v7") { db in
             try db.alter(table: "accounts") { t in t.add(column: "nickname", .text) }
+        }
+        // The Ask screen's saved chats (`Chats`), so a chat can be found in Previous chats and
+        // continued. Nothing rebuilds them; deleting a chat deletes its turns with it.
+        migrator.registerMigration("v8") { db in
+            try db.create(table: "chats") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("title", .text).notNull()
+                // Shown in Previous chats only; data logic never reads them.
+                t.column("created", .datetime).notNull()
+                t.column("updated", .datetime).notNull()
+            }
+            try db.create(table: "chat_turns") { t in
+                t.autoIncrementedPrimaryKey("id") // also the turns' order within a chat
+                t.column("chat_id", .integer).notNull().indexed().references("chats", onDelete: .cascade)
+                t.column("question", .text).notNull()
+                t.column("answer", .text) // the Ask screen's answer as JSON, null if none came
+            }
         }
         return migrator
     }
