@@ -124,7 +124,8 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "New chat didn't clear")
 
         app.navigationBars.buttons["Previous chats"].tap()
-        let row = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", question)).firstMatch
+        // In the list only: once the chat is reopened, the bar's title is a button with the same text.
+        let row = app.collectionViews.buttons.containing(NSPredicate(format: "label CONTAINS %@", question)).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5), "The chat isn't in Previous chats")
         XCTAssertTrue(row.label.contains("Today"), "Row was: \(row.label)")
         attachScreenshot(app, "previous-chats-sheet")
@@ -132,7 +133,8 @@ final class SedgeUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Sedge answers best in a new chat."].waitForExistence(timeout: 5), "No banner")
         XCTAssertTrue(app.staticTexts["You · \(question)"].exists)
-        XCTAssertTrue(app.navigationBars.staticTexts[question].exists, "The title isn't the chat's")
+        // The bar is named by its title; the title itself is a button because it opens the Rename menu.
+        XCTAssertTrue(app.navigationBars[question].exists, "The title isn't the chat's")
         field.tap()
         field.typeText("And coffee?")
         app.buttons["Send"].tap()
