@@ -3,8 +3,8 @@
 Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase.swift`:
 `v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
 `transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`),
-`v4` (profile_facts and profile_corrections), `v5` (saved_answers) and `v6` (`accounts.owner`,
-`transactions.familiar` and `transactions.category_override`).
+`v4` (profile_facts and profile_corrections), `v5` (saved_answers), `v6` (`accounts.owner`,
+`transactions.familiar` and `transactions.category_override`) and `v7` (`accounts.nickname`).
 
 ```mermaid
 erDiagram
@@ -28,6 +28,7 @@ erDiagram
         text subtype
         text balances "not null, JSON: current, available, limit, currency codes"
         text owner "v6, the person's answer: mine or shared, null if not answered"
+        text nickname "v7, the person's own name for the account, null if none"
     }
 
     transactions {
@@ -138,6 +139,10 @@ erDiagram
   Spending screen). Like merchant_id they aren't part of `Account` or `Transaction`, so reloading
   the data or organizing again keeps them. A pending charge's answers stay with the pending
   row, so they are dropped when it posts under a new id.
+- **accounts.nickname** is the person's own name for an account, typed in the account check
+  and saved by `Answers.setNickname` (a blank name is stored as null). The app's screens show
+  it in place of `name`; the tools keep reporting `name`. Like `owner`, reloading the data or a
+  bank sync keeps it.
 
 ## Database files
 

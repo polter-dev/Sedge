@@ -141,8 +141,39 @@ struct MainView: View {
     let changeData: () -> Void
     /// The Ask box's text. It lives here so a typed question stays when the tab changes.
     @State private var question = ""
+    /// The person's own name for this data, kept in the app's settings (one per choice), never in a database.
+    @AppStorage private var nickname: String
+    /// True while the rename alert is showing; `draft` is what is typed in it.
+    @State private var renaming = false
+    @State private var draft = ""
 
-    private var dataName: String { choice == SedgeDatabase.bankChoice ? "Bank" : choice.capitalized }
+    init(database: SedgeDatabase, choice: String, tab: Binding<MainTab>, changeData: @escaping () -> Void) {
+        self.database = database
+        self.choice = choice
+        _tab = tab
+        self.changeData = changeData
+        // The settings key depends on the choice, so it is set here rather than on the property.
+        _nickname = AppStorage(wrappedValue: "", "nickname.\(choice)")
+    }
+
+    private var dataName: String { Self.dataName(choice: choice, nickname: nickname) }
+
+    /// The nickname trimmed and capped at 24 characters, or the default name when it is blank.
+    static func dataName(choice: String, nickname: String) -> String {
+        // Trimmed again after the cap, so a cut at a space doesn't leave one at the end.
+        let cleaned = String(nickname.trimmingCharacters(in: .whitespacesAndNewlines).prefix(24))
+            .trimmingCharacters(in: .whitespaces)
+        if !cleaned.isEmpty { return cleaned }
+        return choice == SedgeDatabase.bankChoice ? "Bank" : choice.capitalized
+    }
+
+    /// The item in the menu under each tab's title (tap the title to open it).
+    private var renameMenu: some View {
+        Button("Rename…", systemImage: "pencil") {
+            draft = dataName
+            renaming = true
+        }
+    }
 
     var body: some View {
         // The tab icons are the design's own drawings, kept as template images so they take the tab colors.
@@ -153,14 +184,17 @@ struct MainView: View {
                         .navigationTitle("Ask Sedge")
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
+                        .toolbarTitleMenu { renameMenu }
                 }
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
                     SpendingView(database: database)
                         .navigationTitle("Spending")
+                        // Inline because iOS shows the title menu only on an inline title.
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
+                        .toolbarTitleMenu { renameMenu }
                 }
             }
             Tab("Accounts", image: "tab-accounts", value: .accounts) {
@@ -168,12 +202,24 @@ struct MainView: View {
                     AccountsView(database: database, isBank: choice == SedgeDatabase.bankChoice,
                                  dataName: dataName, changeData: changeData)
                         .navigationTitle("Accounts")
+                        // Inline because iOS shows the title menu only on an inline title.
+                        .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
-                        .toolbar { Button("Change data", systemImage: "person.2", action: changeData) }
+                        .toolbarTitleMenu { renameMenu }
+                        .toolbar { Button("Change data", systemImage: "person.2", action: changeData).symbolRenderingMode(.monochrome) } // One color for both figures: the app's two-color foregroundStyle would paint them in its two theme colors, which fade on the dark top bar.
                 }
             }
         }
         .modifier(AccountChecksAfterConnecting(database: database))
+        .alert("Rename", isPresented: $renaming) {
+            TextField("Name", text: $draft)
+            // Saved as typed; dataName(choice:nickname:) trims and caps it wherever it is shown.
+            Button("Save") { nickname = draft }
+            Button("Use default name") { nickname = "" }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("A blank name goes back to the default.")
+        }
     }
 }
 
@@ -187,6 +233,8 @@ struct AccountsView: View {
     @State private var rows: [ListedTransaction] = []
     @State private var accounts: [ListedAccount] = []
     @State private var resetDone = false
+    /// The transaction screen's saved choice to hide its spending note, which this tab can undo.
+    @AppStorage("hideSpendingNote") private var noteHidden = false
     /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
     @State private var confirmingReset = false
 
@@ -222,28 +270,51 @@ struct AccountsView: View {
                 } label: {
                     Label("About you", systemImage: "person.text.rectangle")
                 }
+                if !accounts.isEmpty {
+                    let unanswered = accounts.count { $0.owner == nil }
+                    NavigationLink {
+                        YourAccountsView(database: database)
+                            .navigationTitle("Your accounts")
+                            .navigationSubtitle(dataName)
+                    } label: {
+                        LabeledContent {
+                            Text("\(accounts.count)").foregroundStyle(.secondary)
+                        } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Your accounts")
+                                    if unanswered > 0 {
+                                        Text("\(unanswered) still to answer").font(.row).foregroundStyle(.secondary)
+                                    }
+                                }
+                            } icon: {
+                                Image(systemName: "creditcard")
+                            }
+                        }
+                    }
+                    .accessibilityLabel("Your accounts")
+                    .accessibilityValue(unanswered > 0 ? "\(accounts.count), \(unanswered) still to answer" : "\(accounts.count)")
+                }
             }
             .listRowBackground(Color.group)
-            if !accounts.isEmpty {
-                Section("Your accounts") {
-                    ForEach(accounts) { account in
-                        NavigationLink {
-                            AccountCheckView(database: database, account: account)
-                        } label: {
-                            LabeledContent(accountTitle(account.name, account.mask), value: account.ownerLabel)
-                        }
-                        .accessibilityLabel(accountTitle(account.name, account.mask, spoken: true))
-                        .accessibilityValue(account.ownerLabel)
-                    }
-                }
-                .listRowBackground(Color.group)
-            }
             Section {
                 NavigationLink {
                     SavedAnswersView(database: database)
                         .navigationTitle("Saved answers")
                 } label: {
                     Label("Saved answers", systemImage: "tray.full")
+                }
+                if noteHidden {
+                    Button { noteHidden = false } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Show the spending note again").foregroundStyle(Color.ink)
+                                Text("You hid it on a transaction").font(.row).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "eye")
+                        }
+                    }
                 }
                 Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
                     confirmingReset = true

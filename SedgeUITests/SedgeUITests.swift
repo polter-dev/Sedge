@@ -165,8 +165,9 @@ final class SedgeUITests: XCTestCase {
 
             app.tabBars.buttons["Accounts"].tap()
             app.buttons["About you"].tap()
-            let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
-            XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+            // Each tile is one button that reads everything it shows, starting with its kind.
+            let income = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
+            XCTAssertTrue(income.waitForExistence(timeout: 10))
             attachScreenshot(app, "\(persona) profile")
         }
     }
@@ -182,10 +183,15 @@ final class SedgeUITests: XCTestCase {
         // Saving a fact unchanged still makes a correction.
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["About you"].tap()
-        let fact = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+        // Each tile is one button that reads its whole fact, starting with its kind.
+        let fact = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
         XCTAssertTrue(fact.waitForExistence(timeout: 10))
         fact.tap()
         app.buttons["Save"].tap()
+        // The corrected tile keeps its amount and its next payday.
+        let corrected = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income, $520.00' AND label ENDSWITH 'Next Jul 3'")).firstMatch
+        XCTAssertTrue(corrected.waitForExistence(timeout: 5), "The income tile changed after saving it unchanged")
+        attachScreenshot(app, "about-you-corrected")
 
         // Back to the Accounts list, where the menu is.
         app.navigationBars.buttons.firstMatch.tap()
@@ -320,8 +326,8 @@ final class SedgeUITests: XCTestCase {
         app.navigationBars.buttons.firstMatch.tap()
 
         app.buttons["About you"].tap()
-        let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
-        XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+        let income = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
+        XCTAssertTrue(income.waitForExistence(timeout: 10))
         attachScreenshot(app, "accounts-about-you")
         app.navigationBars.buttons.firstMatch.tap()
 
@@ -613,7 +619,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         XCTAssertTrue(app.staticTexts["Higher than your last three visits."].waitForExistence(timeout: 10))
@@ -635,7 +641,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(try spent(app, "Groceries"), before.groceries)
     }
 
-    /// Answering "Is this account yours?" from the Accounts tab shows the answer on that account,
+    /// Answering "Is this account yours?" from Your accounts shows the answer on that account,
     /// and Later leaves it unanswered. Clears the answers at the end, so Maya's saved file ends as it was.
     @MainActor
     func testAccountQuickCheckShowsTheAnswer() throws {
@@ -643,6 +649,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
 
         // Shared, then Yes, mine, so each answer is seen to change what the account shows.
         let checking = app.buttons["Checking"]
@@ -662,7 +669,7 @@ final class SedgeUITests: XCTestCase {
         card.tap()
         app.buttons["Later"].tap()
         XCTAssertTrue(card.waitForExistence(timeout: 5))
-        XCTAssertEqual(card.value as? String, "Not answered")
+        XCTAssertEqual(card.value as? String, "Later")
         attachScreenshot(app, "accounts-with-answers")
 
         // The app has no way to take an owner answer back, so a debug launch argument clears them.
@@ -670,8 +677,43 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
         XCTAssertTrue(checking.waitForExistence(timeout: 10))
-        XCTAssertEqual(checking.value as? String, "Not answered")
+        XCTAssertEqual(checking.value as? String, "Later")
+    }
+
+    /// A name typed in the account check shows on Your accounts in place of the bank's name, and
+    /// clearing the field brings the bank's name back, so Maya's saved file ends as it was.
+    @MainActor
+    func testNamingAnAccountShowsTheNameOnYourAccounts() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
+
+        let checking = app.buttons["Checking"]
+        XCTAssertTrue(checking.waitForExistence(timeout: 10))
+        checking.tap()
+        let field = app.textFields["Account name"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("Everyday")
+        attachScreenshot(app, "account-check-named")
+        app.buttons["Later"].tap()
+
+        let named = app.buttons["Everyday"]
+        XCTAssertTrue(named.waitForExistence(timeout: 5))
+        XCTAssertFalse(checking.exists)
+        attachScreenshot(app, "your-accounts-named")
+
+        // Clear the name: the row goes back to the bank's name.
+        named.tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        app.buttons["Clear name"].tap()
+        app.buttons["Later"].tap()
+        XCTAssertTrue(checking.waitForExistence(timeout: 5))
+        XCTAssertFalse(named.exists)
     }
 
     /// After a bank connection, each unanswered account is asked about once, one after another.
@@ -697,6 +739,127 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(asked.isEmpty)
         XCTAssertEqual(asked.count, Set(asked).count, "An account was asked about twice")
         XCTAssertTrue(app.tabBars.buttons["Ask"].isHittable)
+    }
+
+    /// The spending note's × hides it on every transaction, not just the one it was tapped on,
+    /// and the Accounts tab's "Show the spending note again" row brings it back. The note ends
+    /// shown, as it started. For dark screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testSpendingNoteHidesEverywhereAndComesBack() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        let showAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch
+        // A run stopped halfway may have left the note hidden; start with it shown.
+        if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
+
+        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let note = app.staticTexts["This is a spending observation, not a fraud determination."]
+        let undoLine = app.staticTexts["Spending note hidden on every transaction."]
+        openTransaction(app, corner)
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
+        attachScreenshot(app, "note-with-dismiss")
+        app.buttons["Dismiss"].tap()
+        XCTAssertTrue(undoLine.waitForExistence(timeout: 2))
+        XCTAssertFalse(note.exists)
+        attachScreenshot(app, "note-hidden-undo")
+        // The Undo line stays 4 s, then the box collapses.
+        XCTAssertTrue(undoLine.waitForNonExistence(timeout: 6))
+        XCTAssertFalse(note.exists)
+        attachScreenshot(app, "note-collapsed")
+
+        // Another purchase at the same store has Sedge's context too, and no note either.
+        app.navigationBars.buttons.firstMatch.tap()
+        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Corner Cafe, ' AND label != %@", corner)).firstMatch
+        for _ in 0..<10 where !(other.exists && other.isHittable) { app.swipeUp() }
+        other.tap()
+        XCTAssertTrue(app.staticTexts["Sedge’s context"].waitForExistence(timeout: 10))
+        XCTAssertFalse(note.exists)
+
+        // Back on the Accounts tab, the row shows the note again and then goes away.
+        app.navigationBars.buttons.firstMatch.tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        // At the largest text sizes the row is below the fold.
+        for _ in 0..<10 where !(showAgain.exists && showAgain.isHittable) { app.swipeUp() }
+        XCTAssertTrue(showAgain.isHittable)
+        attachScreenshot(app, "accounts-show-note-again")
+        showAgain.tap()
+        XCTAssertTrue(showAgain.waitForNonExistence(timeout: 5))
+        openTransaction(app, corner)
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
+    }
+
+    /// "Does this look familiar?" saves at once and counts down with Undo. Undo before 0 leaves the
+    /// answer empty, and waiting past 0 folds the prompt away and keeps the answer. Reopening the
+    /// transaction reads the answer back from the database. The answer is undone at the end, so
+    /// Maya's saved file ends as it was. For dark screenshots, run it after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testFamiliarUndoLeavesItEmptyAndWaitingKeepsIt() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
+        /// Goes back to the transactions list and opens the same transaction again, which reloads it.
+        func reopen() {
+            app.navigationBars.buttons.firstMatch.tap()
+            app.buttons[corner].tap()
+            XCTAssertTrue(yes.waitForExistence(timeout: 10))
+        }
+        openTransaction(app, corner)
+        XCTAssertTrue(yes.waitForExistence(timeout: 10))
+        XCTAssertFalse(yes.isSelected)
+        XCTAssertFalse(notSure.isSelected)
+
+        // Undo before 0: the buttons come back and nothing is saved.
+        yes.tap()
+        XCTAssertTrue(app.staticTexts["Saved · Yes"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch.exists)
+        attachScreenshot(app, "familiar-countdown")
+        app.buttons["Undo"].tap()
+        XCTAssertTrue(yes.waitForExistence(timeout: 2))
+        XCTAssertFalse(yes.isSelected)
+        reopen()
+        XCTAssertFalse(yes.isSelected)
+        XCTAssertFalse(notSure.isSelected)
+
+        // Waiting past 0: the whole prompt folds away and the answer stays.
+        notSure.tap()
+        XCTAssertTrue(app.staticTexts["Saved · Not sure"].waitForExistence(timeout: 2))
+        // The ring reaches 0 before the prompt folds away. 0 shows for well under a second and
+        // waitForExistence checks only about once a second, so this reads the ring's label in a
+        // tight loop until the ring is gone. One snapshot per read, so a fold mid-read can't fail.
+        let ring = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
+        var seen: Set<String> = []
+        let end = Date().addingTimeInterval(7)
+        while Date() < end, let label = try? ring.snapshot().label { seen.insert(label) }
+        XCTAssertTrue(seen.contains("Closing in 1"), "The ring was never seen at 1; saw \(seen.sorted())")
+        XCTAssertTrue(seen.contains("Closing in 0"), "The ring never showed 0; saw \(seen.sorted())")
+        XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
+        XCTAssertFalse(notSure.exists)
+        attachScreenshot(app, "familiar-folded")
+        reopen()
+        XCTAssertTrue(notSure.isSelected)
+        XCTAssertFalse(yes.isSelected)
+        attachScreenshot(app, "familiar-answered-later")
+
+        // Clean up: answer again, then Undo, which empties it.
+        notSure.tap()
+        app.buttons["Undo"].tap()
+        reopen()
+        XCTAssertFalse(notSure.isSelected)
+    }
+
+    /// From the Accounts tab, opens the transaction whose row reads `label`.
+    @MainActor
+    private func openTransaction(_ app: XCUIApplication, _ label: String) {
+        app.buttons["Transactions"].tap()
+        let row = app.buttons[label]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
     }
 
     /// Picks a category on the open transaction screen and checks the screen shows it.
@@ -821,7 +984,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         try pickCategory(app, "Groceries")

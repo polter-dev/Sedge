@@ -22,7 +22,7 @@ private func totalSpent(_ category: String?, _ start: String, _ end: String, in 
 /// For Maya at her `as_of` (June 30), every category's four bars equal `total_spent` over the
 /// first 30 days of March to June, and the stores in the graph add up to June's bar.
 @Test func patternBarsMatchTotalSpent() throws {
-    let database = try SedgeDatabase.open("maya")
+    let database = try inMemory("maya") // in memory: running alongside SedgeTests, the shared file would be locked
     let asOf = try #require(try database.asOf())
     #expect(asOf == "2026-06-30")
     let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: 30)
@@ -120,7 +120,7 @@ func pickedMonthMatchesItsBar(persona: String) throws {
 /// month, each category's bar equals `total_spent` over all the data, and the money-moved
 /// switch adds its own category bar without changing any other bar.
 @Test func allMonthsBarsMatchTotalSpent() throws {
-    let database = try SedgeDatabase.open("maya")
+    let database = try inMemory("maya") // in memory: running alongside SedgeTests, the shared file would be locked
     let asOf = try #require(try database.asOf())
     let totals = try SpendingTotal.all(in: database, includeMoved: false)
     let months = AllMonthsView.byMonth(totals)
