@@ -511,7 +511,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         XCTAssertTrue(app.staticTexts["Higher than your last three visits."].waitForExistence(timeout: 10))
@@ -825,7 +825,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         try pickCategory(app, "Groceries")
