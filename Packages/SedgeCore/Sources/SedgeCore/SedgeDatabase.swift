@@ -124,6 +124,23 @@ public struct SedgeDatabase: Sendable {
                 t.add(column: "category_override", .text) // a category name, e.g. groceries
             }
         }
+        // The Ask screen's saved chats (`Chats`), so a chat can be found in Previous chats and
+        // continued. Nothing rebuilds them; deleting a chat deletes its turns with it.
+        migrator.registerMigration("v7") { db in
+            try db.create(table: "chats") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("title", .text).notNull()
+                // Shown in Previous chats only; data logic never reads them.
+                t.column("created", .datetime).notNull()
+                t.column("updated", .datetime).notNull()
+            }
+            try db.create(table: "chat_turns") { t in
+                t.autoIncrementedPrimaryKey("id") // also the turns' order within a chat
+                t.column("chat_id", .integer).notNull().indexed().references("chats", onDelete: .cascade)
+                t.column("question", .text).notNull()
+                t.column("answer", .text) // the Ask screen's answer as JSON, null if none came
+            }
+        }
         return migrator
     }
 

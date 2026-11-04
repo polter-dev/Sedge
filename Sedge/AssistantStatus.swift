@@ -20,6 +20,11 @@ enum AssistantStatus: Equatable {
 /// `@Observable` makes SwiftUI redraw the screen whenever either changes.
 @Observable final class ChatSession {
     var turns: [ChatTurn] = []
+    /// The saved chat (`Chats`) these turns belong to, or nil until its first turn is saved.
+    var chatID: Int64?
+    /// The title of an older chat opened from Previous chats, or nil for a chat started here.
+    /// While it is set, the screen shows the "answers best in a new chat" banner.
+    private(set) var reopenedTitle: String?
     private(set) var status = AssistantStatus.idle
     /// The words next to the thinking row's sprout, picked when thinking starts.
     private(set) var phrase = ""
@@ -47,9 +52,20 @@ enum AssistantStatus: Equatable {
         status = new
     }
 
-    /// "Start new session": clears the conversation so the person can ask again.
+    /// "Start new session" and New chat: clears the conversation so the person can ask again.
+    /// The chat so far stays saved in Previous chats.
     func startNewSession() {
         turns = []
+        chatID = nil
+        reopenedTitle = nil
+        status = .idle
+    }
+
+    /// Shows an older chat from Previous chats. New questions are added to it.
+    func open(_ chat: Int64, titled title: String, turns: [ChatTurn]) {
+        self.turns = turns
+        chatID = chat
+        reopenedTitle = title
         status = .idle
     }
 }
