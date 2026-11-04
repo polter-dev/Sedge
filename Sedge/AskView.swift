@@ -86,8 +86,18 @@ struct AskView: View {
     @State private var turns: [ChatTurn] = []
     /// True when the turns are the sample, so the screen says it is demo state.
     @State private var isDemo = false
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private var blank: Bool { question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    /// The person's Reduce Motion setting. Debug builds launched with `-reduceMotion YES` act as
+    /// if it were on, because a UI test can't switch the setting itself.
+    private var reduceMotion: Bool {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "reduceMotion") { return true }
+        #endif
+        return systemReduceMotion
+    }
 
     var body: some View {
         ScrollView {
@@ -101,8 +111,11 @@ struct AskView: View {
         .scrollDismissesKeyboard(.interactively)
         .overlay {
             if turns.isEmpty {
-                ContentUnavailableView("Ask about your money", image: "tab-ask",
-                                       description: Text("For example, how much did I spend at Netflix this year?").foregroundStyle(Color.muted))
+                ContentUnavailableView {
+                    Label("Ask about your money", image: "tab-ask")
+                } description: {
+                    ExampleQuestion(rotates: !reduceMotion).foregroundStyle(Color.muted)
+                }
             }
         }
         .safeAreaInset(edge: .bottom) { composer }
@@ -132,7 +145,8 @@ struct AskView: View {
 
     /// The question box with its send button, and the line that says where answers come from.
     private var composer: some View {
-        VStack(spacing: 7) {
+        // 9 points, so the 8-point underlay clears the "Local analysis" line below it.
+        VStack(spacing: 9) {
             HStack(alignment: .bottom, spacing: 2) {
                 TextField("Question", text: $question,
                           prompt: Text("Ask about your money…").foregroundStyle(Color.muted), axis: .vertical)
@@ -142,7 +156,16 @@ struct AskView: View {
                     .onSubmit(send)
                 Button("Send", image: .chatSend, action: send)
                     .labelStyle(.iconOnly)
-                    .foregroundStyle(blank ? Color.muted : Color.ink)
+                    .foregroundStyle(blank ? Color.muted : Color.contrast)
+                    // The glow: an accent circle with a soft accent shadow fades in behind the arrow.
+                    .background {
+                        Circle()
+                            .fill(Color.accent)
+                            .frame(width: 34, height: 34)
+                            .shadow(color: Color.accent.opacity(0.35), radius: 8)
+                            .opacity(blank ? 0 : 1)
+                    }
+                    .animation(.easeInOut(duration: 0.25), value: blank)
                     // Apple's minimum tap area, around the 20-point arrow.
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
@@ -152,6 +175,18 @@ struct AskView: View {
             .padding(.trailing, 2)
             .background(Color.surface, in: RoundedRectangle(cornerRadius: 23))
             .overlay(RoundedRectangle(cornerRadius: 23).stroke(Color.line))
+            // While there is text, a soft underlay springs up 8 points beyond the box on every side.
+            // As a background it grows with the box when the question wraps to more lines.
+            .background {
+                if !blank {
+                    RoundedRectangle(cornerRadius: 31)
+                        .fill(Color.soft)
+                        .padding(-8)
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94)))
+                }
+            }
+            .animation(blank || reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.35, dampingFraction: 0.7),
+                       value: blank)
             HStack(spacing: 4) {
                 Image(.chatLocal).accessibilityHidden(true)
                 Text(isDemo ? "Local analysis · demo state" : "Local analysis")
@@ -172,6 +207,44 @@ struct AskView: View {
     }
 }
 
+/// The empty screen's example question. Each one stays 4 seconds, then crossfades to the next,
+/// looping through all six. When `rotates` is false (Reduce Motion) it keeps the first one.
+private struct ExampleQuestion: View {
+    let rotates: Bool
+    @State private var index = 0
+
+    static let questions = [
+        "How much did I spend at Netflix this year?",
+        "What did groceries cost me last month?",
+        "Have I been overspending on food?",
+        "How much have I saved since January?",
+        "What did rent and utilities cost in May?",
+        "How much do I spend on coffee each month?",
+    ]
+
+    var body: some View {
+        ZStack {
+            // Invisible copies of every question keep the slot as tall as the tallest one,
+            // so the screen doesn't jump when a longer question wraps at large text sizes.
+            ForEach(Self.questions, id: \.self) { Text($0).hidden() }
+            // A new id makes this a new view, so the old question fades out as the new one fades in.
+            Text(Self.questions[index])
+                .id(index)
+                .transition(.asymmetric(insertion: .opacity.animation(.easeIn(duration: 0.3)),
+                                        removal: .opacity.animation(.easeOut(duration: 0.3))))
+                .accessibilityIdentifier("exampleQuestion")
+        }
+        .task(id: rotates) {
+            guard rotates else { index = 0; return }
+            // 4 seconds fully shown plus the 0.3-second fade. Sleeping throws once the screen
+            // goes away, which ends the loop.
+            while (try? await Task.sleep(for: .seconds(4.3))) != nil {
+                withAnimation { index = (index + 1) % Self.questions.count }
+            }
+        }
+    }
+}
+
 /// One turn as the design draws it: the breakdown card, the question, the answer, then the quick check.
 private struct TurnView: View {
     let turn: ChatTurn
@@ -179,7 +252,7 @@ private struct TurnView: View {
     let open: (MainTab) -> Void
     /// What the quick check got back, shown in place of its buttons once tapped.
     @State private var reply: String?
-    /// Paper and Carbon Soft use different tokens for a few pieces (bar tracks, button fills).
+    /// Paper and Carbon Soft use different tokens for a few pieces (button fills, the card's rule).
     @Environment(\.colorScheme) private var colorScheme
 
     /// The design's label and amount columns, grown with the reader's text size.
@@ -212,7 +285,7 @@ private struct TurnView: View {
                     Image(.chatSedge).accessibilityHidden(true)
                     Text("Sedge").font(.row.weight(.semibold))
                 }
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.chartNow)
                 .padding(.bottom, 10)
 
                 if let point = answer.point {
@@ -268,11 +341,11 @@ private struct TurnView: View {
                     Text(bar.label).frame(width: labelWidth, alignment: .leading)
                     // Each bar is its share of the card's total.
                     Capsule()
-                        .fill(dark ? Color.line : Color.soft)
+                        .fill(Color.nodeStore)
                         .frame(height: 7)
                         .overlay(alignment: .leading) {
                             GeometryReader { space in
-                                Capsule().fill(Color.accent)
+                                Capsule().fill(Color.chartNow)
                                     .frame(width: space.size.width * min(max(card.total > 0 ? bar.amount / card.total : 0, 0), 1))
                             }
                         }
@@ -327,8 +400,8 @@ private struct TurnView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(index == 0 ? Color.contrast : Color.accent)
-            .background(index == 0 ? Color.accent : (dark ? Color.soft : Color.surface),
+            .foregroundStyle(index == 0 ? Color.onNodeCategory : Color.accent)
+            .background(index == 0 ? Color.nodeCategory : (dark ? Color.soft : Color.surface),
                         in: RoundedRectangle(cornerRadius: 10))
         }
     }

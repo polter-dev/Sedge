@@ -113,10 +113,11 @@ struct SpendingView: View {
     /// The name of the "All" mosaic's block that adds up the smaller categories.
     static let otherCategories = "Other categories"
 
-    /// The four months the bars cover, oldest first, as "YYYY-MM": `asOf`'s month and the three before it.
-    static func months(endingAt asOf: String) -> [String] {
+    /// The four months the bars cover (or `count` months), oldest first, as "YYYY-MM": `asOf`'s
+    /// month and the ones before it. `asOf` may be "YYYY-MM-DD" or "YYYY-MM".
+    static func months(endingAt asOf: String, count: Int = 4) -> [String] {
         guard let year = Int(asOf.prefix(4)), let month = Int(asOf.dropFirst(5).prefix(2)) else { return [] }
-        return (0..<4).reversed().map { back in
+        return (0..<count).reversed().map { back in
             // Months counted from year 0, so stepping back past January lands in the year before.
             let index = year * 12 + month - 1 - back
             return String(format: "%04d-%02d", index / 12, index % 12 + 1)

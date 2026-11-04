@@ -52,6 +52,50 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "ask-not-connected")
     }
 
+    /// The empty Ask screen's example question changes every few seconds, and typing brings up
+    /// the composer's underlay. Screenshots: two moments of the rotation, then typing. For dark
+    /// screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testAskExampleRotatesAndTypingShowsTheUnderlay() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let example = app.staticTexts["exampleQuestion"]
+        XCTAssertTrue(example.waitForExistence(timeout: 5))
+        let first = example.label
+        attachScreenshot(app, "ask-example-first")
+        // Each question stays 4.3 s; allow a couple of turns so a slow simulator can't miss the swap.
+        let changed = expectation(for: NSPredicate(format: "label != %@", first), evaluatedWith: example)
+        wait(for: [changed], timeout: 15)
+        // Let the 0.3-second crossfade finish before the screenshot.
+        Thread.sleep(forTimeInterval: 0.5)
+        attachScreenshot(app, "ask-example-second")
+
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText("How much did I spend at Netflix")
+        Thread.sleep(forTimeInterval: 0.5) // the underlay's spring
+        attachScreenshot(app, "ask-typing")
+    }
+
+    /// With Reduce Motion on, the example question stays on the first one.
+    @MainActor
+    func testAskExampleStaysWithReduceMotion() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let example = app.staticTexts["exampleQuestion"]
+        XCTAssertTrue(example.waitForExistence(timeout: 5))
+        XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
+        // As long as the rotation test waits for a swap, so both watch the same window.
+        Thread.sleep(forTimeInterval: 15)
+        XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
+    }
+
     /// The Debug sample conversation shows the breakdown card, the answer and the quick check,
     /// and a quick-check tap is saved like any other answer. It is removed again at the end,
     /// so Maya's saved file stays as it was.
@@ -754,7 +798,7 @@ final class SedgeUITests: XCTestCase {
         // A run stopped halfway may have left the note hidden; start with it shown.
         if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
 
-        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
         let note = app.staticTexts["This is a spending observation, not a fraud determination."]
         let undoLine = app.staticTexts["Spending note hidden on every transaction."]
         openTransaction(app, corner)
@@ -801,7 +845,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
         let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
         /// Goes back to the transactions list and opens the same transaction again, which reloads it.
         func reopen() {
@@ -853,12 +897,19 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(notSure.isSelected)
     }
 
-    /// From the Accounts tab, opens the transaction whose row reads `label`.
+    /// From the Accounts tab, opens the transaction whose row reads `label`. The list shows one
+    /// month at a time and opens on the data's latest month, so this steps back a month at a time
+    /// until the row turns up or there is no earlier month.
     @MainActor
     private func openTransaction(_ app: XCUIApplication, _ label: String) {
         app.buttons["Transactions"].tap()
-        let row = app.buttons[label]
-        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        let row = app.buttons[label], previous = app.buttons["Previous month"]
+        XCTAssertTrue(previous.waitForExistence(timeout: 10))
+        while true {
+            for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+            if (row.exists && row.isHittable) || !previous.isEnabled { break }
+            previous.tap()
+        }
         row.tap()
     }
 
@@ -923,7 +974,8 @@ final class SedgeUITests: XCTestCase {
 
     /// The All months screen opens from Trends with its month chart, its category chart and the
     /// money-moved switch. The switch adds a "Moved between accounts" bar and turning it off
-    /// restores the totals. The screenshot is the screen in light, or dark after
+    /// restores the totals. Tapping a month opens its categories and tapping a category opens
+    /// its months. The screenshots are the screen in light, or dark after
     /// `xcrun simctl ui <device> appearance dark`. Nothing is changed in Maya's saved file.
     @MainActor
     func testAllMonthsShowsEveryMonthCategoryAndMoneyMoved() throws {
@@ -940,12 +992,41 @@ final class SedgeUITests: XCTestCase {
         let june = app.otherElements["June 2026"]
         XCTAssertTrue(june.waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["January 2026"].exists)
-        let dining = app.otherElements["Dining"]
+        // Each category row is a button: tapping it shows its months.
+        let dining = app.buttons["Dining"]
         XCTAssertTrue(dining.exists)
         let before = (june: june.value as? String, dining: dining.value as? String)
-        let moved = app.otherElements["Moved between accounts"]
+        let moved = app.buttons["Moved between accounts"]
         XCTAssertFalse(moved.exists)
         attachScreenshot(app, "all-months")
+
+        // Tapping March splits its bar into categories and opens its card; Maya's data is one
+        // six-month window, so both chevrons are off.
+        XCTAssertFalse(app.buttons["Earlier months"].isEnabled)
+        XCTAssertFalse(app.buttons["Later months"].isEnabled)
+        let march = app.otherElements["March 2026"]
+        let marchTotal = march.value as? String
+        march.tap()
+        let card = app.staticTexts["March 2026"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        // The split bar still reads as the month and its total; the card lists Dining as a plain row.
+        XCTAssertEqual(march.value as? String, marchTotal)
+        XCTAssertTrue(app.otherElements["Dining"].exists)
+        attachScreenshot(app, "all-months-month-selected")
+        app.buttons["Clear"].tap()
+        XCTAssertTrue(card.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["March 2026"].exists)
+
+        // Tapping Transport (a category with its own color) opens its six months under the row;
+        // tapping again closes them.
+        let transport = app.buttons["Transport"]
+        transport.tap()
+        // The window's dash comes with the phone's own spacing, so only the start is matched.
+        let caption = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Transport · each month'")).firstMatch
+        XCTAssertTrue(caption.waitForExistence(timeout: 5))
+        attachScreenshot(app, "all-months-category-selected")
+        transport.tap()
+        XCTAssertTrue(caption.waitForNonExistence(timeout: 5))
 
         let toggle = app.switches["Include money moved between my accounts"]
         // The inner switch, so the tap lands on the control and not on its label.
@@ -979,7 +1060,7 @@ final class SedgeUITests: XCTestCase {
         let june = app.otherElements["June"]
         let before = try dollars(june)
         app.buttons["All months & categories →"].tap()
-        let dining = app.otherElements["Dining"]
+        let dining = app.buttons["Dining"]
         let beforeAll = try dollars(dining)
 
         app.tabBars.buttons["Accounts"].tap()
