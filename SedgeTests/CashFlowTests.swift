@@ -10,7 +10,7 @@ import Testing
 @testable import Sedge
 
 /// A persona's data in memory, organized, so these tests never touch the files the other tests reopen.
-private func inMemory(_ persona: String) throws -> SedgeDatabase {
+func inMemory(_ persona: String) throws -> SedgeDatabase {
     let database = try SedgeDatabase()
     try Persona.load(accounts: try #require(Bundle.main.url(forResource: "\(persona).accounts", withExtension: "json")),
                      transactions: try #require(Bundle.main.url(forResource: "\(persona).transactions", withExtension: "json")),
