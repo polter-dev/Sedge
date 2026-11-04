@@ -10,6 +10,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - The fake personas' today is 2026-06-30. — `Persona.swift` `asOf`
 - One database is one person, so every account in it belongs to the same person. — `Organizer.swift` `reconcile`
 - Dates are calendar days with no time zone. — `Organizer.swift` `calendar`
+- A week runs Monday to Sunday; in the month-by-month transactions list, a week that crosses into another month shows only the shown month's days. — `Sedge/TransactionsView.swift` `TransactionGroups.monday(of:)`, `TransactionGroups.parts`
 - A positive amount is money out; a credit card's balance is what is owed. — `Simulator.swift` `simulate`, `Tools.swift` `accountBalances`
 - Plaid data's today is its newest transaction date. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`
 - A Plaid transaction's name is the bank's original description when Plaid sends one, else Plaid's `name` (which Plaid rewrites for stores it recognizes, e.g. NETFLIX.COM to Netflix). — `Sedge/BankConnection/ConnectBankView.swift` `AllTransactionsResponse.init(from:)`
@@ -125,6 +126,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A transaction the person moved to another category counts in that category instead of its store's, in the tools' category totals and the Spending screen; totals by store and overall don't change, and the profile still reads the store's category. — `Tools.swift` `spendingFilter`; `Sedge/SpendingView.swift` `SpendingTotal.all`; `Profile.swift` `infer`
 - An account's owner (mine or shared) and a transaction's familiar answer (yes or not_sure) are only reported to the model; they don't change any total. — `Answers.swift`; `Tools.swift` `accountBalances`, `findTransactions`
 - An answer about a pending charge is lost when the charge posts under a new id. — `SedgeDatabase.swift` `save`
+- An account's nickname is the person's own name for it, shown by the app in place of the bank's name; a blank one (after trimming spaces) is no nickname, and the tools keep reporting the bank's name. — `Answers.swift` `setNickname`; `Sedge/AccountCheckView.swift` `ListedAccount.title`
 
 ## Ask screen demo
 
@@ -140,6 +142,12 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - The spending graph shows a category's three biggest stores this month and adds the rest up as "Other stores", or every store when there are four or fewer. — `Sedge/SpendingView.swift` `SpendingView.stores`
 
 - The Ways to save screen, opened from Spending, shows the same cuts savings_options gives for the monthly goal typed in. — `Sedge/SavingsView.swift` `load`
+
+## About you screen
+
+- A tuition payment's term is its month's: January to May is the Spring Term, June and July the Summer Term, August to December the Fall Term; the tuition tile shows the term of the last payment. — `Sedge/ProfileView.swift` `ProfileView.term`, `ProfileView.chip`
+- An income, housing or loan tile's next date is the first day after `as_of` that the simulator's projection changes when that series is cancelled, found by store name; a series the simulator doesn't project (irregular, stopped, or renamed by a correction) shows no date. — `Sedge/ProfileView.swift` `ProfileView.nextDates`
+- The tuition tile's "spent" is everything paid and "back" is everything refunded, shown apart; with nothing refunded it shows only what was spent. — `Sedge/ProfileView.swift` `ProfileView.figure`, `ProfileView.refund`
 
 ## Transaction screen
 
