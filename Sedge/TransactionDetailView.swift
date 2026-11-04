@@ -21,6 +21,7 @@ struct TransactionDetail: Decodable, FetchableRecord {
     /// spending, income, transfer, card_payment or refund (set by the organizer).
     let kind: String?
     let merchant_id: String?
+    /// The account's name as the app shows it: the person's own name, or the bank's.
     let account: String
     let mask: String?
     /// The organizer's category for the store, nil if the organizer hasn't run.
@@ -36,7 +37,7 @@ struct TransactionDetail: Decodable, FetchableRecord {
         try database.dbQueue.read { db in
             try TransactionDetail.fetchOne(db, sql: """
                 SELECT t.transaction_id, t.date, COALESCE(m.name, t.name) AS store, t.name, t.amount, t.pending,
-                       t.kind, t.merchant_id, a.name AS account, a.mask, c.name AS store_category,
+                       t.kind, t.merchant_id, COALESCE(a.nickname, a.name) AS account, a.mask, c.name AS store_category,
                        t.category_override, \(SpendingTotal.categoryOf) AS category, t.familiar
                 FROM transactions t
                 JOIN accounts a ON a.account_id = t.account_id

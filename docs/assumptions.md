@@ -126,6 +126,7 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A transaction the person moved to another category counts in that category instead of its store's, in the tools' category totals and the Spending screen; totals by store and overall don't change, and the profile still reads the store's category. — `Tools.swift` `spendingFilter`; `Sedge/SpendingView.swift` `SpendingTotal.all`; `Profile.swift` `infer`
 - An account's owner (mine or shared) and a transaction's familiar answer (yes or not_sure) are only reported to the model; they don't change any total. — `Answers.swift`; `Tools.swift` `accountBalances`, `findTransactions`
 - An answer about a pending charge is lost when the charge posts under a new id. — `SedgeDatabase.swift` `save`
+- An account's nickname is the person's own name for it, shown by the app in place of the bank's name; a blank one (after trimming spaces) is no nickname, and the tools keep reporting the bank's name. — `Answers.swift` `setNickname`; `Sedge/AccountCheckView.swift` `ListedAccount.title`
 
 ## Ask screen demo
 

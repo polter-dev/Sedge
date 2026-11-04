@@ -533,7 +533,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(try spent(app, "Groceries"), before.groceries)
     }
 
-    /// Answering "Is this account yours?" from the Accounts tab shows the answer on that account,
+    /// Answering "Is this account yours?" from Your accounts shows the answer on that account,
     /// and Later leaves it unanswered. Clears the answers at the end, so Maya's saved file ends as it was.
     @MainActor
     func testAccountQuickCheckShowsTheAnswer() throws {
@@ -541,6 +541,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
 
         // Shared, then Yes, mine, so each answer is seen to change what the account shows.
         let checking = app.buttons["Checking"]
@@ -560,7 +561,7 @@ final class SedgeUITests: XCTestCase {
         card.tap()
         app.buttons["Later"].tap()
         XCTAssertTrue(card.waitForExistence(timeout: 5))
-        XCTAssertEqual(card.value as? String, "Not answered")
+        XCTAssertEqual(card.value as? String, "Later")
         attachScreenshot(app, "accounts-with-answers")
 
         // The app has no way to take an owner answer back, so a debug launch argument clears them.
@@ -568,8 +569,43 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
         XCTAssertTrue(checking.waitForExistence(timeout: 10))
-        XCTAssertEqual(checking.value as? String, "Not answered")
+        XCTAssertEqual(checking.value as? String, "Later")
+    }
+
+    /// A name typed in the account check shows on Your accounts in place of the bank's name, and
+    /// clearing the field brings the bank's name back, so Maya's saved file ends as it was.
+    @MainActor
+    func testNamingAnAccountShowsTheNameOnYourAccounts() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
+
+        let checking = app.buttons["Checking"]
+        XCTAssertTrue(checking.waitForExistence(timeout: 10))
+        checking.tap()
+        let field = app.textFields["Account name"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("Everyday")
+        attachScreenshot(app, "account-check-named")
+        app.buttons["Later"].tap()
+
+        let named = app.buttons["Everyday"]
+        XCTAssertTrue(named.waitForExistence(timeout: 5))
+        XCTAssertFalse(checking.exists)
+        attachScreenshot(app, "your-accounts-named")
+
+        // Clear the name: the row goes back to the bank's name.
+        named.tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        app.buttons["Clear name"].tap()
+        app.buttons["Later"].tap()
+        XCTAssertTrue(checking.waitForExistence(timeout: 5))
+        XCTAssertFalse(named.exists)
     }
 
     /// After a bank connection, each unanswered account is asked about once, one after another.
