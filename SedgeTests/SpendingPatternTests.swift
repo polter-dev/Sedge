@@ -66,6 +66,52 @@ private func totalSpent(_ category: String?, _ start: String, _ end: String, in 
     #expect(stores[3].rows.first?.transaction_id == "1")
 }
 
+/// For every month on the chart and every category, the stores shown for that month (over the
+/// same days as its bar) add up to its bar, and the change line beside "Your patterns" is the
+/// change between its bar and the month before's.
+@Test(arguments: ["maya", "daniel"])
+func pickedMonthMatchesItsBar(persona: String) throws {
+    let database = try SedgeDatabase.open(persona)
+    let asOf = try #require(try database.asOf())
+    let day = try #require(Int(asOf.suffix(2)))
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: day)
+    for category in Set(totals.map(\.category)) {
+        let bars = SpendingView.bars(totals, category: category, asOf: asOf)
+        #expect(SpendingView.window(bars[3].month, asOf: asOf) == (bars[3].month + "-01", asOf))
+        for (index, bar) in bars.enumerated() {
+            let window = SpendingView.window(bar.month, asOf: asOf)
+            let rows = try ListedTransaction.spending(in: database, category: category, from: window.from, through: window.through)
+            let cents = SpendingView.stores(rows).reduce(0) { $0 + Int(($1.total * 100).rounded()) }
+            #expect(cents == Int((bar.total * 100).rounded()), "\(persona) \(category) \(bar.month): stores don't add up to the bar")
+
+            // The month before the oldest bar isn't drawn, so its total is read straight from the totals.
+            let previous = SpendingView.months(endingAt: bar.month + "-01")[2]
+            let before = index > 0 ? bars[index - 1].total
+                                   : totals.first { $0.month == previous && $0.category == category }?.total ?? 0
+            let line = SpendingView.changeLine(totals, category: category, month: bar.month, isThisMonth: false)
+            let name = (bar.month + "-01").displayDate(.dateTime.month(.wide))
+            if before > 0 {
+                // Whole percents, a half rounded away from zero; a change under half a percent is "+0%".
+                let percent = Int(((bar.total - before) / before * 100).rounded())
+                let expected = "\(name) · \(String(format: "%+d", percent))% vs \((previous + "-01").displayDate(.dateTime.month(.abbreviated)))"
+                #expect(line == expected, "\(persona) \(category) \(bar.month)")
+            } else {
+                #expect(line == name)
+            }
+        }
+    }
+}
+
+/// With nothing spent the month before, the change line names the month and gives no percentage.
+@Test func changeLineSkipsAZeroMonthBefore() {
+    let totals = [SpendingTotal(month: "2026-05", category: "dining", total: 47)]
+    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-05", isThisMonth: false) == "May")
+    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-06", isThisMonth: true) == "June so far · -100% vs May")
+    // A drop under half a percent reads "+0%", never "-0%".
+    let tiny = totals + [SpendingTotal(month: "2026-06", category: "dining", total: 46.9)]
+    #expect(SpendingView.changeLine(tiny, category: "dining", month: "2026-06", isThisMonth: true) == "June so far · +0% vs May")
+}
+
 /// Stepping back from January lands in the year before.
 @Test func patternMonthsCrossTheYear() {
     #expect(SpendingView.months(endingAt: "2026-02-14") == ["2025-11", "2025-12", "2026-01", "2026-02"])
@@ -102,4 +148,54 @@ private func totalSpent(_ category: String?, _ start: String, _ end: String, in 
     let movedBars = AllMonthsView.byCategory(withMoved)
     #expect(movedBars.contains { $0.label == "Moved between accounts" && $0.total > 0 })
     #expect(movedBars.filter { $0.label != "Moved between accounts" }.map(\.total) == AllMonthsView.byCategory(totals).map(\.total))
+}
+
+/// For Maya and Daniel, each month's categories on the All months card add up to that month's
+/// bar to the cent, the six-month windows cover every month from the oldest to the newest once,
+/// and each category's mini chart months add up to its bar (their data fits in one window).
+@Test(arguments: ["maya", "daniel"]) func allMonthsBreakdownsAndWindowsAddUp(persona: String) throws {
+    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
+    // Money moved loaded too, to check the card leaves it out as the month bars do.
+    let totals = try SpendingTotal.all(in: database, includeMoved: true)
+    #expect(totals.contains { $0.category == SpendingTotal.movedCategory })
+    let months = AllMonthsView.byMonth(totals)
+    #expect(months.count == 6)
+    for month in months {
+        let parts = AllMonthsView.breakdown(totals, month: month.label)
+        let cents = parts.reduce(0) { $0 + Int(($1.total * 100).rounded()) }
+        #expect(cents == Int((month.total * 100).rounded()), "\(persona) \(month.label): categories \(cents), bar \(month.total)")
+        #expect(!parts.contains { $0.label == "Moved between accounts" })
+    }
+
+    let windows = AllMonthsView.windows(months.map(\.label))
+    #expect(windows.allSatisfy { $0.count == 6 })
+    #expect(windows.first?.last == months.last?.label)
+    // Oldest window first, laid end to end: one run of months, each the one after the last.
+    let laidOut = windows.reversed().flatMap { $0 }
+    #expect(Set(laidOut).count == laidOut.count, "\(persona): windows overlap")
+    for (earlier, later) in zip(laidOut, laidOut.dropFirst()) {
+        #expect(SpendingView.months(endingAt: later, count: 2).first == earlier, "\(persona): gap between \(earlier) and \(later)")
+    }
+    #expect(Set(months.map(\.label)).isSubset(of: Set(laidOut)))
+
+    #expect(windows.count == 1)
+    for category in AllMonthsView.byCategory(totals) {
+        let cents = AllMonthsView.monthly(totals, category: category.label, months: windows[0])
+            .reduce(0) { $0 + Int(($1.total * 100).rounded()) }
+        #expect(cents == Int((category.total * 100).rounded()), "\(persona) \(category.label)")
+    }
+}
+
+/// Windows count back six months at a time from the newest month, across years, and the
+/// oldest window still has six months when the data starts partway through it.
+@Test func allMonthsWindowsCrossTheYear() {
+    #expect(AllMonthsView.windows(["2025-03", "2025-11", "2026-06"]) == [
+        ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"],
+        ["2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12"],
+        ["2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06"],
+    ])
+    #expect(AllMonthsView.windows(["2026-02"]) == [["2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02"]])
+    #expect(AllMonthsView.windows([]).isEmpty)
+    let span = AllMonthsView.span(["2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"])
+    #expect(span.contains("Oct 2025") && span.contains("Mar 2026"), "\(span)")
 }

@@ -232,7 +232,7 @@ final class SedgeUITests: XCTestCase {
             XCTAssertFalse(app.staticTexts["No spending yet"].exists)
             attachScreenshot(app, "\(persona) spending")
 
-            app.navigationBars.buttons["Cash flow"].tap()
+            app.buttons["cashFlow"].tap()
             let field = app.textFields["Extra purchase in dollars"]
             XCTAssertTrue(field.waitForExistence(timeout: 10))
             field.tap()
@@ -401,7 +401,7 @@ final class SedgeUITests: XCTestCase {
         app.tabBars.buttons["Trends"].tap()
         XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
         attachScreenshot(app, "tab-trends-spending")
-        app.navigationBars.buttons["Cash flow"].tap()
+        app.buttons["cashFlow"].tap()
         XCTAssertTrue(app.textFields["Extra purchase in dollars"].waitForExistence(timeout: 10))
         attachScreenshot(app, "trends-cash-flow")
 
@@ -434,7 +434,7 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// Tapping a store in Maya's spending graph shows its latest transaction, which opens the
-    /// transaction; "Ask about a tradeoff" goes to the Ask tab. The screenshot is the screen
+    /// transaction; the Ask link goes to the Ask tab with its question typed in. The screenshot is the screen
     /// in light, or dark after `xcrun simctl ui <device> appearance dark`.
     @MainActor
     func testTappingAStoreShowsItsLatestTransaction() throws {
@@ -459,8 +459,102 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars.staticTexts["Transaction"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.firstMatch.tap()
 
-        app.buttons["Ask about a tradeoff →"].tap()
+        // The Ask link names dining, the category the screen opens on, and types its question in
+        // without sending it, so Ask still shows no conversation.
+        let askLink = app.buttons["Ask Sedge: what if I spent less on dining? →"]
+        app.scrollViews.firstMatch.swipeUp()
+        attachScreenshot(app, "trends-ask-link")
+        askLink.tap()
         XCTAssertTrue(app.tabBars.buttons["Ask"].isSelected)
+        // A vertical text field can show up as either kind of element.
+        let box = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        XCTAssertTrue(box.waitForExistence(timeout: 5))
+        XCTAssertEqual(box.value as? String, "What if I spent less on dining?")
+        XCTAssertTrue(app.staticTexts["Ask about your money"].exists)
+        attachScreenshot(app, "ask-typed-question")
+    }
+
+    /// Double-tapping a store in Maya's spending graph opens its latest transaction, the same
+    /// screen the row below the graph opens. VoiceOver's "Open latest transaction" action runs
+    /// the same line of code; UI tests have no way to perform a named accessibility action.
+    @MainActor
+    func testDoubleTappingAStoreOpensItsLatestTransaction() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let store = app.buttons.matching(identifier: "store").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 10))
+        let name = String(store.label.split(separator: ",")[0])
+        store.doubleTap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Transaction"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts[name].exists, "The transaction isn't from \(name)")
+    }
+
+    /// The Cash flow card on Maya's Trends screen gives the same low point, amount and day, as
+    /// the Cash flow screen it opens. The screenshots are light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testCashFlowCardShowsTheScreensLowPoint() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        // The toolbar link is gone; the card replaces it.
+        XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars.buttons["Cash flow"].exists)
+        let card = app.buttons["cashFlow"]
+        let low = NSPredicate(format: "label CONTAINS 'Low point $'")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: low, object: card)], timeout: 10), .completed)
+        attachScreenshot(app, "trends-cash-flow-card")
+        // E.g. "Cash flow, Low point $1,236.45 · Jul 1": the amount and the day.
+        let parts = card.label.components(separatedBy: "Low point ")[1].components(separatedBy: " · ")
+        XCTAssertEqual(parts.count, 2)
+
+        card.tap()
+        let lowest = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label BEGINSWITH 'Lowest projected balance' AND label CONTAINS %@ AND label CONTAINS %@", parts[0], parts[1])).firstMatch
+        XCTAssertTrue(lowest.waitForExistence(timeout: 10), "Cash flow doesn't show \(parts)")
+    }
+
+    /// Tapping May's bar on Maya's Spending screen shows May: its total, the change line, the
+    /// graph's heading and a May latest transaction. "This month" brings June back. The
+    /// screenshots are the screen in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testTappingAMonthShowsItsSpending() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let may = app.otherElements["May"]
+        XCTAssertTrue(may.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Connected spending · June"].exists)
+        XCTAssertFalse(app.buttons["This month"].exists)
+        attachScreenshot(app, "month-default")
+
+        may.tap()
+        let thisMonth = app.buttons["This month"]
+        XCTAssertTrue(thisMonth.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
+        // The big total is May's bar, and the line beside the title starts with May.
+        let mayTotal = try XCTUnwrap(may.value as? String)
+        XCTAssertGreaterThan(app.staticTexts.matching(NSPredicate(format: "label == %@", mayTotal)).count, 0)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'May · '")).firstMatch.exists)
+        let store = app.buttons.matching(identifier: "store").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 5))
+        store.tap()
+        let latest = app.buttons["latest"]
+        XCTAssertTrue(latest.waitForExistence(timeout: 5))
+        XCTAssertTrue(latest.label.contains("May "), "\(latest.label) isn't from May")
+        attachScreenshot(app, "month-picked")
+
+        thisMonth.tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 5))
+        XCTAssertFalse(thisMonth.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'June so far'")).firstMatch.exists)
     }
 
     /// On Maya's cash flow, switching a scenario on moves "Projected" by exactly its amount, and
@@ -474,7 +568,7 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Trends"].tap()
-        app.navigationBars.buttons["Cash flow"].tap()
+        app.buttons["cashFlow"].tap()
         let projected = app.staticTexts["projected"]
         XCTAssertTrue(projected.waitForExistence(timeout: 10))
         attachScreenshot(app, "cash-flow")
@@ -520,7 +614,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Trends"].tap()
-        app.navigationBars.buttons["Cash flow"].tap()
+        app.buttons["cashFlow"].tap()
         XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
 
         // Switch "Change a bill" on to show its amount field.
@@ -543,7 +637,7 @@ final class SedgeUITests: XCTestCase {
             app.launchArguments = ["-persona", "maya"]
             app.launch()
             app.tabBars.buttons["Trends"].tap()
-            app.navigationBars.buttons["Cash flow"].tap()
+            app.buttons["cashFlow"].tap()
             XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
             if name.hasPrefix("Change") { flip(app.switches["bill"], in: app) }
             let field = app.textFields[name]
@@ -737,7 +831,7 @@ final class SedgeUITests: XCTestCase {
         // A run stopped halfway may have left the note hidden; start with it shown.
         if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
 
-        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
         let note = app.staticTexts["This is a spending observation, not a fraud determination."]
         let undoLine = app.staticTexts["Spending note hidden on every transaction."]
         openTransaction(app, corner)
@@ -784,7 +878,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
         let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
         /// Goes back to the transactions list and opens the same transaction again, which reloads it.
         func reopen() {
@@ -836,12 +930,19 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(notSure.isSelected)
     }
 
-    /// From the Accounts tab, opens the transaction whose row reads `label`.
+    /// From the Accounts tab, opens the transaction whose row reads `label`. The list shows one
+    /// month at a time and opens on the data's latest month, so this steps back a month at a time
+    /// until the row turns up or there is no earlier month.
     @MainActor
     private func openTransaction(_ app: XCUIApplication, _ label: String) {
         app.buttons["Transactions"].tap()
-        let row = app.buttons[label]
-        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        let row = app.buttons[label], previous = app.buttons["Previous month"]
+        XCTAssertTrue(previous.waitForExistence(timeout: 10))
+        while true {
+            for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+            if (row.exists && row.isHittable) || !previous.isEnabled { break }
+            previous.tap()
+        }
         row.tap()
     }
 
@@ -860,12 +961,10 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     private func spent(_ app: XCUIApplication, _ category: String) throws -> Int {
         app.tabBars.buttons["Trends"].tap()
-        let menu = app.buttons["Category"]
-        XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        if menu.value as? String != category {
-            menu.tap()
-            app.buttons[category].tap()
-        }
+        let chip = app.buttons[category]
+        XCTAssertTrue(chip.waitForExistence(timeout: 10))
+        chip.tap()
+        XCTAssertTrue(chip.isSelected)
         let june = app.otherElements["June"]
         XCTAssertTrue(june.waitForExistence(timeout: 5))
         let value = try XCTUnwrap(june.value as? String).filter(\.isNumber)
@@ -891,7 +990,8 @@ final class SedgeUITests: XCTestCase {
 
     /// The All months screen opens from Trends with its month chart, its category chart and the
     /// money-moved switch. The switch adds a "Moved between accounts" bar and turning it off
-    /// restores the totals. The screenshot is the screen in light, or dark after
+    /// restores the totals. Tapping a month opens its categories and tapping a category opens
+    /// its months. The screenshots are the screen in light, or dark after
     /// `xcrun simctl ui <device> appearance dark`. Nothing is changed in Maya's saved file.
     @MainActor
     func testAllMonthsShowsEveryMonthCategoryAndMoneyMoved() throws {
@@ -908,12 +1008,41 @@ final class SedgeUITests: XCTestCase {
         let june = app.otherElements["June 2026"]
         XCTAssertTrue(june.waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["January 2026"].exists)
-        let dining = app.otherElements["Dining"]
+        // Each category row is a button: tapping it shows its months.
+        let dining = app.buttons["Dining"]
         XCTAssertTrue(dining.exists)
         let before = (june: june.value as? String, dining: dining.value as? String)
-        let moved = app.otherElements["Moved between accounts"]
+        let moved = app.buttons["Moved between accounts"]
         XCTAssertFalse(moved.exists)
         attachScreenshot(app, "all-months")
+
+        // Tapping March splits its bar into categories and opens its card; Maya's data is one
+        // six-month window, so both chevrons are off.
+        XCTAssertFalse(app.buttons["Earlier months"].isEnabled)
+        XCTAssertFalse(app.buttons["Later months"].isEnabled)
+        let march = app.otherElements["March 2026"]
+        let marchTotal = march.value as? String
+        march.tap()
+        let card = app.staticTexts["March 2026"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        // The split bar still reads as the month and its total; the card lists Dining as a plain row.
+        XCTAssertEqual(march.value as? String, marchTotal)
+        XCTAssertTrue(app.otherElements["Dining"].exists)
+        attachScreenshot(app, "all-months-month-selected")
+        app.buttons["Clear"].tap()
+        XCTAssertTrue(card.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["March 2026"].exists)
+
+        // Tapping Transport (a category with its own color) opens its six months under the row;
+        // tapping again closes them.
+        let transport = app.buttons["Transport"]
+        transport.tap()
+        // The window's dash comes with the phone's own spacing, so only the start is matched.
+        let caption = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Transport · each month'")).firstMatch
+        XCTAssertTrue(caption.waitForExistence(timeout: 5))
+        attachScreenshot(app, "all-months-category-selected")
+        transport.tap()
+        XCTAssertTrue(caption.waitForNonExistence(timeout: 5))
 
         let toggle = app.switches["Include money moved between my accounts"]
         // The inner switch, so the tap lands on the control and not on its label.
@@ -931,7 +1060,7 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// Both Trends screens read the data again each time they show: moving Maya's Jun 18 Corner
-    /// Cafe charge ($10.40) out of Dining, with the app open and the category picker untouched,
+    /// Cafe charge ($10.40) out of Dining, with the app open and the category chips untouched,
     /// lowers Dining on the All months screen and the June bar on the Spending screen. Moving it
     /// back restores them, so Maya's saved file ends as it was.
     @MainActor
@@ -941,13 +1070,13 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Trends"].tap()
-        let menu = app.buttons["Category"]
-        XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        XCTAssertEqual(menu.value as? String, "Dining")
+        let chip = app.buttons["Dining"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 10))
+        XCTAssertTrue(chip.isSelected)
         let june = app.otherElements["June"]
         let before = try dollars(june)
         app.buttons["All months & categories →"].tap()
-        let dining = app.otherElements["Dining"]
+        let dining = app.buttons["Dining"]
         let beforeAll = try dollars(dining)
 
         app.tabBars.buttons["Accounts"].tap()
@@ -962,8 +1091,8 @@ final class SedgeUITests: XCTestCase {
         let afterAll = try dollars(dining)
         XCTAssertTrue((10...11).contains(beforeAll - afterAll), "All months Dining went from \(beforeAll) to \(afterAll)")
         app.navigationBars.buttons.firstMatch.tap()
-        XCTAssertTrue(menu.waitForExistence(timeout: 5))
-        XCTAssertEqual(menu.value as? String, "Dining")
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        XCTAssertTrue(chip.isSelected)
         let after = try dollars(june)
         XCTAssertTrue((10...11).contains(before - after), "June Dining went from \(before) to \(after)")
 
@@ -972,6 +1101,34 @@ final class SedgeUITests: XCTestCase {
         try pickCategory(app, "Dining")
         app.tabBars.buttons["Trends"].tap()
         XCTAssertEqual(try dollars(june), before)
+    }
+
+    /// Tapping Maya's Groceries chip on Spending selects it and shows Groceries' numbers: the
+    /// first 30 days of March to June are $104.73, $100.33, $115.23 and $86.97 (shown in whole
+    /// dollars), and June's only grocery store is Value Mart. The screenshot is light, or dark
+    /// after `xcrun simctl ui <device> appearance dark`. Nothing is changed in Maya's saved file.
+    @MainActor
+    func testCategoryChipSwitchesTheChart() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let dining = app.buttons["Dining"]
+        XCTAssertTrue(dining.waitForExistence(timeout: 10))
+        XCTAssertTrue(dining.isSelected)
+        let groceries = app.buttons["Groceries"]
+        XCTAssertGreaterThanOrEqual(groceries.frame.height, 44 - 0.001)
+        groceries.tap()
+
+        XCTAssertTrue(groceries.isSelected)
+        XCTAssertFalse(dining.isSelected)
+        XCTAssertTrue(app.staticTexts["$87"].waitForExistence(timeout: 5))
+        for (month, total) in [("March", "$105"), ("April", "$100"), ("May", "$115"), ("June", "$87")] {
+            XCTAssertEqual(app.otherElements[month].value as? String, total, month)
+        }
+        XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))
+        attachScreenshot(app, "spending-groceries")
     }
 
     /// Ways to save opens from Spending; a $200 goal lists Daniel's cuts ranked least valued first
