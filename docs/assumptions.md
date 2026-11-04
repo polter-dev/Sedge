@@ -138,7 +138,9 @@ To add a rule, add one line under its area in the same shape as the others: the 
 
 - Months are compared over the same first days: the day of the month of `as_of` (a shorter month just ends sooner), for `as_of`'s month and the three before it. — `Sedge/SpendingView.swift` `SpendingTotal.all`, `SpendingView.months`
 - The All months screen counts whole months, and money moved between the person's own accounts (transfers and card payments) counts only when its switch is on, as its own category bar, using only the side leaving an account so the arriving side doesn't cancel it. — `Sedge/SpendingView.swift` `SpendingTotal.all`; `Sedge/AllMonthsView.swift` `byMonth`, `byCategory`
+- A tapped month's categories on All months leave money moved out, as its bar does, so they add up to that bar; the month chart pages in six-month windows counted back from the newest month in the data, and the oldest window may start before the data. — `Sedge/AllMonthsView.swift` `breakdown`, `windows`
 - The spending graph shows a category's three biggest stores this month and adds the rest up as "Other stores", or every store when there are four or fewer. — `Sedge/SpendingView.swift` `SpendingView.stores`
+- A tapped month on the Spending chart shows that month's 1st through the same day of the month as `as_of` (a shorter month just ends sooner), the same days as its bar, in the total, the graph and the latest row; its change line compares the bar with the month before's bar and gives no percentage when the month before is $0 or less. — `Sedge/SpendingView.swift` `SpendingView.window`, `SpendingView.changeLine`
 
 - The Ways to save screen, opened from Spending, shows the same cuts savings_options gives for the monthly goal typed in. — `Sedge/SavingsView.swift` `load`
 
@@ -151,5 +153,6 @@ To add a rule, add one line under its area in the same shape as the others: the 
 ## Transaction screen
 
 - Sedge's context compares a purchase with the same store's three posted purchases just before it (same-day ones by id; refunds, transfers and pending charges left out): above all three is higher, below all three is lower, anything else is in line. With fewer than three earlier purchases there is no comparison. — `Sedge/TransactionDetailView.swift` `StoreContext.compare`, `TransactionDetail.earlierCharges`
+- A purchase is worth a look when it is posted spending in the 30 days up to today (30 days back still counts), has no "Does this look familiar?" answer, and either is at least 1.5× and at least $25 more than the highest of the same store's three posted purchases just before it (same-day ones by id; answered ones still count as history; with one or two earlier purchases it is never flagged), or is the store's first purchase and is $150 or more. The store is the organizer's grouping, never Plaid's merchant name or category. — `WorthALook.swift` `flagged`; `Sedge/SpendingView.swift` `worthALookRow`
 - Choosing a transaction's store category again clears the person's category answer instead of saving it. — `Sedge/TransactionDetailView.swift` `setCategory`
 - After a bank connection, each account with no owner answer is asked about once; Later saves nothing, so it is asked again after the next connection. — `Sedge/AccountCheckView.swift` `AccountChecksAfterConnecting`

@@ -139,6 +139,8 @@ struct MainView: View {
     /// The open tab. It lives in ContentView, so picking other data from Accounts comes back to Accounts.
     @Binding var tab: MainTab
     let changeData: () -> Void
+    /// The Ask box's text. It lives here so Trends can type a question into it before switching tabs.
+    @State private var question = ""
     /// The person's own name for this data, kept in the app's settings (one per choice), never in a database.
     @AppStorage private var nickname: String
     /// True while the rename alert is showing; `draft` is what is typed in it.
@@ -178,7 +180,7 @@ struct MainView: View {
         TabView(selection: $tab) {
             Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
-                    AskView(database: database) { tab = $0 }
+                    AskView(database: database, question: $question) { tab = $0 }
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                         .toolbarTitleMenu { renameMenu }
@@ -186,20 +188,15 @@ struct MainView: View {
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
-                    SpendingView(database: database) { tab = .ask }
+                    SpendingView(database: database) {
+                        question = $0
+                        tab = .ask
+                    }
                         .navigationTitle("Spending")
                         // Inline because iOS shows the title menu only on an inline title.
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                         .toolbarTitleMenu { renameMenu }
-                        .toolbar {
-                            // The cash-flow projection and its scenarios open from here.
-                            NavigationLink("Cash flow") {
-                                CashFlowView(database: database)
-                                    .navigationTitle("Cash flow")
-                                    .navigationSubtitle(dataName)
-                            }
-                        }
                 }
             }
             Tab("Accounts", image: "tab-accounts", value: .accounts) {

@@ -69,11 +69,11 @@ extension ListedTransaction {
 }
 
 /// The Trends tab's Spending screen: one category's last four months side by side, and the
-/// stores that make up this month's spending in it.
+/// stores that make up this month's spending in it, or a tapped month's.
 struct SpendingView: View {
     let database: SedgeDatabase
-    /// Opens the Ask tab.
-    let ask: () -> Void
+    /// Opens the Ask tab with this question typed into its box, not sent.
+    let ask: (String) -> Void
     /// The dataset's "today"; nil until loaded, or when nothing has been saved yet.
     @State private var asOf: String?
     /// Spending per month and category over the first `day` days of each month.
@@ -83,6 +83,18 @@ struct SpendingView: View {
     @State private var rows: [ListedTransaction] = []
     /// The store tapped last, by name.
     @State private var selected: String?
+    /// The past month tapped on the chart, "YYYY-MM"; nil shows this month.
+    @State private var picked: String?
+    /// The month under the last tap on the chart, cleared again once `picked` is set from it.
+    @State private var tapped: String?
+    /// The next 30 days of checking, as the Cash flow screen first shows them; nil without a bank account.
+    @State private var cashFlow: CashFlow?
+    /// The transaction a double-tapped store opens, by id; nil when none is open.
+    @State private var opened: String?
+    /// How many recent purchases are worth a look; the row for them shows only above 0.
+    @State private var worthALook = 0
+    /// True while the Worth a look sheet is open.
+    @State private var showingWorthALook = false
 
     /// One store in the graph, or "Other stores" for the rest.
     struct Store: Identifiable {
@@ -94,10 +106,11 @@ struct SpendingView: View {
         var total: Double { Double(rows.reduce(0) { $0 + Int(($1.amount * 100).rounded()) }) / 100 }
     }
 
-    /// The four months the bars cover, oldest first, as "YYYY-MM": `asOf`'s month and the three before it.
-    static func months(endingAt asOf: String) -> [String] {
+    /// The four months the bars cover (or `count` months), oldest first, as "YYYY-MM": `asOf`'s
+    /// month and the ones before it. `asOf` may be "YYYY-MM-DD" or "YYYY-MM".
+    static func months(endingAt asOf: String, count: Int = 4) -> [String] {
         guard let year = Int(asOf.prefix(4)), let month = Int(asOf.dropFirst(5).prefix(2)) else { return [] }
-        return (0..<4).reversed().map { back in
+        return (0..<count).reversed().map { back in
             // Months counted from year 0, so stepping back past January lands in the year before.
             let index = year * 12 + month - 1 - back
             return String(format: "%04d-%02d", index / 12, index % 12 + 1)
@@ -109,6 +122,26 @@ struct SpendingView: View {
         months(endingAt: asOf).map { month in
             (month, totals.first { $0.month == month && $0.category == category }?.total ?? 0)
         }
+    }
+
+    /// The days one month's bar covers: its first day through the same day of the month as
+    /// today, so the graph and the latest row for that month add up to its bar. A shorter month
+    /// just ends sooner, since "2026-02-30" still sorts after every February date.
+    static func window(_ month: String, asOf: String) -> (from: String, through: String) {
+        (month + "-01", month + "-" + asOf.suffix(2))
+    }
+
+    /// The line next to "Your patterns": the month, then its change from the month before, e.g.
+    /// "May · +24% vs Apr" or "June so far · -32% vs May". Both amounts are bars, so over the
+    /// same first days. With nothing spent the month before there is no percentage to give.
+    static func changeLine(_ totals: [SpendingTotal], category: String, month: String, isThisMonth: Bool) -> String {
+        let name = (month + "-01").displayDate(.dateTime.month(.wide)) + (isThisMonth ? " so far" : "")
+        // The four bars ending at `month`; the last two are the month before and the month itself.
+        let pair = Array(bars(totals, category: category, asOf: month + "-01").suffix(2))
+        guard pair.count == 2, pair[0].total > 0 else { return name }
+        // Rounded to a whole percent first, so a tiny drop reads "+0%" and never "-0%".
+        let percent = Int(((pair[1].total - pair[0].total) / pair[0].total * 100).rounded())
+        return name + " · " + String(format: "%+d%%", percent) + " vs " + (pair[0].month + "-01").displayDate(.dateTime.month(.abbreviated))
     }
 
     /// The biggest three stores and "Other stores" for the rest, or every store when there are
@@ -125,9 +158,12 @@ struct SpendingView: View {
     /// The day of the month of "today": every month is compared over its first this many days.
     private var day: Int { asOf.flatMap { Int($0.suffix(2)) } ?? 31 }
 
+    /// The month the screen shows, "YYYY-MM": the tapped one, else today's.
+    private var shownMonth: String { picked ?? String((asOf ?? "").prefix(7)) }
+
     /// The categories with spending in the four months shown, by name.
     private var categories: [String] {
-        let months = asOf.map(Self.months) ?? []
+        let months = asOf.map { Self.months(endingAt: $0) } ?? []
         return Set(totals.filter { months.contains($0.month) }.map(\.category)).sorted { Self.title($0) < Self.title($1) }
     }
 
@@ -144,6 +180,10 @@ struct SpendingView: View {
     @ScaledMetric(relativeTo: .caption) private var nodeWidth: CGFloat = 96
     /// The legend's color dots, 9 pt in the design, grow with their labels.
     @ScaledMetric(relativeTo: .caption2) private var dotSize: CGFloat = 9
+    /// The Worth a look count badge, 20 pt in the design, grows with its number.
+    @ScaledMetric(relativeTo: .caption2) private var badgeSize: CGFloat = 20
+    /// The reader's Reduce Motion setting: when on, a new category changes the chart without animating.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
@@ -167,12 +207,17 @@ struct SpendingView: View {
                             .contentShape(.rect)
                     }
                     .font(.link)
+                    cashFlowCard
+                        .padding(.top, 8)
                     connected
-                    Button("Ask about a tradeoff →", action: ask)
+                    // Says what it does: the question goes into the Ask box, for the person to send or change.
+                    let name = Self.title(category).lowercased()
+                    Button("Ask Sedge: what if I spent less on \(name)? →") { ask("What if I spent less on \(name)?") }
                         .font(.link)
                         // Wrapped lines at large text sizes stay flush left, like the rest of the screen.
                         .multilineTextAlignment(.leading)
                         .frame(minHeight: 44)
+                    if worthALook > 0 { worthALookRow }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -184,8 +229,8 @@ struct SpendingView: View {
             if categories.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
         }
         // Runs each time the screen shows, so a transaction moved to another category counts
-        // here, and again whenever another category is picked.
-        .task(id: category) {
+        // here, and again whenever another category or month is picked.
+        .task(id: [category, picked]) {
             do {
                 let first = asOf == nil
                 asOf = try database.asOf()
@@ -195,51 +240,85 @@ struct SpendingView: View {
                     category = categories.contains("dining") ? "dining" : categories.first ?? ""
                 }
                 guard let asOf else { return }
+                let window = Self.window(shownMonth, asOf: asOf)
                 rows = try ListedTransaction.spending(in: database, category: category,
-                                                      from: String(asOf.prefix(8)) + "01", through: asOf)
+                                                      from: window.from, through: window.through)
             } catch {
                 print("Could not read spending:", error)
             }
         }
+        // Each time the screen shows, so the card matches the Cash flow screen it opens.
+        .task {
+            do {
+                cashFlow = try CashFlow.load(database)
+            } catch {
+                print("Could not project:", error)
+            }
+            countWorthALook()
+        }
+        // Closing the sheet counts again, since answers given in it take purchases off.
+        .sheet(isPresented: $showingWorthALook, onDismiss: countWorthALook) { WorthALookView(database: database) }
         // A tapped store belongs to one category, so picking another clears it.
         .onChange(of: category) { selected = nil }
+        // A double-tapped store's latest transaction, the same screen its row below opens.
+        .navigationDestination(item: $opened) { TransactionDetailView(database: database, id: $0) }
     }
 
     /// "Your patterns": this month so far and the three months before it, over the same days.
+    /// Tapping a past month shows its total, and the graph below switches to it.
     private func patterns(_ asOf: String) -> some View {
         let bars = Self.bars(totals, category: category, asOf: asOf)
+        let month = shownMonth
+        let total = bars.first { $0.month == month }?.total ?? 0
+        let name = (month + "-01").displayDate(.dateTime.month(.wide))
         return VStack(alignment: .leading, spacing: 3) {
-            Text("Your patterns").font(.title2.bold()).foregroundStyle(Color.ink)
-            HStack(spacing: 4) {
-                Menu {
-                    Picker("Category", selection: $category) {
-                        ForEach(categories, id: \.self) { Text(Self.title($0)) }
-                    }
-                } label: {
-                    HStack(spacing: 2) {
-                        Text(Self.title(category))
-                        Image(systemName: "chevron.up.chevron.down").imageScale(.small)
-                    }
-                    .foregroundStyle(Color.ink)
-                    // Apple's minimum tap target, taller than the design's caption line.
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-                }
-                .accessibilityLabel("Category")
-                .accessibilityValue(Self.title(category))
+            // The change sits beside the title, or under it once both no longer fit on one line.
+            ViewThatFits(in: .horizontal) {
+                HStack { patternsTitle; Spacer(minLength: 8); changePill(month) }
+                VStack(alignment: .leading, spacing: 4) { patternsTitle; changePill(month) }
             }
-            .font(.row)
-            Text(bars.last?.total ?? 0, format: Self.dollars)
+            chips
+            Text(total, format: Self.dollars)
                 .font(.bigValue)
                 .foregroundStyle(Color.amountNow)
+                // The total rolls digit by digit to the new category's or month's amount.
+                .contentTransition(.numericText(value: total))
+            HStack(spacing: 10) {
+                Text(picked == nil ? "\(name) · 1–\(day)" : "\(name) · same first \(day) days")
+                    .font(.row)
+                    .foregroundStyle(Color.muted)
+                if picked != nil {
+                    Button { picked = nil } label: {
+                        Text("This month")
+                            .font(.row.weight(.medium))
+                            .foregroundStyle(Color.accent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.background, in: .capsule)
+                            .overlay { Capsule().stroke(Color.line, lineWidth: 1) }
+                            // Apple's minimum tap target around the smaller pill.
+                            .frame(minHeight: 44)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(minHeight: 44)
             Chart {
                 ForEach(bars, id: \.month) { bar in
                     BarMark(x: .value("Month", bar.month), y: .value("Spent", bar.total), width: .ratio(0.55))
                         .cornerRadius(5)
-                        // This month in teal, the months before it a lighter teal; the legend names both.
-                        .foregroundStyle(bar.month == bars.last?.month ? Color.chartNow : Color.chartPast)
+                        // This month in teal, the months before it a lighter teal and a tapped month
+                        // amber; the legend names all three.
+                        .foregroundStyle(bar.month == picked ? Color.chartPick : bar.month == bars.last?.month ? Color.chartNow : Color.chartPast)
                         .accessibilityLabel((bar.month + "-01").displayDate(.dateTime.month(.wide)))
                         .accessibilityValue(bar.total.formatted(Self.dollars))
+                        // The tapped month's amount above its bar, so it doesn't rest on color either.
+                        .annotation(position: .top) {
+                            if bar.month == picked {
+                                Text(bar.total, format: Self.dollars).font(.row).foregroundStyle(Color.ink)
+                            }
+                        }
                 }
                 RuleMark(y: .value("Zero", 0)).foregroundStyle(Color.graphLine)
             }
@@ -256,14 +335,183 @@ struct SpendingView: View {
                     AxisValueLabel(format: Self.dollars).foregroundStyle(Color.muted)
                 }
             }
+            .chartOverlay { proxy in
+                // The tapped bar's 1.5 pt ink ring. Charts can't outline a bar, so it is drawn over it.
+                GeometryReader { geometry in
+                    if picked != nil, let plot = proxy.plotFrame.map({ geometry[$0] }),
+                       let x = proxy.position(forX: month), let top = proxy.position(forY: total),
+                       let zero = proxy.position(forY: 0.0) {
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.ink, lineWidth: 1.5)
+                            // Each month gets an equal column; its bar is 55% of it, as in the BarMark.
+                            .frame(width: plot.width / CGFloat(bars.count) * 0.55, height: abs(zero - top))
+                            .position(x: plot.minX + x, y: plot.minY + (top + zero) / 2)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+            // A tap anywhere in a month's column picks it, without stopping the screen from scrolling.
+            .chartXSelection(value: $tapped)
+            .chartGesture { proxy in
+                SpatialTapGesture().onEnded { proxy.selectXValue(at: $0.location.x) }
+            }
+            .onChange(of: tapped) {
+                guard let tapped else { return }
+                // Tapping the picked month again, or this month, goes back to this month.
+                picked = tapped == picked || tapped == bars.last?.month ? nil : tapped
+                self.tapped = nil
+            }
             .frame(height: 175)
             .padding(.top, 8)
-            // Names what each bar color means, so the meaning never rests on color alone.
-            HStack(spacing: 14) {
-                legendItem("This month", Color.chartNow)
-                legendItem("Earlier months", Color.chartPast)
+            // Names what each bar color means, so the meaning never rests on color alone. The
+            // entries stack when they no longer fit side by side at large text sizes.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 14) { legend }
+                VStack(alignment: .leading, spacing: 4) { legend }
             }
             .padding(.top, 6)
+        }
+        // A new category re-heights the bars and rolls the total in place; with Reduce Motion
+        // they change at once. The chips keep their own shorter fade (set in `chips`).
+        .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: category)
+        // A tapped month's color, ring and amount fade in; a fade only, so Reduce Motion keeps it.
+        .animation(.easeOut(duration: 0.2), value: picked)
+    }
+
+    /// "Cash flow": the lowest balance of the next 30 days and a small line of them, opening the
+    /// Cash flow screen. Both come from `CashFlow`, the same as that screen's first view.
+    private var cashFlowCard: some View {
+        NavigationLink {
+            CashFlowView(database: database).navigationTitle("Cash flow")
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cash flow").font(.cardTitle).foregroundStyle(Color.ink)
+                    if let cashFlow, let low = cashFlow.lowest(cashFlow.shown) {
+                        Text("Low point \(low.balance.formatted(.currency(code: "USD"))) · \(low.date.displayDate(.dateTime.month(.abbreviated).day()))")
+                            .font(.row)
+                            .foregroundStyle(Color.muted)
+                    }
+                }
+                Spacer(minLength: 8)
+                if let cashFlow {
+                    Chart(cashFlow.shown, id: \.date) { day in
+                        LineMark(x: .value("Day", day.date), y: .value("Balance", cashFlow.balance(day)))
+                            .foregroundStyle(Color.accent)
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, lineJoin: .round))
+                    }
+                    // Only the shape matters here, so no axes, and the line fills the height.
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .chartYScale(domain: .automatic(includesZero: false))
+                    .frame(width: 72, height: 24)
+                    .accessibilityHidden(true)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.row)
+                    .foregroundStyle(Color.muted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(minHeight: 44)
+            .background(Color.group, in: .rect(cornerRadius: 14))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("cashFlow")
+    }
+
+    /// "1 purchase worth a look →" with the count in a small badge, opening the Worth a look sheet.
+    private var worthALookRow: some View {
+        Button { showingWorthALook = true } label: {
+            HStack(spacing: 8) {
+                Text("\(worthALook)")
+                    .font(.note.weight(.semibold))
+                    .foregroundStyle(Color.contrast)
+                    .frame(minWidth: badgeSize, minHeight: badgeSize)
+                    .background(Color.accent, in: .capsule)
+                    .accessibilityHidden(true)
+                Text(worthALook == 1 ? "1 purchase worth a look" : "\(worthALook) purchases worth a look")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("→").accessibilityHidden(true)
+            }
+            .font(.row.weight(.medium))
+            .foregroundStyle(Color.muted)
+            .frame(minHeight: 44)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("worthALook")
+    }
+
+    /// Counts the purchases worth a look again, with the same rule the sheet lists them by.
+    private func countWorthALook() {
+        do {
+            worthALook = try WorthALook.flagged(in: database).count
+        } catch {
+            print("Could not read purchases worth a look:", error)
+        }
+    }
+
+    private var patternsTitle: some View {
+        Text("Your patterns").font(.title2.bold()).foregroundStyle(Color.ink)
+    }
+
+    /// The shown month and its change from the month before, in a soft capsule.
+    private func changePill(_ month: String) -> some View {
+        Text(Self.changeLine(totals, category: category, month: month, isThisMonth: picked == nil))
+            .font(.row.weight(.medium))
+            .foregroundStyle(Color.ink)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.soft, in: .capsule)
+    }
+
+    /// The chart's legend entries.
+    @ViewBuilder
+    private var legend: some View {
+        legendItem("This month", Color.chartNow)
+        legendItem("Earlier months", Color.chartPast)
+        legendItem("Tapped month", Color.chartPick)
+    }
+
+    /// One capsule per category in a row that scrolls sideways; the picked one is filled.
+    private var chips: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(categories, id: \.self) { name in
+                        let picked = name == category
+                        Button { category = name } label: {
+                            Text(Self.title(name))
+                                .font(.link)
+                                .lineLimit(1)
+                                .foregroundStyle(picked ? Color.contrast : Color.ink)
+                                .padding(.horizontal, 14)
+                                .frame(minHeight: 36)
+                                .background(picked ? Color.accent : Color.soft, in: .capsule)
+                                // Apple's minimum tap target: the 36 pt capsule sits in a 44 pt row.
+                                .frame(minHeight: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(picked ? .isSelected : [])
+                        .animation(.easeOut(duration: 0.2), value: category)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            // The chips run on to the screen's edge, as in the design, instead of stopping at the margin.
+            .scrollClipDisabled()
+            // VoiceOver names the row once, so each chip only needs its category's name.
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Categories")
+            // Brings the picked chip on screen, also when the screen first opens. A reader rather
+            // than scrollPosition, so scrolling the row by hand never changes the category.
+            .onChange(of: category, initial: true) {
+                withAnimation { proxy.scrollTo(category) }
+            }
         }
     }
 
@@ -275,16 +523,18 @@ struct SpendingView: View {
         }
     }
 
-    /// "Connected spending": the category in the middle and its stores around it, with this
+    /// "Connected spending": the category in the middle and its stores around it, with the shown
     /// month's amount at each. Tapping a store shows its latest transaction below.
     @ViewBuilder
     private var connected: some View {
         let stores = Self.stores(rows)
-        Text("Connected spending").font(.headline).foregroundStyle(Color.ink)
+        let name = (shownMonth + "-01").displayDate(.dateTime.month(.wide))
+        Text("Connected spending · \(name)").font(.headline).foregroundStyle(Color.ink)
             .padding(.top, 18)
             .padding(.bottom, 20)
         if stores.isEmpty {
-            Text("No \(Self.title(category).lowercased()) spending so far this month.")
+            Text(picked == nil ? "No \(Self.title(category).lowercased()) spending so far this month."
+                               : "No \(Self.title(category).lowercased()) spending in the first \(day) days of \(name).")
                 .font(.row)
                 .foregroundStyle(Color.muted)
         } else {
@@ -313,6 +563,8 @@ struct SpendingView: View {
                 }
                 .accessibilityHidden(true)
             }
+            // The new category's stores fade in once they load, which is a little after the tap.
+            .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25), value: rows.map(\.id))
             if let store = stores.first(where: { $0.name == selected }), let row = store.rows.first {
                 latest(row)
             }
@@ -324,6 +576,7 @@ struct SpendingView: View {
     private func node(_ stores: [Store], _ index: Int) -> some View {
         if index < stores.count {
             let store = stores[index]
+            // One tap selects the store; two open its latest transaction, as tapping its row below does.
             Button { selected = store.name } label: {
                 VStack(spacing: 2) {
                     Text(store.name).lineLimit(2)
@@ -341,7 +594,10 @@ struct SpendingView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(store.name), \(store.total.formatted(Self.dollars))")
+            .simultaneousGesture(TapGesture(count: 2).onEnded { opened = store.rows.first?.id })
             .accessibilityHint("Shows the latest transaction")
+            // VoiceOver's double tap is the button's own tap, so opening is offered as a named action.
+            .accessibilityAction(named: "Open latest transaction") { opened = store.rows.first?.id }
             .accessibilityIdentifier("store")
             .accessibilityAddTraits(selected == store.name ? .isSelected : [])
         }
@@ -378,7 +634,7 @@ struct SpendingView: View {
 #Preview {
     // Maya's fake data, loaded the same way the app loads it.
     NavigationStack {
-        SpendingView(database: try! .open("maya")) {}
+        SpendingView(database: try! .open("maya")) { _ in }
             .navigationTitle("Spending")
     }
 }

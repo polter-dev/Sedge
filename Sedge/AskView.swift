@@ -83,10 +83,11 @@ struct QuickCheck: Codable {
 /// reopen it; nothing hands the saved turns to whatever answers questions.
 struct AskView: View {
     let database: SedgeDatabase
+    /// The question box's text, owned by the tabs so Trends can type a question in for the person.
+    @Binding var question: String
     /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
     @State private var session = ChatSession()
-    @State private var question = ""
     /// True when the turns are demo content, so the screen says it is demo state.
     @State private var isDemo = false
     /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
@@ -737,7 +738,7 @@ extension ChatTurn {
 
 #Preview {
     NavigationStack {
-        AskView(database: try! SedgeDatabase())
+        AskView(database: try! SedgeDatabase(), question: .constant(""))
             .navigationBarTitleDisplayMode(.inline)
     }
 }
