@@ -9,6 +9,14 @@ import SwiftUI
 // design token with a light and a dark value. Xcode turns each set into a `Color`, so screens
 // write `Color.ink`, `Color.muted`, `Color.group` and so on. The design's `accent` token is the
 // app's AccentColor set (Xcode names it `Color.accent`), so it also colors every button and toggle.
+//
+// The Marsh chart colors work the same way, one color set each:
+// - `chartNow`: this month's bar. `chartPast`: the earlier months' bars.
+// - `chartPick`: a tapped month's bar (for month selection, not built yet).
+// - `amountNow`: the big total above the chart.
+// - `nodeCategory` and `onNodeCategory`: the category node in Connected spending and its text.
+// - `nodeStore`: the store nodes. `graphLine`: the "categorized as" lines and the chart's zero line.
+//
 // About you adds its own sets: a fill per kind of tile (`tileIncome`, `tileHousing`, `tileLoan`,
 // `tileTuition`, `tileAccounts`), money back and spent (`moneyBack`, `moneySpent`), a fill per
 // account type (`accountChecking`, `accountSavings`, `accountCard`) and the text on them (`onAccount`).

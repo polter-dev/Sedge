@@ -142,6 +142,8 @@ struct SpendingView: View {
 
     /// Every node in the graph is this wide (the design's "equal node sizes"); it grows with the text size.
     @ScaledMetric(relativeTo: .caption) private var nodeWidth: CGFloat = 96
+    /// The legend's color dots, 9 pt in the design, grow with their labels.
+    @ScaledMetric(relativeTo: .caption2) private var dotSize: CGFloat = 9
 
     var body: some View {
         ScrollView {
@@ -229,17 +231,17 @@ struct SpendingView: View {
             .font(.row)
             Text(bars.last?.total ?? 0, format: Self.dollars)
                 .font(.bigValue)
-                .foregroundStyle(Color.ink)
+                .foregroundStyle(Color.amountNow)
             Chart {
                 ForEach(bars, id: \.month) { bar in
                     BarMark(x: .value("Month", bar.month), y: .value("Spent", bar.total), width: .ratio(0.55))
                         .cornerRadius(5)
-                        // This month in full, the months before it faded, as in the design.
-                        .foregroundStyle(Color.accent.opacity(bar.month == bars.last?.month ? 1 : 0.35))
+                        // This month in teal, the months before it a lighter teal; the legend names both.
+                        .foregroundStyle(bar.month == bars.last?.month ? Color.chartNow : Color.chartPast)
                         .accessibilityLabel((bar.month + "-01").displayDate(.dateTime.month(.wide)))
                         .accessibilityValue(bar.total.formatted(Self.dollars))
                 }
-                RuleMark(y: .value("Zero", 0)).foregroundStyle(Color.line)
+                RuleMark(y: .value("Zero", 0)).foregroundStyle(Color.graphLine)
             }
             .chartXAxis {
                 AxisMarks { value in
@@ -256,6 +258,20 @@ struct SpendingView: View {
             }
             .frame(height: 175)
             .padding(.top, 8)
+            // Names what each bar color means, so the meaning never rests on color alone.
+            HStack(spacing: 14) {
+                legendItem("This month", Color.chartNow)
+                legendItem("Earlier months", Color.chartPast)
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    /// One legend entry: a small dot in the bar's color and its name.
+    private func legendItem(_ name: String, _ color: Color) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: dotSize, height: dotSize)
+            Text(name).font(.note).foregroundStyle(Color.muted)
         }
     }
 
@@ -276,12 +292,12 @@ struct SpendingView: View {
                 HStack(alignment: .top) { node(stores, 0); Spacer(minLength: 8); node(stores, 1) }
                 Text(Self.title(category))
                     .font(.row)
-                    .foregroundStyle(Color.contrast)
+                    .foregroundStyle(Color.onNodeCategory)
                     // Two lines tall like a store node, whatever the name's length.
                     .lineLimit(2, reservesSpace: true)
                     .padding(10)
                     .frame(width: nodeWidth, alignment: .leading)
-                    .background(Color.accent, in: .rect(cornerRadius: 12))
+                    .background(Color.nodeCategory, in: .rect(cornerRadius: 12))
                 HStack(alignment: .bottom) { node(stores, 2); Spacer(minLength: 8); node(stores, 3) }
             }
             .background {
@@ -292,7 +308,7 @@ struct SpendingView: View {
                         var line = Path()
                         line.move(to: CGPoint(x: size.width / 2, y: size.height / 2))
                         line.addLine(to: CGPoint(x: corner.x * size.width, y: corner.y * size.height))
-                        context.stroke(line, with: .color(.line), lineWidth: 2)
+                        context.stroke(line, with: .color(.graphLine), lineWidth: 2)
                     }
                 }
                 .accessibilityHidden(true)
@@ -318,7 +334,7 @@ struct SpendingView: View {
                 .multilineTextAlignment(.center)
                 .padding(10)
                 .frame(maxWidth: nodeWidth, minHeight: 44)
-                .background(Color.soft, in: .rect(cornerRadius: 12))
+                .background(Color.nodeStore, in: .rect(cornerRadius: 12))
                 .overlay {
                     if selected == store.name { RoundedRectangle(cornerRadius: 12).stroke(Color.ink, lineWidth: 1.5) }
                 }

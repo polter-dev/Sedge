@@ -896,7 +896,8 @@ final class SedgeUITests: XCTestCase {
         app.tabBars.buttons["Trends"].tap()
         let link = app.buttons["Ways to save →"]
         XCTAssertTrue(link.waitForExistence(timeout: 10))
-        XCTAssertGreaterThanOrEqual(link.frame.height, 44)
+        // A row placed at a fractional y reads back as 43.99999…, so allow for rounding.
+        XCTAssertGreaterThanOrEqual(link.frame.height, 44 - 0.001)
         link.tap()
 
         let field = app.textFields["Monthly goal in dollars"]
