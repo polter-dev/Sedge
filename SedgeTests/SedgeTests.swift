@@ -36,6 +36,16 @@ struct SedgeTests {
         #expect(rows.contains { $0.kind == "income" })
     }
 
+    /// A nickname is trimmed and capped at 24 characters, and a blank one shows the default name.
+    @Test func nicknameRules() {
+        #expect(MainView.dataName(choice: "maya", nickname: "") == "Maya")
+        #expect(MainView.dataName(choice: "bank", nickname: "   \n") == "Bank")
+        #expect(MainView.dataName(choice: "maya", nickname: "  Mo  ") == "Mo")
+        #expect(MainView.dataName(choice: "maya", nickname: String(repeating: "a", count: 30)) == String(repeating: "a", count: 24))
+        // A cut that lands just after a space doesn't keep the space.
+        #expect(MainView.dataName(choice: "maya", nickname: String(repeating: "a", count: 23) + " bcd") == String(repeating: "a", count: 23))
+    }
+
     /// Stored dates are shown for people on the same day in any time zone, and other text is left alone.
     @Test func datesAreShownForPeople() {
         let shown = "2026-06-30".displayDate()
