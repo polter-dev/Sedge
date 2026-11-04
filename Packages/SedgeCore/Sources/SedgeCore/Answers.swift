@@ -1,10 +1,10 @@
 import GRDB
 
-/// The person's answers about their own accounts and transactions: "Is this account yours?",
-/// "Does this look familiar?" and a transaction's category. They are saved in the dataset's
-/// own database file, nothing rebuilds them, and passing nil clears one. `account_balances`
-/// and `find_transactions` report them, and a category answer moves that transaction's
-/// spending to the new category.
+/// The person's answers about their own accounts and transactions: "Is this account yours?"
+/// (with an optional name for the account), "Does this look familiar?" and a transaction's
+/// category. They are saved in the dataset's own database file, nothing rebuilds them, and
+/// passing nil clears one. `account_balances` and `find_transactions` report them (never the
+/// name), and a category answer moves that transaction's spending to the new category.
 public enum Answers {
     /// Whose account it is. "Later" is no answer, so it is saved as nil.
     public enum Owner: String, Sendable { case mine, shared }
@@ -23,6 +23,13 @@ public enum Answers {
     /// Saves (or with nil, clears) whether an account is the person's own or shared.
     public static func setOwner(_ owner: Owner?, account id: String, in database: SedgeDatabase) throws {
         try update("UPDATE accounts SET owner = ? WHERE account_id = ?", owner?.rawValue, id, in: database)
+    }
+
+    /// Saves the person's own name for an account. Blank (or nil) clears it, so the app shows the
+    /// bank's name again. Only the app's screens show it; the tools keep the bank's name.
+    public static func setNickname(_ nickname: String?, account id: String, in database: SedgeDatabase) throws {
+        let trimmed = nickname?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        try update("UPDATE accounts SET nickname = ? WHERE account_id = ?", trimmed.isEmpty ? nil : trimmed, id, in: database)
     }
 
     /// Saves (or with nil, clears) whether a transaction looks familiar.
