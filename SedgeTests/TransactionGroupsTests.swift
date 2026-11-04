@@ -9,16 +9,6 @@ import SedgeCore
 import Testing
 @testable import Sedge
 
-/// A persona's data in memory, organized, so these tests never touch the files the other tests reopen.
-private func inMemory(_ persona: String) throws -> SedgeDatabase {
-    let database = try SedgeDatabase()
-    try Persona.load(accounts: try #require(Bundle.main.url(forResource: "\(persona).accounts", withExtension: "json")),
-                     transactions: try #require(Bundle.main.url(forResource: "\(persona).transactions", withExtension: "json")),
-                     into: database)
-    try Organizer.organize(database)
-    return database
-}
-
 private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String? = "spending") -> ListedTransaction {
     ListedTransaction(transaction_id: id, date: date, store: "Bean Street Coffee", name: "BEAN STREET COFFEE", amount: amount, kind: kind)
 }
