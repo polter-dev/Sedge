@@ -91,6 +91,10 @@ struct SpendingView: View {
     @State private var cashFlow: CashFlow?
     /// The transaction a double-tapped store opens, by id; nil when none is open.
     @State private var opened: String?
+    /// How many recent purchases are worth a look; the row for them shows only above 0.
+    @State private var worthALook = 0
+    /// True while the Worth a look sheet is open.
+    @State private var showingWorthALook = false
 
     /// One store in the graph, or "Other stores" for the rest.
     struct Store: Identifiable {
@@ -175,6 +179,8 @@ struct SpendingView: View {
     @ScaledMetric(relativeTo: .caption) private var nodeWidth: CGFloat = 96
     /// The legend's color dots, 9 pt in the design, grow with their labels.
     @ScaledMetric(relativeTo: .caption2) private var dotSize: CGFloat = 9
+    /// The Worth a look count badge, 20 pt in the design, grows with its number.
+    @ScaledMetric(relativeTo: .caption2) private var badgeSize: CGFloat = 20
     /// The reader's Reduce Motion setting: when on, a new category changes the chart without animating.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -210,6 +216,7 @@ struct SpendingView: View {
                         // Wrapped lines at large text sizes stay flush left, like the rest of the screen.
                         .multilineTextAlignment(.leading)
                         .frame(minHeight: 44)
+                    if worthALook > 0 { worthALookRow }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -246,7 +253,10 @@ struct SpendingView: View {
             } catch {
                 print("Could not project:", error)
             }
+            countWorthALook()
         }
+        // Closing the sheet counts again, since answers given in it take purchases off.
+        .sheet(isPresented: $showingWorthALook, onDismiss: countWorthALook) { WorthALookView(database: database) }
         // A tapped store belongs to one category, so picking another clears it.
         .onChange(of: category) { selected = nil }
         // A double-tapped store's latest transaction, the same screen its row below opens.
@@ -409,6 +419,38 @@ struct SpendingView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("cashFlow")
+    }
+
+    /// "1 purchase worth a look →" with the count in a small badge, opening the Worth a look sheet.
+    private var worthALookRow: some View {
+        Button { showingWorthALook = true } label: {
+            HStack(spacing: 8) {
+                Text("\(worthALook)")
+                    .font(.note.weight(.semibold))
+                    .foregroundStyle(Color.contrast)
+                    .frame(minWidth: badgeSize, minHeight: badgeSize)
+                    .background(Color.accent, in: .capsule)
+                    .accessibilityHidden(true)
+                Text(worthALook == 1 ? "1 purchase worth a look" : "\(worthALook) purchases worth a look")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("→").accessibilityHidden(true)
+            }
+            .font(.row.weight(.medium))
+            .foregroundStyle(Color.muted)
+            .frame(minHeight: 44)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("worthALook")
+    }
+
+    /// Counts the purchases worth a look again, with the same rule the sheet lists them by.
+    private func countWorthALook() {
+        do {
+            worthALook = try WorthALook.flagged(in: database).count
+        } catch {
+            print("Could not read purchases worth a look:", error)
+        }
     }
 
     private var patternsTitle: some View {
