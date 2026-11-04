@@ -33,7 +33,7 @@ struct CashFlow {
         try database.dbQueue.read { db in
             // The same account the simulate_balance tool picks, so this screen and the assistant agree.
             guard let checking = try Row.fetchOne(db, sql: """
-                SELECT account_id, name FROM accounts
+                SELECT account_id, COALESCE(nickname, name) FROM accounts
                 WHERE type = 'depository' AND json_extract(balances, '$.current') IS NOT NULL
                 ORDER BY subtype = 'checking' DESC, name LIMIT 1
                 """) else { return nil }
