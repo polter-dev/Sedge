@@ -144,6 +144,8 @@ struct SpendingView: View {
     @ScaledMetric(relativeTo: .caption) private var nodeWidth: CGFloat = 96
     /// The legend's color dots, 9 pt in the design, grow with their labels.
     @ScaledMetric(relativeTo: .caption2) private var dotSize: CGFloat = 9
+    /// The reader's Reduce Motion setting: when on, a new category changes the chart without animating.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
@@ -210,28 +212,12 @@ struct SpendingView: View {
         let bars = Self.bars(totals, category: category, asOf: asOf)
         return VStack(alignment: .leading, spacing: 3) {
             Text("Your patterns").font(.title2.bold()).foregroundStyle(Color.ink)
-            HStack(spacing: 4) {
-                Menu {
-                    Picker("Category", selection: $category) {
-                        ForEach(categories, id: \.self) { Text(Self.title($0)) }
-                    }
-                } label: {
-                    HStack(spacing: 2) {
-                        Text(Self.title(category))
-                        Image(systemName: "chevron.up.chevron.down").imageScale(.small)
-                    }
-                    .foregroundStyle(Color.ink)
-                    // Apple's minimum tap target, taller than the design's caption line.
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-                }
-                .accessibilityLabel("Category")
-                .accessibilityValue(Self.title(category))
-            }
-            .font(.row)
+            chips
             Text(bars.last?.total ?? 0, format: Self.dollars)
                 .font(.bigValue)
                 .foregroundStyle(Color.amountNow)
+                // The total rolls digit by digit to the new category's amount.
+                .contentTransition(.numericText(value: bars.last?.total ?? 0))
             Chart {
                 ForEach(bars, id: \.month) { bar in
                     BarMark(x: .value("Month", bar.month), y: .value("Spent", bar.total), width: .ratio(0.55))
@@ -264,6 +250,48 @@ struct SpendingView: View {
                 legendItem("Earlier months", Color.chartPast)
             }
             .padding(.top, 6)
+        }
+        // A new category re-heights the bars and rolls the total in place; with Reduce Motion
+        // they change at once. The chips keep their own shorter fade (set in `chips`).
+        .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: category)
+    }
+
+    /// One capsule per category in a row that scrolls sideways; the picked one is filled.
+    private var chips: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(categories, id: \.self) { name in
+                        let picked = name == category
+                        Button { category = name } label: {
+                            Text(Self.title(name))
+                                .font(.link)
+                                .lineLimit(1)
+                                .foregroundStyle(picked ? Color.contrast : Color.ink)
+                                .padding(.horizontal, 14)
+                                .frame(minHeight: 36)
+                                .background(picked ? Color.accent : Color.soft, in: .capsule)
+                                // Apple's minimum tap target: the 36 pt capsule sits in a 44 pt row.
+                                .frame(minHeight: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(picked ? .isSelected : [])
+                        .animation(.easeOut(duration: 0.2), value: category)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            // The chips run on to the screen's edge, as in the design, instead of stopping at the margin.
+            .scrollClipDisabled()
+            // VoiceOver names the row once, so each chip only needs its category's name.
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Categories")
+            // Brings the picked chip on screen, also when the screen first opens. A reader rather
+            // than scrollPosition, so scrolling the row by hand never changes the category.
+            .onChange(of: category, initial: true) {
+                withAnimation { proxy.scrollTo(category) }
+            }
         }
     }
 
@@ -313,6 +341,8 @@ struct SpendingView: View {
                 }
                 .accessibilityHidden(true)
             }
+            // The new category's stores fade in once they load, which is a little after the tap.
+            .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25), value: rows.map(\.id))
             if let store = stores.first(where: { $0.name == selected }), let row = store.rows.first {
                 latest(row)
             }
