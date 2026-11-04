@@ -20,6 +20,26 @@ import SwiftUI
 // About you adds its own sets: a fill per kind of tile (`tileIncome`, `tileHousing`, `tileLoan`,
 // `tileTuition`, `tileAccounts`), money back and spent (`moneyBack`, `moneySpent`), a fill per
 // account type (`accountChecking`, `accountSavings`, `accountCard`) and the text on them (`onAccount`).
+//
+// The category colors on All months, one color set each: `catHousing`, `catUtilities`,
+// `catPhoneInternet`, `catTransport`, `catSubscriptions`, `catEducation` and `catCoffee`.
+// `Color.category` picks one by name; categories without a hue of their own yet use `second`.
+
+extension Color {
+    /// A category's color in charts, by the name the screens show (e.g. "Phone internet").
+    static func category(_ title: String) -> Color {
+        switch title {
+        case "Housing": .catHousing
+        case "Utilities": .catUtilities
+        case "Phone internet": .catPhoneInternet
+        case "Transport": .catTransport
+        case "Subscriptions": .catSubscriptions
+        case "Education": .catEducation
+        case "Coffee": .catCoffee
+        default: .second
+        }
+    }
+}
 
 /// The design's type scale on the system font. Each size is the nearest Dynamic Type text
 /// style, so the text still grows and shrinks with the reader's text size setting.

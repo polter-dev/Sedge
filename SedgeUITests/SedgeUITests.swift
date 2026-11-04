@@ -892,7 +892,8 @@ final class SedgeUITests: XCTestCase {
 
     /// The All months screen opens from Trends with its month chart, its category chart and the
     /// money-moved switch. The switch adds a "Moved between accounts" bar and turning it off
-    /// restores the totals. The screenshot is the screen in light, or dark after
+    /// restores the totals. Tapping a month opens its categories and tapping a category opens
+    /// its months. The screenshots are the screen in light, or dark after
     /// `xcrun simctl ui <device> appearance dark`. Nothing is changed in Maya's saved file.
     @MainActor
     func testAllMonthsShowsEveryMonthCategoryAndMoneyMoved() throws {
@@ -909,12 +910,41 @@ final class SedgeUITests: XCTestCase {
         let june = app.otherElements["June 2026"]
         XCTAssertTrue(june.waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["January 2026"].exists)
-        let dining = app.otherElements["Dining"]
+        // Each category row is a button: tapping it shows its months.
+        let dining = app.buttons["Dining"]
         XCTAssertTrue(dining.exists)
         let before = (june: june.value as? String, dining: dining.value as? String)
-        let moved = app.otherElements["Moved between accounts"]
+        let moved = app.buttons["Moved between accounts"]
         XCTAssertFalse(moved.exists)
         attachScreenshot(app, "all-months")
+
+        // Tapping March splits its bar into categories and opens its card; Maya's data is one
+        // six-month window, so both chevrons are off.
+        XCTAssertFalse(app.buttons["Earlier months"].isEnabled)
+        XCTAssertFalse(app.buttons["Later months"].isEnabled)
+        let march = app.otherElements["March 2026"]
+        let marchTotal = march.value as? String
+        march.tap()
+        let card = app.staticTexts["March 2026"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        // The split bar still reads as the month and its total; the card lists Dining as a plain row.
+        XCTAssertEqual(march.value as? String, marchTotal)
+        XCTAssertTrue(app.otherElements["Dining"].exists)
+        attachScreenshot(app, "all-months-month-selected")
+        app.buttons["Clear"].tap()
+        XCTAssertTrue(card.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["March 2026"].exists)
+
+        // Tapping Transport (a category with its own color) opens its six months under the row;
+        // tapping again closes them.
+        let transport = app.buttons["Transport"]
+        transport.tap()
+        // The window's dash comes with the phone's own spacing, so only the start is matched.
+        let caption = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Transport · each month'")).firstMatch
+        XCTAssertTrue(caption.waitForExistence(timeout: 5))
+        attachScreenshot(app, "all-months-category-selected")
+        transport.tap()
+        XCTAssertTrue(caption.waitForNonExistence(timeout: 5))
 
         let toggle = app.switches["Include money moved between my accounts"]
         // The inner switch, so the tap lands on the control and not on its label.
@@ -948,7 +978,7 @@ final class SedgeUITests: XCTestCase {
         let june = app.otherElements["June"]
         let before = try dollars(june)
         app.buttons["All months & categories →"].tap()
-        let dining = app.otherElements["Dining"]
+        let dining = app.buttons["Dining"]
         let beforeAll = try dollars(dining)
 
         app.tabBars.buttons["Accounts"].tap()
