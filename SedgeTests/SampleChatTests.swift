@@ -33,7 +33,7 @@ func transferCheckPicksLargestJuneMove(persona: String) throws {
             ORDER BY amount DESC, date DESC LIMIT 1
             """)
     }
-    let quick = try ChatTurn.sample(in: database).answer.quickCheck
+    let quick = try ChatTurn.sample(in: database).answer?.quickCheck
     guard let best else { #expect(quick == nil); return }
     let amount: Double = best["amount"], date: String = best["date"]
     #expect(quick?.factKey == "own_transfer_\(date)")

@@ -33,11 +33,14 @@ final class SedgeUITests: XCTestCase {
         // https://developer.apple.com/documentation/xcuiautomation
     }
 
-    /// No model is wired in, so asking says so plainly instead of answering.
+    /// No model is wired in, so asking shows the thinking row briefly, then says so plainly
+    /// instead of answering.
     @MainActor
     func testAskSaysNotConnected() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya"]
+        // Reduce Motion keeps the sprout still. Its breathing never stops, and the test waits
+        // for the screen to settle after each tap, which would outlast the brief thinking row.
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
@@ -45,11 +48,55 @@ final class SedgeUITests: XCTestCase {
         field.tap()
         field.typeText("How much did I spend at Netflix this year?")
         app.buttons["Send"].tap()
+        XCTAssertTrue(app.staticTexts["thinkingRow"].waitForExistence(timeout: 1), "No thinking row")
         XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["thinkingRow"].exists, "The thinking row stayed after the reply")
         XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
         // Without the sample, nothing on screen is demo content.
         XCTAssertTrue(app.staticTexts["Local analysis"].exists)
         attachScreenshot(app, "ask-not-connected")
+    }
+
+    /// `-demoThinking` holds a question at the thinking row, with one of the design's phrases.
+    @MainActor
+    func testDemoThinkingShowsTheThinkingRow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-demoThinking", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let row = app.staticTexts["thinkingRow"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "No thinking row")
+        XCTAssertTrue(row.label.hasSuffix("…"), "Phrase was: \(row.label)")
+        XCTAssertTrue(app.staticTexts["You · What about coffee?"].exists)
+        // One question at a time: Send stays off while the answer is worked out.
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText("And dining?")
+        XCTAssertFalse(app.buttons["Send"].isEnabled)
+        attachScreenshot(app, "ask-thinking")
+    }
+
+    /// `-demoTokenLimit` shows the limit as an ordinary Sedge turn, and "Start new session"
+    /// clears the chat back to the empty screen.
+    @MainActor
+    func testDemoTokenLimitStartsANewSession() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-demoTokenLimit", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["This chat has reached its limit."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.alerts.firstMatch.exists, "The limit must not be an alert")
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        XCTAssertFalse(field.isEnabled, "The question box should be off at the limit")
+        attachScreenshot(app, "ask-token-limit")
+
+        app.buttons["Start new session"].tap()
+        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "No empty screen")
+        XCTAssertFalse(app.staticTexts["This chat has reached its limit."].exists)
+        XCTAssertTrue(field.isEnabled)
+        XCTAssertTrue(app.staticTexts["Local analysis"].exists)
     }
 
     /// The empty Ask screen's example question changes every few seconds, and typing brings up
