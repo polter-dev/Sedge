@@ -52,3 +52,24 @@ import Testing
     #expect(Chats.title(for: "How much did I spend on rent and utilities in May and June?")
             == "How much did I spend on rent and…")
 }
+
+/// A file saved before chats existed (at `v7`, with an account nickname) opens at `v8`:
+/// the chat tables appear and the nickname is still there.
+@Test func fileAtNicknameVersionUpgradesToChats() throws {
+    let path = FileManager.default.temporaryDirectory.appendingPathComponent("v7-\(UUID()).sqlite").path
+    defer { try? FileManager.default.removeItem(atPath: path) }
+    do {
+        let old = try DatabaseQueue(path: path)
+        try SedgeDatabase.migrator.migrate(old, upTo: "v7")
+        try old.write { db in
+            try db.execute(sql: """
+                INSERT INTO accounts (account_id, name, type, balances, nickname)
+                VALUES ('a1', 'Checking', 'depository', '{}', 'Everyday')
+                """)
+        }
+    } // the old connection closes here, so the file is opened fresh below
+    let database = try SedgeDatabase(path: path)
+    #expect(try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT nickname FROM accounts") } == "Everyday")
+    #expect(try database.dbQueue.read { db in try db.tableExists("chats") && db.tableExists("chat_turns") })
+    #expect(try Chats.append(question: "Hi?", answer: nil, to: nil, at: Date(timeIntervalSince1970: 0), in: database) > 0)
+}

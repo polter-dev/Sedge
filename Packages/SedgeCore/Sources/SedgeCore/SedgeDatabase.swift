@@ -23,7 +23,8 @@ public struct SedgeDatabase: Sendable {
 
     /// Each migration runs once per file, in order. To change a table later,
     /// add a new migration instead of editing an old one, so existing files upgrade.
-    private static var migrator: DatabaseMigrator {
+    // Not private so a test can stop a file at an older version and check it upgrades.
+    static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1") { db in
             try db.create(table: "accounts") { t in
@@ -131,7 +132,7 @@ public struct SedgeDatabase: Sendable {
         }
         // The Ask screen's saved chats (`Chats`), so a chat can be found in Previous chats and
         // continued. Nothing rebuilds them; deleting a chat deletes its turns with it.
-        migrator.registerMigration("v7") { db in
+        migrator.registerMigration("v8") { db in
             try db.create(table: "chats") { t in
                 t.autoIncrementedPrimaryKey("id")
                 t.column("title", .text).notNull()

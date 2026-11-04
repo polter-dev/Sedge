@@ -4,7 +4,8 @@ Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase
 `v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
 `transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`),
 `v4` (profile_facts and profile_corrections), `v5` (saved_answers), `v6` (`accounts.owner`,
-`transactions.familiar` and `transactions.category_override`), `v7` (`accounts.nickname`) and `v7` (chats and chat_turns).
+`transactions.familiar` and `transactions.category_override`), `v7` (`accounts.nickname`) and
+`v8` (chats and chat_turns).
 
 ```mermaid
 erDiagram
