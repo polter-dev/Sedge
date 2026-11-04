@@ -4,7 +4,7 @@ Taken from the migrations in `Packages/SedgeCore/Sources/SedgeCore/SedgeDatabase
 `v1` (accounts, transactions, meta), `v2` (the merchant graph: entities, edges and
 `transactions.merchant_id`), `v3` (`transactions.kind` and `transactions.linked_transaction_id`),
 `v4` (profile_facts and profile_corrections), `v5` (saved_answers), `v6` (`accounts.owner`,
-`transactions.familiar` and `transactions.category_override`) and `v7` (chats and chat_turns).
+`transactions.familiar` and `transactions.category_override`), `v7` (`accounts.nickname`) and `v7` (chats and chat_turns).
 
 ```mermaid
 erDiagram
@@ -29,6 +29,7 @@ erDiagram
         text subtype
         text balances "not null, JSON: current, available, limit, currency codes"
         text owner "v6, the person's answer: mine or shared, null if not answered"
+        text nickname "v7, the person's own name for the account, null if none"
     }
 
     transactions {
@@ -153,6 +154,10 @@ erDiagram
   Spending screen). Like merchant_id they aren't part of `Account` or `Transaction`, so reloading
   the data or organizing again keeps them. A pending charge's answers stay with the pending
   row, so they are dropped when it posts under a new id.
+- **accounts.nickname** is the person's own name for an account, typed in the account check
+  and saved by `Answers.setNickname` (a blank name is stored as null). The app's screens show
+  it in place of `name`; the tools keep reporting `name`. Like `owner`, reloading the data or a
+  bank sync keeps it.
 - **chats** and **chat_turns** are the Ask screen's saved chats (`Chats`), listed in Previous
   chats and reopened for display. A turn is saved once its answer is in (or the chat hit its
   limit); continuing an older chat adds turns to it. They live in the open dataset's file, so

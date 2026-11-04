@@ -18,10 +18,18 @@ import SwiftUI
 // - `nodeStore`: the store nodes. `graphLine`: the "categorized as" lines and the chart's zero line.
 // The Ask screen reuses them: `chartNow` for the breakdown bars and the "Sedge" label, `nodeStore`
 // for the bar tracks, and `nodeCategory` with `onNodeCategory` text for the first quick-check button.
+//
+// About you adds its own sets: a fill per kind of tile (`tileIncome`, `tileHousing`, `tileLoan`,
+// `tileTuition`, `tileAccounts`), money back and spent (`moneyBack`, `moneySpent`), a fill per
+// account type (`accountChecking`, `accountSavings`, `accountCard`) and the text on them (`onAccount`).
 
 /// The design's type scale on the system font. Each size is the nearest Dynamic Type text
 /// style, so the text still grows and shrinks with the reader's text size setting.
 extension Font {
+    /// The income tile's figure on About you, the biggest number on that screen (34 pt semibold, the large title size).
+    static let heroValue = Font.largeTitle.weight(.semibold)
+    /// The figure on About you's smaller tiles: loans, tuition and housing (20 pt semibold).
+    static let tileValue = Font.title3.weight(.semibold)
     /// The big dollar figure at the top of a card (28 pt semibold in the design).
     static let bigValue = Font.title.weight(.semibold)
     /// A card's title, e.g. "Food & dining" (14 pt semibold).

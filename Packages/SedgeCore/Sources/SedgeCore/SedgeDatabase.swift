@@ -124,6 +124,11 @@ public struct SedgeDatabase: Sendable {
                 t.add(column: "category_override", .text) // a category name, e.g. groceries
             }
         }
+        // The person's own name for an account (`Answers.setNickname`), shown by the app in place
+        // of the bank's name. NULL means none; the tools keep reporting the bank's name.
+        migrator.registerMigration("v7") { db in
+            try db.alter(table: "accounts") { t in t.add(column: "nickname", .text) }
+        }
         // The Ask screen's saved chats (`Chats`), so a chat can be found in Previous chats and
         // continued. Nothing rebuilds them; deleting a chat deletes its turns with it.
         migrator.registerMigration("v7") { db in

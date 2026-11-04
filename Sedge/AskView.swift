@@ -200,7 +200,8 @@ struct AskView: View {
 
     /// The question box with its send button, and the line that says where answers come from.
     private var composer: some View {
-        VStack(spacing: 7) {
+        // 9 points, so the 8-point underlay clears the "Local analysis" line below it.
+        VStack(spacing: 9) {
             HStack(alignment: .bottom, spacing: 2) {
                 TextField("Question", text: $question,
                           prompt: Text(limited ? "Start a new session to keep asking" : "Ask about your money…")
