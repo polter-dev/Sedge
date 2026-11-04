@@ -20,7 +20,7 @@ struct ProfileView: View {
     /// Every transaction's date by id, to say when a fact's evidence starts and ends.
     @State private var dates: [String: String] = [:]
     @State private var editing: Profile.Fact?
-    /// False until the first load, so the tiles fade in once.
+    /// False until the grid first appears, so the tiles fade in once.
     @State private var shown = false
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -59,6 +59,9 @@ struct ProfileView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
+                // Flipped here, after the tiles exist at opacity 0, so their animation sees the change.
+                // Setting it in the same update that loads the facts would build them already shown.
+                .onAppear { shown = true }
             }
         }
         .themedBackground()
@@ -76,17 +79,14 @@ struct ProfileView: View {
                 withAnimation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25)) { reload() }
             }
         }
-        .task {
-            reload()
-            shown = true
-        }
+        .task { reload() }
     }
 
     /// One tappable tile: its content on the group color, the whole rounded shape as the tap
     /// target, read by VoiceOver as one button with the fact's full text.
     private func tile(_ fact: Profile.Fact, @ViewBuilder _ content: () -> some View) -> some View {
         // Tiles rise in one after another in reading order; with Reduce Motion they only fade.
-        let order = (income + pair + strips + accounts).firstIndex(of: fact) ?? 0
+        let order = facts.firstIndex(of: fact) ?? 0
         return Button { editing = fact } label: {
             content()
                 .background(Color.group, in: .rect(cornerRadius: 16))
@@ -238,7 +238,10 @@ struct ProfileView: View {
 
     private func reload() {
         do {
-            facts = try Profile.facts(in: database)
+            // In reading order (income, housing and loans, strips, accounts), so a fact's index is its
+            // place in the tiles' entrance. The sort is stable, so each group keeps Profile's order.
+            let row = ["income": 0, "housing": 1, "loan": 1, "account": 3]
+            facts = try Profile.facts(in: database).sorted { row[$0.kind, default: 2] < row[$1.kind, default: 2] }
             dates = try database.dbQueue.read { db in
                 try Dictionary(uniqueKeysWithValues: Row.fetchAll(db, sql: "SELECT transaction_id, date FROM transactions")
                     .map { ($0[0] as String, $0[1] as String) })

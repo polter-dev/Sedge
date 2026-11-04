@@ -13,7 +13,7 @@ import SwiftUI
 /// The design's type scale on the system font. Each size is the nearest Dynamic Type text
 /// style, so the text still grows and shrinks with the reader's text size setting.
 extension Font {
-    /// The income tile's figure on About you, the biggest number on that screen (36 pt semibold in the design).
+    /// The income tile's figure on About you, the biggest number on that screen (34 pt semibold, the large title size).
     static let heroValue = Font.largeTitle.weight(.semibold)
     /// The big dollar figure at the top of a card (28 pt semibold in the design).
     static let bigValue = Font.title.weight(.semibold)
