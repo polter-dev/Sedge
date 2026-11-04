@@ -466,6 +466,8 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(change.label.contains("Groceries") && change.label.contains("-$28 vs May"), change.label)
         XCTAssertTrue(app.buttons["Housing, $650"].exists)
         attachScreenshot(app, "spending-all")
+        app.swipeUp()
+        attachScreenshot(app, "spending-all-mosaic")
 
         app.buttons["Groceries, $87"].tap()
         XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))

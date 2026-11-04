@@ -279,8 +279,9 @@ struct SpendingView: View {
     @ScaledMetric(relativeTo: .caption2) private var badgeSize: CGFloat = 20
     /// The mosaic's height, 132 pt in the design; it grows with the text so labels still fit.
     @ScaledMetric(relativeTo: .caption) private var mosaicHeight: CGFloat = 132
-    /// The narrowest and shortest a mosaic block gets, so its two lines always fit.
-    @ScaledMetric(relativeTo: .caption) private var blockMinimum: CGFloat = 56
+    /// The shortest and narrowest a mosaic block gets (56 and 80 pt in the design), so its two lines fit.
+    @ScaledMetric(relativeTo: .caption) private var blockHeight: CGFloat = 56
+    @ScaledMetric(relativeTo: .caption) private var blockWidth: CGFloat = 80
     /// A block narrower than this shows only its name's first word.
     @ScaledMetric(relativeTo: .caption) private var shortName: CGFloat = 84
     /// The reader's Reduce Motion setting: when on, a new category changes the chart without animating.
@@ -436,10 +437,11 @@ struct SpendingView: View {
             .chartYScale(domain: 0...top)
             .chartXAxis {
                 AxisMarks { value in
-                    // "2026-06" is shown as "Jun"; the page's month in bold ink.
+                    // "2026-06" is shown as "Jun" ("J" at the largest text sizes, as on All months);
+                    // the page's month in bold ink.
                     if let label = value.as(String.self) {
                         AxisValueLabel {
-                            Text((label + "-01").displayDate(.dateTime.month(.abbreviated)))
+                            Text((label + "-01").displayDate(.dateTime.month(dynamicTypeSize.isAccessibilitySize ? .narrow : .abbreviated)))
                                 .fontWeight(label == month ? .semibold : .regular)
                                 .foregroundStyle(label == month ? Color.ink : Color.muted)
                         }
@@ -569,9 +571,10 @@ struct SpendingView: View {
             .chartYScale(domain: .automatic(includesZero: false), range: .plotDimension(startPadding: 20, endPadding: 4))
             .chartOverlay { proxy in
                 // The low point's amount and day just under it. Drawn over the chart, since a
-                // Charts annotation there gets moved above the point when it nears the edge.
+                // Charts annotation there gets moved above the point when it nears the edge. At the
+                // largest text sizes it would cover the dates, and the title above already says it.
                 GeometryReader { geometry in
-                    if let low, let plot = proxy.plotFrame.map({ geometry[$0] }),
+                    if !dynamicTypeSize.isAccessibilitySize, let low, let plot = proxy.plotFrame.map({ geometry[$0] }),
                        let x = proxy.position(forX: low.date), let y = proxy.position(forY: low.balance) {
                         // Starts under the point on the left half and ends under it on the right half, so it stays on the card.
                         let onLeft = x < plot.width / 2
@@ -795,7 +798,10 @@ struct SpendingView: View {
         let blocks: [(name: String, total: Double)] = category == nil
             ? Self.categoryBlocks(totals, month: shownMonth)
             : Self.stores(rows).map { ($0.name, $0.total) }
-        HStack(alignment: .firstTextBaseline) {
+        // Side by side, or stacked at the largest text sizes so the heading keeps the full width.
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        layout {
             Text("Connected spending · \(name)").font(.headline).foregroundStyle(Color.ink)
             Spacer(minLength: 8)
             Text(category == nil ? "by category" : "by store").font(.row).foregroundStyle(Color.muted)
@@ -808,9 +814,18 @@ struct SpendingView: View {
                 .font(.row)
                 .foregroundStyle(Color.muted)
         } else {
-            mosaic(blocks)
-                // The new category's or month's blocks fade in once they load, a little after the tap.
-                .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25), value: blocks.map(\.name))
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    // At the largest text sizes the blocks stack full width, so every name fits whole.
+                    VStack(spacing: 4) {
+                        ForEach(Array(blocks.enumerated()), id: \.element.name) { block($1, index: $0, width: nil, height: nil) }
+                    }
+                } else {
+                    mosaic(blocks)
+                }
+            }
+            // The new category's or month's blocks fade in once they load, a little after the tap.
+            .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25), value: blocks.map(\.name))
         }
     }
 
@@ -819,19 +834,22 @@ struct SpendingView: View {
     private func mosaic(_ blocks: [(name: String, total: Double)]) -> some View {
         GeometryReader { geometry in
             let amounts = blocks.map(\.total)
-            let columns = blocks.count > 1
-                ? Self.split([amounts[0], amounts.dropFirst().reduce(0, +)], length: geometry.size.width, gap: 4, minimum: blockMinimum)
-                : [geometry.size.width]
+            let width = geometry.size.width
+            let rest = Array(blocks.dropFirst(2))
+            let share = Self.split([amounts[0], amounts.dropFirst().reduce(0, +)], length: width, gap: 4, minimum: blockWidth)
+            // The right column is wide enough for its bottom blocks side by side, as long as the left keeps its minimum.
+            let needed = CGFloat(rest.count) * (blockWidth + 4) - 4
+            let right = max(0, min(max(share[1], needed), width - 4 - blockWidth))
+            let columns = blocks.count > 1 ? [width - 4 - right, right] : [width]
             HStack(spacing: 4) {
                 block(blocks[0], index: 0, width: columns[0], height: geometry.size.height)
                 if blocks.count > 1 {
-                    let rest = Array(blocks.dropFirst(2))
                     let heights = rest.isEmpty ? [geometry.size.height]
-                        : Self.split([amounts[1], amounts.dropFirst(2).reduce(0, +)], length: geometry.size.height, gap: 4, minimum: blockMinimum)
+                        : Self.split([amounts[1], amounts.dropFirst(2).reduce(0, +)], length: geometry.size.height, gap: 4, minimum: blockHeight)
                     VStack(spacing: 4) {
                         block(blocks[1], index: 1, width: columns[1], height: heights[0])
                         if !rest.isEmpty {
-                            let widths = Self.split(rest.map(\.total), length: columns[1], gap: 4, minimum: blockMinimum)
+                            let widths = Self.split(rest.map(\.total), length: columns[1], gap: 4, minimum: blockWidth)
                             HStack(spacing: 4) {
                                 ForEach(Array(rest.enumerated()), id: \.element.name) { index, item in
                                     block(item, index: index + 2, width: widths[index], height: heights[1])
@@ -849,19 +867,20 @@ struct SpendingView: View {
     /// the rest in the store color. With a store, one tap selects it and shows its latest
     /// transaction below, two open that transaction; with "All", a tap picks that category.
     @ViewBuilder
-    private func block(_ item: (name: String, total: Double), index: Int, width: CGFloat, height: CGFloat) -> some View {
+    private func block(_ item: (name: String, total: Double), index: Int, width: CGFloat?, height: CGFloat?) -> some View {
         let isAll = category == nil
         let name = isAll ? Self.title(item.name) : item.name
         let face = VStack(alignment: .leading, spacing: 2) {
             // A narrow block shows the name's first word, so it never clips mid-word.
-            Text(width < shortName ? String(name.split(separator: " ").first ?? "") : name).font(.row.weight(.medium))
+            Text(width.map { $0 < shortName } == true ? String(name.split(separator: " ").first ?? "") : name).font(.row.weight(.medium))
             Text(item.total, format: Self.dollars).font(.row)
         }
-        .lineLimit(1)
+        .lineLimit(width == nil ? nil : 1)
         .foregroundStyle(index < 2 ? Color.onNodeCategory : Color.ink)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .frame(width: width, height: height, alignment: .topLeading)
+        // A given size is exact; without one the block is full width and as tall as its text.
+        .frame(minWidth: width, maxWidth: width ?? .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
         .background(index == 0 ? Color.nodeCategory : index == 1 ? Color.chartNow : Color.nodeStore, in: .rect(cornerRadius: 10))
         .overlay {
             if !isAll && selected == item.name { RoundedRectangle(cornerRadius: 10).stroke(Color.ink, lineWidth: 1.5) }
