@@ -66,9 +66,9 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(example.waitForExistence(timeout: 5))
         let first = example.label
         attachScreenshot(app, "ask-example-first")
-        // Each question stays 4 seconds, so a different one shows within 6.
+        // Each question stays 4.3 s; allow a couple of turns so a slow simulator can't miss the swap.
         let changed = expectation(for: NSPredicate(format: "label != %@", first), evaluatedWith: example)
-        wait(for: [changed], timeout: 6)
+        wait(for: [changed], timeout: 15)
         // Let the 0.3-second crossfade finish before the screenshot.
         Thread.sleep(forTimeInterval: 0.5)
         attachScreenshot(app, "ask-example-second")
@@ -91,8 +91,8 @@ final class SedgeUITests: XCTestCase {
         let example = app.staticTexts["exampleQuestion"]
         XCTAssertTrue(example.waitForExistence(timeout: 5))
         XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
-        // Longer than one 4-second turn plus its fade.
-        Thread.sleep(forTimeInterval: 6)
+        // As long as the rotation test waits for a swap, so both watch the same window.
+        Thread.sleep(forTimeInterval: 15)
         XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
     }
 
