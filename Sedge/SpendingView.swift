@@ -72,8 +72,8 @@ extension ListedTransaction {
 /// stores that make up this month's spending in it, or a tapped month's.
 struct SpendingView: View {
     let database: SedgeDatabase
-    /// Opens the Ask tab.
-    let ask: () -> Void
+    /// Opens the Ask tab with this question typed into its box, not sent.
+    let ask: (String) -> Void
     /// The dataset's "today"; nil until loaded, or when nothing has been saved yet.
     @State private var asOf: String?
     /// Spending per month and category over the first `day` days of each month.
@@ -87,6 +87,10 @@ struct SpendingView: View {
     @State private var picked: String?
     /// The month under the last tap on the chart, cleared again once `picked` is set from it.
     @State private var tapped: String?
+    /// The next 30 days of checking, as the Cash flow screen first shows them; nil without a bank account.
+    @State private var cashFlow: CashFlow?
+    /// The transaction a double-tapped store opens, by id; nil when none is open.
+    @State private var opened: String?
 
     /// One store in the graph, or "Other stores" for the rest.
     struct Store: Identifiable {
@@ -196,8 +200,12 @@ struct SpendingView: View {
                             .contentShape(.rect)
                     }
                     .font(.link)
+                    cashFlowCard
+                        .padding(.top, 8)
                     connected
-                    Button("Ask about a tradeoff →", action: ask)
+                    // Says what it does: the question goes into the Ask box, for the person to send or change.
+                    let name = Self.title(category).lowercased()
+                    Button("Ask Sedge: what if I spent less on \(name)? →") { ask("What if I spent less on \(name)?") }
                         .font(.link)
                         // Wrapped lines at large text sizes stay flush left, like the rest of the screen.
                         .multilineTextAlignment(.leading)
@@ -231,8 +239,18 @@ struct SpendingView: View {
                 print("Could not read spending:", error)
             }
         }
+        // Each time the screen shows, so the card matches the Cash flow screen it opens.
+        .task {
+            do {
+                cashFlow = try CashFlow.load(database)
+            } catch {
+                print("Could not project:", error)
+            }
+        }
         // A tapped store belongs to one category, so picking another clears it.
         .onChange(of: category) { selected = nil }
+        // A double-tapped store's latest transaction, the same screen its row below opens.
+        .navigationDestination(item: $opened) { TransactionDetailView(database: database, id: $0) }
     }
 
     /// "Your patterns": this month so far and the three months before it, over the same days.
@@ -347,6 +365,50 @@ struct SpendingView: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: category)
         // A tapped month's color, ring and amount fade in; a fade only, so Reduce Motion keeps it.
         .animation(.easeOut(duration: 0.2), value: picked)
+    }
+
+    /// "Cash flow": the lowest balance of the next 30 days and a small line of them, opening the
+    /// Cash flow screen. Both come from `CashFlow`, the same as that screen's first view.
+    private var cashFlowCard: some View {
+        NavigationLink {
+            CashFlowView(database: database).navigationTitle("Cash flow")
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cash flow").font(.cardTitle).foregroundStyle(Color.ink)
+                    if let cashFlow, let low = cashFlow.lowest(cashFlow.shown) {
+                        Text("Low point \(low.balance.formatted(.currency(code: "USD"))) · \(low.date.displayDate(.dateTime.month(.abbreviated).day()))")
+                            .font(.row)
+                            .foregroundStyle(Color.muted)
+                    }
+                }
+                Spacer(minLength: 8)
+                if let cashFlow {
+                    Chart(cashFlow.shown, id: \.date) { day in
+                        LineMark(x: .value("Day", day.date), y: .value("Balance", cashFlow.balance(day)))
+                            .foregroundStyle(Color.accent)
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, lineJoin: .round))
+                    }
+                    // Only the shape matters here, so no axes, and the line fills the height.
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .chartYScale(domain: .automatic(includesZero: false))
+                    .frame(width: 72, height: 24)
+                    .accessibilityHidden(true)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.row)
+                    .foregroundStyle(Color.muted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(minHeight: 44)
+            .background(Color.group, in: .rect(cornerRadius: 14))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("cashFlow")
     }
 
     private var patternsTitle: some View {
@@ -471,6 +533,7 @@ struct SpendingView: View {
     private func node(_ stores: [Store], _ index: Int) -> some View {
         if index < stores.count {
             let store = stores[index]
+            // One tap selects the store; two open its latest transaction, as tapping its row below does.
             Button { selected = store.name } label: {
                 VStack(spacing: 2) {
                     Text(store.name).lineLimit(2)
@@ -488,7 +551,10 @@ struct SpendingView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(store.name), \(store.total.formatted(Self.dollars))")
+            .simultaneousGesture(TapGesture(count: 2).onEnded { opened = store.rows.first?.id })
             .accessibilityHint("Shows the latest transaction")
+            // VoiceOver's double tap is the button's own tap, so opening is offered as a named action.
+            .accessibilityAction(named: "Open latest transaction") { opened = store.rows.first?.id }
             .accessibilityIdentifier("store")
             .accessibilityAddTraits(selected == store.name ? .isSelected : [])
         }
@@ -525,7 +591,7 @@ struct SpendingView: View {
 #Preview {
     // Maya's fake data, loaded the same way the app loads it.
     NavigationStack {
-        SpendingView(database: try! .open("maya")) {}
+        SpendingView(database: try! .open("maya")) { _ in }
             .navigationTitle("Spending")
     }
 }

@@ -139,6 +139,8 @@ struct MainView: View {
     /// The open tab. It lives in ContentView, so picking other data from Accounts comes back to Accounts.
     @Binding var tab: MainTab
     let changeData: () -> Void
+    /// The Ask box's text. It lives here so Trends can type a question into it before switching tabs.
+    @State private var question = ""
 
     private var dataName: String { choice == SedgeDatabase.bankChoice ? "Bank" : choice.capitalized }
 
@@ -147,7 +149,7 @@ struct MainView: View {
         TabView(selection: $tab) {
             Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
-                    AskView(database: database) { tab = $0 }
+                    AskView(database: database, question: $question) { tab = $0 }
                         .navigationTitle("Ask Sedge")
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
@@ -155,18 +157,13 @@ struct MainView: View {
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
-                    SpendingView(database: database) { tab = .ask }
+                    SpendingView(database: database) {
+                        question = $0
+                        tab = .ask
+                    }
                         .navigationTitle("Spending")
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
-                        .toolbar {
-                            // The cash-flow projection and its scenarios open from here.
-                            NavigationLink("Cash flow") {
-                                CashFlowView(database: database)
-                                    .navigationTitle("Cash flow")
-                                    .navigationSubtitle(dataName)
-                            }
-                        }
                 }
             }
             Tab("Accounts", image: "tab-accounts", value: .accounts) {

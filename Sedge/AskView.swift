@@ -79,10 +79,11 @@ struct QuickCheck {
 /// `-sampleChat YES` show the design's sample conversation, worked out from this data.
 struct AskView: View {
     let database: SedgeDatabase
+    /// The question box's text, owned by the tabs so Trends can type a question in for the person.
+    @Binding var question: String
     /// Switches the main tab, for the toolbar buttons and the card's trends link.
     var open: (MainTab) -> Void = { _ in }
     @State private var turns: [ChatTurn] = []
-    @State private var question = ""
     /// True when the turns are the sample, so the screen says it is demo state.
     @State private var isDemo = false
 
@@ -451,7 +452,7 @@ extension ChatTurn {
 
 #Preview {
     NavigationStack {
-        AskView(database: try! SedgeDatabase())
+        AskView(database: try! SedgeDatabase(), question: .constant(""))
             .navigationTitle("Ask Sedge")
             .navigationBarTitleDisplayMode(.inline)
     }
