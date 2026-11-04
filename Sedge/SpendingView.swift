@@ -94,10 +94,11 @@ struct SpendingView: View {
         var total: Double { Double(rows.reduce(0) { $0 + Int(($1.amount * 100).rounded()) }) / 100 }
     }
 
-    /// The four months the bars cover, oldest first, as "YYYY-MM": `asOf`'s month and the three before it.
-    static func months(endingAt asOf: String) -> [String] {
+    /// The four months the bars cover (or `count` months), oldest first, as "YYYY-MM": `asOf`'s
+    /// month and the ones before it. `asOf` may be "YYYY-MM-DD" or "YYYY-MM".
+    static func months(endingAt asOf: String, count: Int = 4) -> [String] {
         guard let year = Int(asOf.prefix(4)), let month = Int(asOf.dropFirst(5).prefix(2)) else { return [] }
-        return (0..<4).reversed().map { back in
+        return (0..<count).reversed().map { back in
             // Months counted from year 0, so stepping back past January lands in the year before.
             let index = year * 12 + month - 1 - back
             return String(format: "%04d-%02d", index / 12, index % 12 + 1)
@@ -127,7 +128,7 @@ struct SpendingView: View {
 
     /// The categories with spending in the four months shown, by name.
     private var categories: [String] {
-        let months = asOf.map(Self.months) ?? []
+        let months = asOf.map { Self.months(endingAt: $0) } ?? []
         return Set(totals.filter { months.contains($0.month) }.map(\.category)).sorted { Self.title($0) < Self.title($1) }
     }
 
