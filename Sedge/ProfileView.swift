@@ -11,49 +11,54 @@ import SwiftUI
 extension Profile.Fact: @retroactive Identifiable {}
 
 /// What the app worked out about the person (income, rent, tuition, loans, accounts), with
-/// the transactions behind each fact. Tapping a fact corrects it; the correction is saved in
-/// the open database and always wins over what was worked out.
+/// the transactions behind each fact, as a grid of tiles whose size says how much each matters.
+/// Tapping a tile corrects its fact; the correction is saved in the open database and always
+/// wins over what was worked out.
 struct ProfileView: View {
     let database: SedgeDatabase
     @State private var facts: [Profile.Fact] = []
     /// Every transaction's date by id, to say when a fact's evidence starts and ends.
     @State private var dates: [String: String] = [:]
     @State private var editing: Profile.Fact?
+    /// False until the first load, so the tiles fade in once.
+    @State private var shown = false
+    @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Grows the tiles' symbols with the reader's text size.
+    @ScaledMetric(relativeTo: .caption2) private var glyphScale = 1.0
 
     /// Section titles for the kinds `Profile` knows; anything else shows its raw kind.
     static let titles = ["income": "Income", "housing": "Housing", "tuition": "Tuition", "loan": "Loans", "account": "Accounts"]
 
-    /// The kinds in the order `Profile.facts` sorted them.
-    private var kinds: [String] {
-        facts.map(\.kind).reduce(into: []) { kinds, kind in if !kinds.contains(kind) { kinds.append(kind) } }
-    }
+    // The four groups of tiles, top to bottom. Tuition and any kind `Profile` adds later are wide strips.
+    private var income: [Profile.Fact] { facts.filter { $0.kind == "income" } }
+    private var pair: [Profile.Fact] { facts.filter { $0.kind == "housing" || $0.kind == "loan" } }
+    private var strips: [Profile.Fact] { facts.filter { !["income", "housing", "loan", "account"].contains($0.kind) } }
+    private var accounts: [Profile.Fact] { facts.filter { $0.kind == "account" } }
 
     var body: some View {
-        List {
-            ForEach(kinds, id: \.self) { kind in
-                Section {
-                    ForEach(facts.filter { $0.kind == kind }) { fact in
-                        Button { editing = fact } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(fact.value.name)
-                                Text(Self.details(fact.value))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Text(evidence(fact))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .foregroundStyle(.primary)
-                        .accessibilityHint("Correct this fact")
+        // At the largest text sizes every tile is full width, so nothing has to squeeze.
+        let oneColumn = textSize.isAccessibilitySize
+        ScrollView {
+            if !facts.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("What Sedge worked out from this data. Tap any tile to correct it.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.muted)
+                    ForEach(income) { fact in tile(fact) { card(fact, hero: true) } }
+                    grid(pair, columns: oneColumn ? 1 : 2, span: true) { fact in tile(fact) { card(fact) } }
+                    ForEach(strips) { fact in
+                        tile(fact) { if oneColumn { card(fact) } else { strip(fact) } }
                     }
-                } header: {
-                    Text(Self.titles[kind] ?? kind)
-                } footer: {
-                    // The rows don't look like buttons, so the first section says they are.
-                    if kind == kinds.first { Text("Tap a fact to correct it.").foregroundStyle(.secondary) }
+                    grid(accounts, columns: oneColumn ? 1 : 4, span: false) { fact in
+                        tile(fact) { if oneColumn { card(fact) } else { square(fact) } }
+                    }
+                    Text("Accounts come from your bank's list. Corrections always win over what Sedge worked out.")
+                        .font(.note)
+                        .foregroundStyle(Color.muted)
                 }
-                .listRowBackground(Color.group)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
         }
         .themedBackground()
@@ -67,10 +72,168 @@ struct ProfileView: View {
                 } catch {
                     print("Could not save the correction:", error)
                 }
-                reload()
+                // The changed tile's text cross-fades to the new value.
+                withAnimation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25)) { reload() }
             }
         }
-        .task { reload() }
+        .task {
+            reload()
+            shown = true
+        }
+    }
+
+    /// One tappable tile: its content on the group color, the whole rounded shape as the tap
+    /// target, read by VoiceOver as one button with the fact's full text.
+    private func tile(_ fact: Profile.Fact, @ViewBuilder _ content: () -> some View) -> some View {
+        // Tiles rise in one after another in reading order; with Reduce Motion they only fade.
+        let order = (income + pair + strips + accounts).firstIndex(of: fact) ?? 0
+        return Button { editing = fact } label: {
+            content()
+                .background(Color.group, in: .rect(cornerRadius: 16))
+                .contentShape(.rect(cornerRadius: 16))
+        }
+        .buttonStyle(TileStyle())
+        .accessibilityLabel([Self.titles[fact.kind] ?? fact.kind, fact.value.name, Self.details(fact.value), evidence(fact)]
+            .filter { !$0.isEmpty }.joined(separator: ", "))
+        .accessibilityHint("Correct this fact")
+        .opacity(shown ? 1 : 0)
+        .offset(y: shown || reduceMotion ? 0 : 8)
+        .animation(reduceMotion ? .easeInOut(duration: 0.2)
+                   : .spring(response: 0.35, dampingFraction: 0.85).delay(Double(order) * 0.04), value: shown)
+    }
+
+    /// `items` in rows of `columns` tiles of one width and one height. A short last row is
+    /// filled with blanks, so squares stay squares, or with `span` its lone tile takes the
+    /// whole row (housing without a loan).
+    private func grid<Tile: View>(_ items: [Profile.Fact], columns: Int, span: Bool,
+                                  tile: @escaping (Profile.Fact) -> Tile) -> some View {
+        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+            ForEach(Array(stride(from: 0, to: items.count, by: columns)), id: \.self) { start in
+                let row = items[start..<min(start + columns, items.count)]
+                GridRow {
+                    ForEach(row) { fact in tile(fact).gridCellColumns(span && row.count == 1 ? columns : 1) }
+                    if !span {
+                        ForEach(row.count..<columns, id: \.self) { _ in Color.clear.gridCellUnsizedAxes(.vertical) }
+                    }
+                }
+            }
+        }
+    }
+
+    /// A tile's top line: the kind's glyph and name, and the pencil that says it can be corrected.
+    private func head(_ fact: Profile.Fact, pencil: Bool = true) -> some View {
+        HStack(spacing: 6) {
+            glyph(Self.symbol(fact))
+            Text(Self.titles[fact.kind] ?? fact.kind).font(.note.weight(.semibold)).textCase(.uppercase).tracking(0.44)
+            Spacer(minLength: 0)
+            if pencil { glyph("pencil") }
+        }
+        .foregroundStyle(Color.muted)
+    }
+
+    /// An SF Symbol in a square box `size` points wide (at the default text size), so a tall
+    /// symbol like the house makes its row no taller than a flat one like the banknote.
+    private func glyph(_ name: String, size: Double = 14) -> some View {
+        Image(systemName: name)
+            .resizable()
+            .scaledToFit()
+            // Capped at double size, so at the largest text sizes the glyphs leave room for the words.
+            .frame(width: size * min(glyphScale, 2), height: size * min(glyphScale, 2))
+    }
+
+    /// The big dollar figure. It shrinks rather than wraps, so a long amount stays on one line.
+    private func figure(_ text: String, hero: Bool = false) -> some View {
+        Text(text)
+            .font(hero ? .heroValue : .bigValue)
+            .foregroundStyle(Color.ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .contentTransition(.opacity)
+    }
+
+    /// The fact's evidence line, if it has one (a fact with no dated transactions has none).
+    @ViewBuilder private func evidenceLine(_ fact: Profile.Fact) -> some View {
+        let text = evidence(fact)
+        if !text.isEmpty { Text(text).font(.note).foregroundStyle(Color.muted).contentTransition(.opacity) }
+    }
+
+    /// The tall tile: income (the hero), housing and loans, and every tile at the largest text sizes.
+    private func card(_ fact: Profile.Fact, hero: Bool = false) -> some View {
+        let (amount, rest) = Self.split(fact.value)
+        return VStack(alignment: .leading, spacing: 4) {
+            head(fact)
+            Text(fact.value.name).font(.cardTitle).foregroundStyle(Color.ink)
+            if let amount { figure(amount, hero: hero) }
+            if !rest.isEmpty { Text(rest).font(.row).foregroundStyle(Color.muted).contentTransition(.opacity) }
+            evidenceLine(fact)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    /// The wide, short tile for tuition: name and evidence on the left, the figure on the right.
+    private func strip(_ fact: Profile.Fact) -> some View {
+        let (amount, rest) = Self.split(fact.value)
+        return HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                head(fact, pencil: false)
+                Text(fact.value.name).font(.cardTitle).foregroundStyle(Color.ink)
+                evidenceLine(fact)
+            }
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: 2) {
+                if let amount { figure(amount) }
+                if !rest.isEmpty {
+                    Text(rest).font(.note).foregroundStyle(Color.muted).multilineTextAlignment(.trailing).contentTransition(.opacity)
+                }
+            }
+            glyph("pencil").foregroundStyle(Color.muted)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    /// The small square for an account: glyph, name and type. The note under the grid says the
+    /// list came from the bank, so only a corrected account shows its evidence line.
+    private func square(_ fact: Profile.Fact) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .top) {
+                glyph(Self.symbol(fact), size: 16)
+                Spacer(minLength: 0)
+                glyph("pencil", size: 12)
+            }
+            .foregroundStyle(Color.muted)
+            Spacer(minLength: 12)
+            Text(fact.value.name).font(.row.weight(.semibold)).foregroundStyle(Color.ink)
+            Text(Self.details(fact.value)).font(.note).foregroundStyle(Color.muted)
+            if fact.rule != "account_list" { evidenceLine(fact) }
+        }
+        // 82 pt tall with the padding: the design's square, and well over the 44 pt tap minimum.
+        .frame(maxWidth: .infinity, minHeight: 62, alignment: .topLeading)
+        .padding(10)
+    }
+
+    /// The SF Symbol on a fact's tile; an account's depends on its type.
+    private static func symbol(_ fact: Profile.Fact) -> String {
+        switch fact.kind {
+        case "income": "dollarsign"
+        case "housing": "house"
+        case "loan": "banknote"
+        case "tuition": "graduationcap"
+        case "account":
+            fact.value.type?.contains("credit") == true ? "creditcard"
+                : fact.value.type == "savings" ? "dollarsign.circle" : "building.columns"
+        default: "person.text.rectangle"
+        }
+    }
+
+    /// A tile's big figure (the amount, e.g. "$1,850.00") and the rest of `details` without it,
+    /// e.g. "mortgage · monthly · on day 1". The figure is nil when the fact has no amount (accounts).
+    static func split(_ value: Profile.Value) -> (amount: String?, rest: String) {
+        var rest = value
+        rest.amount = nil
+        return (value.amount?.formatted(.currency(code: "USD")), details(rest))
     }
 
     private func reload() {
@@ -110,6 +273,18 @@ struct ProfileView: View {
             let noun = fact.kind == "income" ? "deposit" : "payment"
             return "Based on \(found.count) \(noun)\(found.count == 1 ? "" : "s") from \(first.displayDate()) to \(last.displayDate())."
         }
+    }
+}
+
+/// A tile presses in slightly while touched, so the tap feels physical; Reduce Motion turns it off.
+private struct TileStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    // Spelled out because GRDB, imported above, has its own `Configuration` type.
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

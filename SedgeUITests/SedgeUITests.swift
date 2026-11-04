@@ -165,7 +165,8 @@ final class SedgeUITests: XCTestCase {
 
             app.tabBars.buttons["Accounts"].tap()
             app.buttons["About you"].tap()
-            let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+            // Each tile is one button that reads its whole fact, evidence included.
+            let evidence = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Based on'")).firstMatch
             XCTAssertTrue(evidence.waitForExistence(timeout: 10))
             attachScreenshot(app, "\(persona) profile")
         }
@@ -182,10 +183,15 @@ final class SedgeUITests: XCTestCase {
         // Saving a fact unchanged still makes a correction.
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["About you"].tap()
-        let fact = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+        // Each tile is one button that reads its whole fact, starting with its kind.
+        let fact = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,' AND label CONTAINS 'Based on'")).firstMatch
         XCTAssertTrue(fact.waitForExistence(timeout: 10))
         fact.tap()
         app.buttons["Save"].tap()
+        // The saved correction shows on the income tile right away.
+        let corrected = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,' AND label ENDSWITH 'You set this.'")).firstMatch
+        XCTAssertTrue(corrected.waitForExistence(timeout: 5), "The income tile doesn't show the correction")
+        attachScreenshot(app, "about-you-corrected")
 
         // Back to the Accounts list, where the menu is.
         app.navigationBars.buttons.firstMatch.tap()
@@ -320,7 +326,7 @@ final class SedgeUITests: XCTestCase {
         app.navigationBars.buttons.firstMatch.tap()
 
         app.buttons["About you"].tap()
-        let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+        let evidence = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Based on'")).firstMatch
         XCTAssertTrue(evidence.waitForExistence(timeout: 10))
         attachScreenshot(app, "accounts-about-you")
         app.navigationBars.buttons.firstMatch.tap()

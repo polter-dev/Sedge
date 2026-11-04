@@ -68,6 +68,20 @@ struct SedgeTests {
         #expect(facts.contains { $0.kind == "income" && !$0.evidence.isEmpty })
     }
 
+    /// About you's tiles move each fact's amount into a big figure and show the rest of the old
+    /// details line under it, so every value the list showed before is still on screen, in order.
+    @Test(arguments: ["maya", "daniel"]) func profileTilesKeepEveryValue(persona: String) throws {
+        let facts = try Profile.facts(in: SedgeDatabase.open(persona))
+        #expect(!facts.isEmpty)
+        for fact in facts {
+            let (amount, rest) = ProfileView.split(fact.value)
+            let before = ProfileView.details(fact.value).components(separatedBy: " · ")
+            #expect((amount == nil) == (fact.value.amount == nil))
+            #expect(amount == nil || before.contains(amount!), "\(fact.id): \(before) has no \(amount!)")
+            #expect(before.filter { $0 != amount } == rest.components(separatedBy: " · ").filter { !$0.isEmpty }, "\(fact.id)")
+        }
+    }
+
     /// When Plaid connects but the download fails, the bank screen gets its plain line. The
     /// failure is made up here, so the test never needs the quickstart server.
     @Test func syncFailureAfterConnectingShowsMessage() async throws {
