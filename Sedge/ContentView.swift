@@ -139,7 +139,7 @@ struct MainView: View {
     /// The open tab. It lives in ContentView, so picking other data from Accounts comes back to Accounts.
     @Binding var tab: MainTab
     let changeData: () -> Void
-    /// The Ask box's text. It lives here so Trends can type a question into it before switching tabs.
+    /// The Ask box's text. It lives here so a typed question stays when the tab changes.
     @State private var question = ""
     /// The person's own name for this data, kept in the app's settings (one per choice), never in a database.
     @AppStorage private var nickname: String
@@ -188,10 +188,7 @@ struct MainView: View {
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
-                    SpendingView(database: database) {
-                        question = $0
-                        tab = .ask
-                    }
+                    SpendingView(database: database)
                         .navigationTitle("Spending")
                         // Inline because iOS shows the title menu only on an inline title.
                         .navigationBarTitleDisplayMode(.inline)

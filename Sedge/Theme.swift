@@ -11,11 +11,12 @@ import SwiftUI
 // app's AccentColor set (Xcode names it `Color.accent`), so it also colors every button and toggle.
 //
 // The Marsh chart colors work the same way, one color set each:
-// - `chartNow`: this month's bar. `chartPast`: the earlier months' bars.
-// - `chartPick`: a tapped month's bar.
+// - `chartNow`: this month's bar, the second mosaic block and the cash-flow line. `chartPast`: the earlier months' bars.
+// - `chartPick`: an earlier month page's bar, the shown page's dot and the cash-flow low point.
 // - `amountNow`: the big total above the chart.
-// - `nodeCategory` and `onNodeCategory`: the category node in Connected spending and its text.
-// - `nodeStore`: the store nodes. `graphLine`: the "categorized as" lines and the chart's zero line.
+// - `nodeCategory` and `onNodeCategory`: the biggest mosaic block in Connected spending and the text on the two biggest.
+// - `nodeStore`: the other mosaic blocks. `graphLine`: the chart's zero line.
+// - `moneySpent` and `moneyBack`: Trends' biggest change when spending rose (red) or fell (green).
 // The Ask screen reuses them: `chartNow` for the breakdown bars and the "Sedge" label, `nodeStore`
 // for the bar tracks, and `nodeCategory` with `onNodeCategory` text for the first quick-check button.
 //

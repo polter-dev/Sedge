@@ -88,28 +88,27 @@ func pickedMonthMatchesItsBar(persona: String) throws {
             let previous = SpendingView.months(endingAt: bar.month + "-01")[2]
             let before = index > 0 ? bars[index - 1].total
                                    : totals.first { $0.month == previous && $0.category == category }?.total ?? 0
-            let line = SpendingView.changeLine(totals, category: category, month: bar.month, isThisMonth: false)
-            let name = (bar.month + "-01").displayDate(.dateTime.month(.wide))
+            let line = SpendingView.changeLine(totals, category: category, month: bar.month)
             if before > 0 {
                 // Whole percents, a half rounded away from zero; a change under half a percent is "+0%".
                 let percent = Int(((bar.total - before) / before * 100).rounded())
-                let expected = "\(name) · \(String(format: "%+d", percent))% vs \((previous + "-01").displayDate(.dateTime.month(.abbreviated)))"
+                let expected = "\(String(format: "%+d", percent))% vs \((previous + "-01").displayDate(.dateTime.month(.abbreviated)))"
                 #expect(line == expected, "\(persona) \(category) \(bar.month)")
             } else {
-                #expect(line == name)
+                #expect(line == nil)
             }
         }
     }
 }
 
-/// With nothing spent the month before, the change line names the month and gives no percentage.
+/// With nothing spent the month before, there is no change line.
 @Test func changeLineSkipsAZeroMonthBefore() {
     let totals = [SpendingTotal(month: "2026-05", category: "dining", total: 47)]
-    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-05", isThisMonth: false) == "May")
-    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-06", isThisMonth: true) == "June so far · -100% vs May")
+    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-05") == nil)
+    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-06") == "-100% vs May")
     // A drop under half a percent reads "+0%", never "-0%".
     let tiny = totals + [SpendingTotal(month: "2026-06", category: "dining", total: 46.9)]
-    #expect(SpendingView.changeLine(tiny, category: "dining", month: "2026-06", isThisMonth: true) == "June so far · +0% vs May")
+    #expect(SpendingView.changeLine(tiny, category: "dining", month: "2026-06") == "+0% vs May")
 }
 
 /// Stepping back from January lands in the year before.
@@ -148,6 +147,140 @@ func pickedMonthMatchesItsBar(persona: String) throws {
     let movedBars = AllMonthsView.byCategory(withMoved)
     #expect(movedBars.contains { $0.label == "Moved between accounts" && $0.total > 0 })
     #expect(movedBars.filter { $0.label != "Moved between accounts" }.map(\.total) == AllMonthsView.byCategory(totals).map(\.total))
+}
+
+/// The chart's axis tops out at the largest bar rounded up to the smallest step of 25, 50, 100,
+/// 250, 500, 1,000, 2,500, 5,000 … that reaches it in at most 4 steps; a bar on a step stays there.
+@Test func axisTopRoundsUpToANiceStep() {
+    let cases: [(largest: Double, top: Double)] = [
+        (0, 25), (-12, 25), (18.10, 25), (25, 25), (25.01, 50), (99.99, 100), (100, 100), (100.01, 150),
+        (442, 500), (486, 500), (500, 500), (500.01, 750), (966, 1_000), (1_000, 1_000), (2_640, 3_000),
+        (4_000, 4_000), (4_001, 5_000), (9_999, 10_000), (10_000, 10_000), (10_001, 15_000),
+    ]
+    for (largest, top) in cases {
+        #expect(SpendingView.axisTop(largest) == top, "\(largest)")
+    }
+}
+
+/// For each persona and month on the chart: the "All" bars are every category's bars added up to
+/// the cent, and the mosaic adds up to the page's bar (categories for "All", stores for each
+/// category).
+@Test(arguments: ["maya", "daniel"])
+func allBarsAndMosaicsAddUp(persona: String) throws {
+    let database = try SedgeDatabase.open(persona)
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: try #require(Int(asOf.suffix(2))))
+    let categories = Set(totals.map(\.category))
+    func cents(_ dollars: Double) -> Int { Int((dollars * 100).rounded()) }
+    let all = SpendingView.bars(totals, category: nil, asOf: asOf)
+    for (index, bar) in all.enumerated() {
+        let sum = categories.reduce(0) { $0 + cents(SpendingView.bars(totals, category: $1, asOf: asOf)[index].total) }
+        #expect(cents(bar.total) == sum, "\(persona) \(bar.month): All isn't the categories added up")
+        let blocks = SpendingView.categoryBlocks(totals, month: bar.month)
+        #expect(blocks.count <= 4)
+        #expect(blocks.reduce(0) { $0 + cents($1.total) } == sum, "\(persona) \(bar.month): the All mosaic doesn't add up")
+    }
+    for category in categories {
+        for bar in SpendingView.bars(totals, category: category, asOf: asOf) {
+            let window = SpendingView.window(bar.month, asOf: asOf)
+            let rows = try ListedTransaction.spending(in: database, category: category, from: window.from, through: window.through)
+            #expect(SpendingView.stores(rows).reduce(0) { $0 + cents($1.total) } == cents(bar.total), "\(persona) \(category) \(bar.month)")
+        }
+    }
+}
+
+/// The biggest change from May to June (both over the 1st to the 30th), counted by hand from the
+/// transactions: by store within a category, and by category with "All" (nil).
+/// Maya's Corner Cafe: $10.40 + $9.11 in June against $9.29 + $8.81 in May, +$1.41. Her Bean
+/// Street coffee: $3.72 + $3.99 + $2.32 + $2.68 against $2.79 + $3.51 + $3.75 + $3.80 + $3.12,
+/// -$4.26. Her groceries fell most of any category: $86.97 against $115.23, -$28.26. Daniel's
+/// Corner Cafe: $212.04 against $167.87, +$44.17; his groceries rose most: $390.17 against
+/// $293.89, +$96.28.
+@Test(arguments: [
+    ("maya", "dining", "Corner Cafe", 141, "+$1 vs May"),
+    ("maya", "coffee", "Bean Street Coffee", -426, "-$4 vs May"),
+    ("maya", nil, "groceries", -2826, "-$28 vs May"),
+    ("daniel", "dining", "Corner Cafe", 4417, "+$44 vs May"),
+    ("daniel", nil, "groceries", 9628, "+$96 vs May"),
+] as [(String, String?, String, Int, String)])
+func biggestChangeMatchesAHandCount(persona: String, category: String?, name: String, cents: Int, text: String) throws {
+    let database = try SedgeDatabase.open(persona)
+    let asOf = try #require(try database.asOf())
+    #expect(asOf == "2026-06-30")
+    let change: (name: String, cents: Int)?
+    if let category {
+        let june = try ListedTransaction.spending(in: database, category: category, from: "2026-06-01", through: asOf)
+        let may = try ListedTransaction.spending(in: database, category: category, from: "2026-05-01", through: "2026-05-30")
+        change = SpendingView.biggestChange(now: SpendingView.cents(june), before: SpendingView.cents(may))
+    } else {
+        let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: 30)
+        change = SpendingView.biggestChange(now: SpendingView.cents(totals, month: "2026-06"),
+                                            before: SpendingView.cents(totals, month: "2026-05"))
+    }
+    #expect(change?.name == name)
+    #expect(change?.cents == cents)
+    #expect(SpendingView.changeText(cents, before: "2026-05") == text)
+}
+
+/// A store that stopped counts as a drop to $0, the first name wins a tie, and no change is none.
+@Test func biggestChangeCountsAStoppedStore() {
+    let stopped = SpendingView.biggestChange(now: ["A": 500], before: ["A": 400, "B": 300])
+    #expect(stopped?.name == "B" && stopped?.cents == -300)
+    let tie = SpendingView.biggestChange(now: ["B": 100, "A": 100], before: [:])
+    #expect(tie?.name == "A" && tie?.cents == 100)
+    #expect(SpendingView.biggestChange(now: ["A": 100], before: ["A": 100]) == nil)
+    // Under a dollar keeps the cents, so it never reads "+$0".
+    #expect(SpendingView.changeText(40, before: "2026-05") == "+$0.40 vs May")
+    #expect(SpendingView.changeText(-5, before: "2026-05") == "-$0.05 vs May")
+}
+
+/// The card's low point is the one the Cash flow screen leads with: `CashFlow` loaded for 30 days
+/// with nothing switched on, and its lowest day's balance.
+@Test(arguments: ["maya", "daniel"])
+func cashFlowCardLowPointMatchesTheScreen(persona: String) throws {
+    let database = try SedgeDatabase.open(persona)
+    let card = try #require(try CashFlow.load(database))
+    let screen = try #require(try CashFlow.load(database, days: 30, purchases: [], changes: []))
+    let lowest = try #require(screen.shown.map(screen.balance).min())
+    let day = try #require(screen.shown.first { screen.balance($0) == lowest }).date
+    let expected = "Low point \(lowest.formatted(.currency(code: "USD"))) · \(day.displayDate(.dateTime.month(.abbreviated).day()))"
+    #expect(SpendingView.lowPointLine(card) == expected)
+}
+
+/// Mosaic widths follow each block's share and fill the space; a sliver is raised to the minimum.
+@Test func mosaicSplitKeepsSmallBlocksReadable() {
+    #expect(SpendingView.split([300, 100], length: 404, gap: 4, minimum: 56) == [300, 100])
+    let sliver = SpendingView.split([300, 100, 1], length: 408, gap: 4, minimum: 56)
+    #expect(sliver[2] == 56)
+    #expect(abs(sliver.reduce(0, +) - 400) < 0.001)
+    #expect(SpendingView.split([1, 1, 1], length: 100, gap: 5, minimum: 56) == [30, 30, 30])
+}
+
+/// The category sheet lists categories most spent first in the page's month (June 1–30 here),
+/// a tie by name. Counted by hand from the transactions. Maya: rent $650, groceries $86.97,
+/// phone and internet $25 + $35 = $60 and utilities $60 (a tie, so by name), transit $40,
+/// dining $19.51, the bookstore $18.82, Netflix $17.99, coffee $12.71. Daniel: mortgage
+/// $1,850, groceries $390.17, auto loan $325, dining $212.04, gas $165.06, insurance $125,
+/// electric $110, shopping $25.01 + $19.05 + $28.97 = $73.03, internet $70, Netflix $17.99,
+/// coffee $11.40.
+@Test(arguments: [
+    ("maya", ["housing", "groceries", "phone_internet", "utilities", "transport", "dining", "education", "subscriptions", "coffee"]),
+    ("daniel", ["housing", "groceries", "loans", "dining", "gas", "insurance", "utilities", "shopping", "phone_internet",
+                "subscriptions", "coffee"]),
+])
+func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) throws {
+    let database = try SedgeDatabase.open(persona)
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: 30)
+    #expect(SpendingView.categoryOrder(totals, asOf: asOf, month: "2026-06") == expected)
+}
+
+/// An earlier page sorts by its own month, and a category with nothing that month counts $0.
+@Test func categorySheetOrderFollowsThePage() {
+    let totals = [SpendingTotal(month: "2026-05", category: "dining", total: 30), SpendingTotal(month: "2026-06", category: "coffee", total: 5),
+                  SpendingTotal(month: "2026-06", category: "dining", total: 4)]
+    #expect(SpendingView.categoryOrder(totals, asOf: "2026-06-30", month: "2026-06") == ["coffee", "dining"])
+    #expect(SpendingView.categoryOrder(totals, asOf: "2026-06-30", month: "2026-05") == ["dining", "coffee"])
 }
 
 /// For Maya and Daniel, each month's categories on the All months card add up to that month's
