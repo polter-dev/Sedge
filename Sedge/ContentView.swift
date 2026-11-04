@@ -239,6 +239,8 @@ struct AccountsView: View {
     @State private var rows: [ListedTransaction] = []
     @State private var accounts: [ListedAccount] = []
     @State private var resetDone = false
+    /// The transaction screen's saved choice to hide its spending note, which this tab can undo.
+    @AppStorage("hideSpendingNote") private var noteHidden = false
     /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
     @State private var confirmingReset = false
 
@@ -296,6 +298,18 @@ struct AccountsView: View {
                         .navigationTitle("Saved answers")
                 } label: {
                     Label("Saved answers", systemImage: "tray.full")
+                }
+                if noteHidden {
+                    Button { noteHidden = false } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Show the spending note again").foregroundStyle(Color.ink)
+                                Text("You hid it on a transaction").font(.row).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "eye")
+                        }
+                    }
                 }
                 Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
                     confirmingReset = true

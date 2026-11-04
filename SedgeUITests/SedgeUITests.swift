@@ -591,6 +591,127 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Ask"].isHittable)
     }
 
+    /// The spending note's × hides it on every transaction, not just the one it was tapped on,
+    /// and the Accounts tab's "Show the spending note again" row brings it back. The note ends
+    /// shown, as it started. For dark screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testSpendingNoteHidesEverywhereAndComesBack() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        let showAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch
+        // A run stopped halfway may have left the note hidden; start with it shown.
+        if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
+
+        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let note = app.staticTexts["This is a spending observation, not a fraud determination."]
+        let undoLine = app.staticTexts["Spending note hidden on every transaction."]
+        openTransaction(app, corner)
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
+        attachScreenshot(app, "note-with-dismiss")
+        app.buttons["Dismiss"].tap()
+        XCTAssertTrue(undoLine.waitForExistence(timeout: 2))
+        XCTAssertFalse(note.exists)
+        attachScreenshot(app, "note-hidden-undo")
+        // The Undo line stays 4 s, then the box collapses.
+        XCTAssertTrue(undoLine.waitForNonExistence(timeout: 6))
+        XCTAssertFalse(note.exists)
+        attachScreenshot(app, "note-collapsed")
+
+        // Another purchase at the same store has Sedge's context too, and no note either.
+        app.navigationBars.buttons.firstMatch.tap()
+        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Corner Cafe, ' AND label != %@", corner)).firstMatch
+        for _ in 0..<10 where !(other.exists && other.isHittable) { app.swipeUp() }
+        other.tap()
+        XCTAssertTrue(app.staticTexts["Sedge’s context"].waitForExistence(timeout: 10))
+        XCTAssertFalse(note.exists)
+
+        // Back on the Accounts tab, the row shows the note again and then goes away.
+        app.navigationBars.buttons.firstMatch.tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        // At the largest text sizes the row is below the fold.
+        for _ in 0..<10 where !(showAgain.exists && showAgain.isHittable) { app.swipeUp() }
+        XCTAssertTrue(showAgain.isHittable)
+        attachScreenshot(app, "accounts-show-note-again")
+        showAgain.tap()
+        XCTAssertTrue(showAgain.waitForNonExistence(timeout: 5))
+        openTransaction(app, corner)
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
+    }
+
+    /// "Does this look familiar?" saves at once and counts down with Undo. Undo before 0 leaves the
+    /// answer empty, and waiting past 0 folds the prompt away and keeps the answer. Reopening the
+    /// transaction reads the answer back from the database. The answer is undone at the end, so
+    /// Maya's saved file ends as it was. For dark screenshots, run it after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testFamiliarUndoLeavesItEmptyAndWaitingKeepsIt() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        let corner = "Corner Cafe, CORNER CAFE, -$10.40"
+        let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
+        /// Goes back to the transactions list and opens the same transaction again, which reloads it.
+        func reopen() {
+            app.navigationBars.buttons.firstMatch.tap()
+            app.buttons[corner].tap()
+            XCTAssertTrue(yes.waitForExistence(timeout: 10))
+        }
+        openTransaction(app, corner)
+        XCTAssertTrue(yes.waitForExistence(timeout: 10))
+        XCTAssertFalse(yes.isSelected)
+        XCTAssertFalse(notSure.isSelected)
+
+        // Undo before 0: the buttons come back and nothing is saved.
+        yes.tap()
+        XCTAssertTrue(app.staticTexts["Saved · Yes"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch.exists)
+        attachScreenshot(app, "familiar-countdown")
+        app.buttons["Undo"].tap()
+        XCTAssertTrue(yes.waitForExistence(timeout: 2))
+        XCTAssertFalse(yes.isSelected)
+        reopen()
+        XCTAssertFalse(yes.isSelected)
+        XCTAssertFalse(notSure.isSelected)
+
+        // Waiting past 0: the whole prompt folds away and the answer stays.
+        notSure.tap()
+        XCTAssertTrue(app.staticTexts["Saved · Not sure"].waitForExistence(timeout: 2))
+        // The ring reaches 0 before the prompt folds away. 0 shows for well under a second and
+        // waitForExistence checks only about once a second, so this reads the ring's label in a
+        // tight loop until the ring is gone. One snapshot per read, so a fold mid-read can't fail.
+        let ring = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
+        var seen: Set<String> = []
+        let end = Date().addingTimeInterval(7)
+        while Date() < end, let label = try? ring.snapshot().label { seen.insert(label) }
+        XCTAssertTrue(seen.contains("Closing in 1"), "The ring was never seen at 1; saw \(seen.sorted())")
+        XCTAssertTrue(seen.contains("Closing in 0"), "The ring never showed 0; saw \(seen.sorted())")
+        XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
+        XCTAssertFalse(notSure.exists)
+        attachScreenshot(app, "familiar-folded")
+        reopen()
+        XCTAssertTrue(notSure.isSelected)
+        XCTAssertFalse(yes.isSelected)
+        attachScreenshot(app, "familiar-answered-later")
+
+        // Clean up: answer again, then Undo, which empties it.
+        notSure.tap()
+        app.buttons["Undo"].tap()
+        reopen()
+        XCTAssertFalse(notSure.isSelected)
+    }
+
+    /// From the Accounts tab, opens the transaction whose row reads `label`.
+    @MainActor
+    private func openTransaction(_ app: XCUIApplication, _ label: String) {
+        app.buttons["Transactions"].tap()
+        let row = app.buttons[label]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+    }
+
     /// Picks a category on the open transaction screen and checks the screen shows it.
     @MainActor
     private func pickCategory(_ app: XCUIApplication, _ category: String) throws {

@@ -107,6 +107,19 @@ struct TransactionDetailView: View {
     @State private var history: [ListedTransaction] = []
     /// The design's 16 pt icon, growing with the text beside it.
     @ScaledMetric(relativeTo: .caption) private var sproutSize: CGFloat = 16
+    /// The person hid the "not a fraud determination" note. Saved in the app's settings, so it
+    /// stays hidden on every transaction and for every dataset, until the Accounts tab shows it again.
+    @AppStorage("hideSpendingNote") private var noteHidden = false
+    /// True for the 4 s the note's box says it was hidden, with Undo.
+    @State private var noteUndo = false
+    /// The familiar prompt's countdown, 4 down to 0, while the saved bar shows; nil shows the buttons.
+    @State private var countdown: Int?
+    /// The answer the saved bar names. Kept apart from `detail`, so Undo's reload can't change
+    /// the bar's words while it fades out.
+    @State private var savedAnswer = Answers.Familiar.yes
+    /// True once the ring has shown 0: the prompt is folded away until the screen is opened again.
+    @State private var folded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
@@ -121,6 +134,27 @@ struct TransactionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         // Runs on open, and again on coming back from Merchant history.
         .task { reload() }
+        // The note's Undo line stays 4 s, then the box collapses. Undo cancels this by
+        // changing `noteUndo`; a cancelled sleep fails, so nothing collapses after an Undo.
+        .task(id: noteUndo) {
+            guard noteUndo, (try? await Task.sleep(for: .seconds(4))) != nil else { return }
+            // With Reduce Motion the box is simply gone in the next frame, so nothing slides.
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { noteUndo = false }
+        }
+        // One tick a second: 4, 3, 2, 1, 0. Each tick changes `countdown`, which starts the next one;
+        // Undo sets it to nil, which cancels the tick in progress.
+        .task(id: countdown) {
+            guard let count = countdown else { return }
+            // The ring holds 0 for 0.3 s, so it's seen, before the prompt folds away.
+            guard (try? await Task.sleep(for: .seconds(count > 0 ? 1 : 0.3))) != nil else { return }
+            // With Reduce Motion the number just changes and the prompt is removed without
+            // sliding the rest up.
+            if count > 0 {
+                withAnimation(reduceMotion ? nil : .default) { countdown = count - 1 }
+            } else {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { folded = true }
+            }
+        }
     }
 
     private func content(_ detail: TransactionDetail) -> some View {
@@ -148,15 +182,25 @@ struct TransactionDetailView: View {
                 rule.padding(.vertical, 17)
             }
 
-            Text("Does this look familiar?")
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-            AnswerStack {
-                AnswerButton("Yes", chosen: detail.familiar == "yes", filled: detail.familiar != "not_sure") { setFamiliar(.yes) }
-                AnswerButton("Not sure", chosen: detail.familiar == "not_sure") { setFamiliar(.notSure) }
+            if !folded {
+                Text("Does this look familiar?")
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+                Group {
+                    if let countdown {
+                        savedBar(savedAnswer == .notSure ? "Not sure" : "Yes", countdown: countdown)
+                    } else {
+                        AnswerStack {
+                            AnswerButton("Yes", chosen: detail.familiar == "yes", filled: detail.familiar != "not_sure") { setFamiliar(.yes) }
+                            AnswerButton("Not sure", chosen: detail.familiar == "not_sure") { setFamiliar(.notSure) }
+                        }
+                    }
+                }
+                // The design's swap between the buttons and the saved bar; Reduce Motion keeps only the fade.
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
+                .padding(.top, 10)
+                rule.padding(.vertical, 17)
             }
-            .padding(.top, 10)
-            rule.padding(.vertical, 17)
 
             Menu {
                 // Choosing the store's own category clears the answer, so the data stays as the organizer left it.
@@ -213,12 +257,93 @@ struct TransactionDetailView: View {
                     .foregroundStyle(.secondary)
                     .padding(.top, 14)
             }
-            Text("This is a spending observation, not a fraud determination.")
+            if !noteHidden || noteUndo {
+                spendingNote
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .padding(.leading, 12)
+                    .background(Color.soft, in: .rect(cornerRadius: 10))
+                    .padding(.top, 14)
+            }
+        }
+    }
+
+    /// The note with its 44 × 44 ×, or for 4 s after the × the line saying it's hidden, with Undo.
+    /// The text cross-fades inside the same box.
+    @ViewBuilder private var spendingNote: some View {
+        if noteHidden {
+            let text = Text("Spending note hidden on every transaction.")
                 .font(.row)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(Color.soft, in: .rect(cornerRadius: 10))
-                .padding(.top, 14)
+            let undo = undoButton { setNoteHidden(false) }
+            // At the largest text sizes Undo drops under the line instead of squeezing it.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 4) { text; undo }
+                VStack(alignment: .leading, spacing: 0) { text.padding(.top, 12); undo }
+            }
+            .padding(.trailing, 4)
+        } else {
+            HStack(spacing: 4) {
+                Text("This is a spending observation, not a fraud determination.")
+                    .font(.row)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
+                Button("Dismiss", systemImage: "xmark") { setNoteHidden(true) }
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+        }
+    }
+
+    /// "Saved · Yes", the countdown ring and Undo, in place of the answer buttons.
+    private func savedBar(_ answer: String, countdown: Int) -> some View {
+        let text = Text("Saved · \(answer)").font(.row).frame(maxWidth: .infinity, alignment: .leading)
+        let ring = Text("\(countdown)")
+            .font(.note.weight(.semibold))
+            .monospacedDigit()
+            .contentTransition(.numericText(countsDown: true))
+            // The ring stays 24 pt at every text size, so its number stops growing before it would spill out.
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+            .foregroundStyle(Color.accent)
+            .frame(width: 24, height: 24)
+            .overlay(Circle().stroke(Color.accent, lineWidth: 2))
+            .accessibilityLabel("Closing in \(countdown)")
+        let undo = undoButton(undoFamiliar)
+        // At the largest text sizes the ring and Undo drop under the text.
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { text; ring; undo }
+            VStack(alignment: .leading, spacing: 0) {
+                text.padding(.top, 12)
+                HStack(spacing: 8) { ring; undo }
+            }
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .background(Color.surface, in: .rect(cornerRadius: 10))
+    }
+
+    /// The design's text-only Undo, with a 44 pt target.
+    private func undoButton(_ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text("Undo")
+                .font(.row.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .padding(.horizontal, 8)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Hides the note (its box shows the Undo line for 4 s) or, from Undo, shows it again.
+    private func setNoteHidden(_ hidden: Bool) {
+        withAnimation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25)) {
+            noteHidden = hidden
+            noteUndo = hidden
         }
     }
 
@@ -265,8 +390,19 @@ struct TransactionDetailView: View {
         }
     }
 
+    /// Saves the answer at once, then swaps the buttons for the saved bar and its countdown.
     private func setFamiliar(_ answer: Answers.Familiar) {
         save { try Answers.setFamiliar(answer, transaction: id, in: database) }
+        // Only a saved answer counts down; if saving failed, the buttons stay.
+        guard detail?.familiar == answer.rawValue else { return }
+        savedAnswer = answer
+        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .easeOut(duration: 0.3)) { countdown = 4 }
+    }
+
+    /// Undo on the saved bar: the answer goes back to empty and the buttons come back.
+    private func undoFamiliar() {
+        save { try Answers.setFamiliar(nil, transaction: id, in: database) }
+        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .easeOut(duration: 0.3)) { countdown = nil }
     }
 
     private func setCategory(_ category: String) {
