@@ -66,6 +66,52 @@ private func totalSpent(_ category: String?, _ start: String, _ end: String, in 
     #expect(stores[3].rows.first?.transaction_id == "1")
 }
 
+/// For every month on the chart and every category, the stores shown for that month (over the
+/// same days as its bar) add up to its bar, and the change line beside "Your patterns" is the
+/// change between its bar and the month before's.
+@Test(arguments: ["maya", "daniel"])
+func pickedMonthMatchesItsBar(persona: String) throws {
+    let database = try SedgeDatabase.open(persona)
+    let asOf = try #require(try database.asOf())
+    let day = try #require(Int(asOf.suffix(2)))
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: day)
+    for category in Set(totals.map(\.category)) {
+        let bars = SpendingView.bars(totals, category: category, asOf: asOf)
+        #expect(SpendingView.window(bars[3].month, asOf: asOf) == (bars[3].month + "-01", asOf))
+        for (index, bar) in bars.enumerated() {
+            let window = SpendingView.window(bar.month, asOf: asOf)
+            let rows = try ListedTransaction.spending(in: database, category: category, from: window.from, through: window.through)
+            let cents = SpendingView.stores(rows).reduce(0) { $0 + Int(($1.total * 100).rounded()) }
+            #expect(cents == Int((bar.total * 100).rounded()), "\(persona) \(category) \(bar.month): stores don't add up to the bar")
+
+            // The month before the oldest bar isn't drawn, so its total is read straight from the totals.
+            let previous = SpendingView.months(endingAt: bar.month + "-01")[2]
+            let before = index > 0 ? bars[index - 1].total
+                                   : totals.first { $0.month == previous && $0.category == category }?.total ?? 0
+            let line = SpendingView.changeLine(totals, category: category, month: bar.month, isThisMonth: false)
+            let name = (bar.month + "-01").displayDate(.dateTime.month(.wide))
+            if before > 0 {
+                // Whole percents, a half rounded away from zero; a change under half a percent is "+0%".
+                let percent = Int(((bar.total - before) / before * 100).rounded())
+                let expected = "\(name) · \(String(format: "%+d", percent))% vs \((previous + "-01").displayDate(.dateTime.month(.abbreviated)))"
+                #expect(line == expected, "\(persona) \(category) \(bar.month)")
+            } else {
+                #expect(line == name)
+            }
+        }
+    }
+}
+
+/// With nothing spent the month before, the change line names the month and gives no percentage.
+@Test func changeLineSkipsAZeroMonthBefore() {
+    let totals = [SpendingTotal(month: "2026-05", category: "dining", total: 47)]
+    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-05", isThisMonth: false) == "May")
+    #expect(SpendingView.changeLine(totals, category: "dining", month: "2026-06", isThisMonth: true) == "June so far · -100% vs May")
+    // A drop under half a percent reads "+0%", never "-0%".
+    let tiny = totals + [SpendingTotal(month: "2026-06", category: "dining", total: 46.9)]
+    #expect(SpendingView.changeLine(tiny, category: "dining", month: "2026-06", isThisMonth: true) == "June so far · +0% vs May")
+}
+
 /// Stepping back from January lands in the year before.
 @Test func patternMonthsCrossTheYear() {
     #expect(SpendingView.months(endingAt: "2026-02-14") == ["2025-11", "2025-12", "2026-01", "2026-02"])

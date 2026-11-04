@@ -12,7 +12,7 @@ import SwiftUI
 //
 // The Marsh chart colors work the same way, one color set each:
 // - `chartNow`: this month's bar. `chartPast`: the earlier months' bars.
-// - `chartPick`: a tapped month's bar (for month selection, not built yet).
+// - `chartPick`: a tapped month's bar.
 // - `amountNow`: the big total above the chart.
 // - `nodeCategory` and `onNodeCategory`: the category node in Connected spending and its text.
 // - `nodeStore`: the store nodes. `graphLine`: the "categorized as" lines and the chart's zero line.

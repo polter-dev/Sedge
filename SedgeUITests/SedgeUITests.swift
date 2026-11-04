@@ -372,6 +372,44 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Ask"].isSelected)
     }
 
+    /// Tapping May's bar on Maya's Spending screen shows May: its total, the change line, the
+    /// graph's heading and a May latest transaction. "This month" brings June back. The
+    /// screenshots are the screen in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testTappingAMonthShowsItsSpending() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let may = app.otherElements["May"]
+        XCTAssertTrue(may.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Connected spending · June"].exists)
+        XCTAssertFalse(app.buttons["This month"].exists)
+        attachScreenshot(app, "month-default")
+
+        may.tap()
+        let thisMonth = app.buttons["This month"]
+        XCTAssertTrue(thisMonth.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
+        // The big total is May's bar, and the line beside the title starts with May.
+        let mayTotal = try XCTUnwrap(may.value as? String)
+        XCTAssertGreaterThan(app.staticTexts.matching(NSPredicate(format: "label == %@", mayTotal)).count, 0)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'May · '")).firstMatch.exists)
+        let store = app.buttons.matching(identifier: "store").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 5))
+        store.tap()
+        let latest = app.buttons["latest"]
+        XCTAssertTrue(latest.waitForExistence(timeout: 5))
+        XCTAssertTrue(latest.label.contains("May "), "\(latest.label) isn't from May")
+        attachScreenshot(app, "month-picked")
+
+        thisMonth.tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 5))
+        XCTAssertFalse(thisMonth.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'June so far'")).firstMatch.exists)
+    }
+
     /// On Maya's cash flow, switching a scenario on moves "Projected" by exactly its amount, and
     /// switching it off puts it back: a $400 purchase, then cancelling subscriptions by the saving
     /// the simulator works out for that row. For dark screenshots, run it after
