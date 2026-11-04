@@ -108,7 +108,7 @@ private func totalSpent(_ category: String?, _ start: String, _ end: String, in 
 /// bar to the cent, the six-month windows cover every month from the oldest to the newest once,
 /// and each category's mini chart months add up to its bar (their data fits in one window).
 @Test(arguments: ["maya", "daniel"]) func allMonthsBreakdownsAndWindowsAddUp(persona: String) throws {
-    let database = try SedgeDatabase.open(persona)
+    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
     // Money moved loaded too, to check the card leaves it out as the month bars do.
     let totals = try SpendingTotal.all(in: database, includeMoved: true)
     #expect(totals.contains { $0.category == SpendingTotal.movedCategory })
