@@ -16,6 +16,8 @@ import SwiftUI
 // - `amountNow`: the big total above the chart.
 // - `nodeCategory` and `onNodeCategory`: the category node in Connected spending and its text.
 // - `nodeStore`: the store nodes. `graphLine`: the "categorized as" lines and the chart's zero line.
+// The Ask screen reuses them: `chartNow` for the breakdown bars and the "Sedge" label, `nodeStore`
+// for the bar tracks, and `nodeCategory` with `onNodeCategory` text for the first quick-check button.
 
 /// The design's type scale on the system font. Each size is the nearest Dynamic Type text
 /// style, so the text still grows and shrinks with the reader's text size setting.

@@ -52,6 +52,50 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "ask-not-connected")
     }
 
+    /// The empty Ask screen's example question changes every few seconds, and typing brings up
+    /// the composer's underlay. Screenshots: two moments of the rotation, then typing. For dark
+    /// screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testAskExampleRotatesAndTypingShowsTheUnderlay() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let example = app.staticTexts["exampleQuestion"]
+        XCTAssertTrue(example.waitForExistence(timeout: 5))
+        let first = example.label
+        attachScreenshot(app, "ask-example-first")
+        // Each question stays 4 seconds, so a different one shows within 6.
+        let changed = expectation(for: NSPredicate(format: "label != %@", first), evaluatedWith: example)
+        wait(for: [changed], timeout: 6)
+        // Let the 0.3-second crossfade finish before the screenshot.
+        Thread.sleep(forTimeInterval: 0.5)
+        attachScreenshot(app, "ask-example-second")
+
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText("How much did I spend at Netflix")
+        Thread.sleep(forTimeInterval: 0.5) // the underlay's spring
+        attachScreenshot(app, "ask-typing")
+    }
+
+    /// With Reduce Motion on, the example question stays on the first one.
+    @MainActor
+    func testAskExampleStaysWithReduceMotion() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let example = app.staticTexts["exampleQuestion"]
+        XCTAssertTrue(example.waitForExistence(timeout: 5))
+        XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
+        // Longer than one 4-second turn plus its fade.
+        Thread.sleep(forTimeInterval: 6)
+        XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
+    }
+
     /// The Debug sample conversation shows the breakdown card, the answer and the quick check,
     /// and a quick-check tap is saved like any other answer. It is removed again at the end,
     /// so Maya's saved file stays as it was.
