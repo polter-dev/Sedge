@@ -630,7 +630,9 @@ final class SedgeUITests: XCTestCase {
         // Back on the Accounts tab, the row shows the note again and then goes away.
         app.navigationBars.buttons.firstMatch.tap()
         app.navigationBars.buttons.firstMatch.tap()
-        XCTAssertTrue(showAgain.waitForExistence(timeout: 5))
+        // At the largest text sizes the row is below the fold.
+        for _ in 0..<10 where !(showAgain.exists && showAgain.isHittable) { app.swipeUp() }
+        XCTAssertTrue(showAgain.isHittable)
         attachScreenshot(app, "accounts-show-note-again")
         showAgain.tap()
         XCTAssertTrue(showAgain.waitForNonExistence(timeout: 5))
@@ -677,7 +679,16 @@ final class SedgeUITests: XCTestCase {
         // Waiting past 0: the whole prompt folds away and the answer stays.
         notSure.tap()
         XCTAssertTrue(app.staticTexts["Saved · Not sure"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 7))
+        // The ring reaches 0 before the prompt folds away. 0 shows for well under a second and
+        // waitForExistence checks only about once a second, so this reads the ring's label in a
+        // tight loop until the ring is gone. One snapshot per read, so a fold mid-read can't fail.
+        let ring = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
+        var seen: Set<String> = []
+        let end = Date().addingTimeInterval(7)
+        while Date() < end, let label = try? ring.snapshot().label { seen.insert(label) }
+        XCTAssertTrue(seen.contains("Closing in 1"), "The ring was never seen at 1; saw \(seen.sorted())")
+        XCTAssertTrue(seen.contains("Closing in 0"), "The ring never showed 0; saw \(seen.sorted())")
+        XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
         XCTAssertFalse(notSure.exists)
         attachScreenshot(app, "familiar-folded")
         reopen()
