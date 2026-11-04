@@ -157,6 +157,7 @@ struct MainView: View {
                 NavigationStack {
                     SpendingView(database: database) { tab = .ask }
                         .navigationTitle("Spending")
+                        .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                         .toolbar {
                             // The cash-flow projection and its scenarios open from here.
