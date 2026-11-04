@@ -212,7 +212,7 @@ struct MainView: View {
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                         .toolbarTitleMenu { renameMenu }
-                        .toolbar { Button("Change data", systemImage: "person.2", action: changeData) }
+                        .toolbar { Button("Change data", systemImage: "person.2", action: changeData).symbolRenderingMode(.monochrome) } // One color for both figures: the app's two-color foregroundStyle would paint them in its two theme colors, which fade on the dark top bar.
                 }
             }
         }
