@@ -165,8 +165,9 @@ final class SedgeUITests: XCTestCase {
 
             app.tabBars.buttons["Accounts"].tap()
             app.buttons["About you"].tap()
-            let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
-            XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+            // Each tile is one button that reads everything it shows, starting with its kind.
+            let income = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
+            XCTAssertTrue(income.waitForExistence(timeout: 10))
             attachScreenshot(app, "\(persona) profile")
         }
     }
@@ -182,10 +183,15 @@ final class SedgeUITests: XCTestCase {
         // Saving a fact unchanged still makes a correction.
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["About you"].tap()
-        let fact = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
+        // Each tile is one button that reads its whole fact, starting with its kind.
+        let fact = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
         XCTAssertTrue(fact.waitForExistence(timeout: 10))
         fact.tap()
         app.buttons["Save"].tap()
+        // The corrected tile keeps its amount and its next payday.
+        let corrected = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income, $520.00' AND label ENDSWITH 'Next Jul 3'")).firstMatch
+        XCTAssertTrue(corrected.waitForExistence(timeout: 5), "The income tile changed after saving it unchanged")
+        attachScreenshot(app, "about-you-corrected")
 
         // Back to the Accounts list, where the menu is.
         app.navigationBars.buttons.firstMatch.tap()
@@ -320,8 +326,8 @@ final class SedgeUITests: XCTestCase {
         app.navigationBars.buttons.firstMatch.tap()
 
         app.buttons["About you"].tap()
-        let evidence = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Based on'")).firstMatch
-        XCTAssertTrue(evidence.waitForExistence(timeout: 10))
+        let income = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
+        XCTAssertTrue(income.waitForExistence(timeout: 10))
         attachScreenshot(app, "accounts-about-you")
         app.navigationBars.buttons.firstMatch.tap()
 
@@ -505,7 +511,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         XCTAssertTrue(app.staticTexts["Higher than your last three visits."].waitForExistence(timeout: 10))
@@ -666,7 +672,9 @@ final class SedgeUITests: XCTestCase {
         // Back on the Accounts tab, the row shows the note again and then goes away.
         app.navigationBars.buttons.firstMatch.tap()
         app.navigationBars.buttons.firstMatch.tap()
-        XCTAssertTrue(showAgain.waitForExistence(timeout: 5))
+        // At the largest text sizes the row is below the fold.
+        for _ in 0..<10 where !(showAgain.exists && showAgain.isHittable) { app.swipeUp() }
+        XCTAssertTrue(showAgain.isHittable)
         attachScreenshot(app, "accounts-show-note-again")
         showAgain.tap()
         XCTAssertTrue(showAgain.waitForNonExistence(timeout: 5))
@@ -713,7 +721,16 @@ final class SedgeUITests: XCTestCase {
         // Waiting past 0: the whole prompt folds away and the answer stays.
         notSure.tap()
         XCTAssertTrue(app.staticTexts["Saved · Not sure"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 7))
+        // The ring reaches 0 before the prompt folds away. 0 shows for well under a second and
+        // waitForExistence checks only about once a second, so this reads the ring's label in a
+        // tight loop until the ring is gone. One snapshot per read, so a fold mid-read can't fail.
+        let ring = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
+        var seen: Set<String> = []
+        let end = Date().addingTimeInterval(7)
+        while Date() < end, let label = try? ring.snapshot().label { seen.insert(label) }
+        XCTAssertTrue(seen.contains("Closing in 1"), "The ring was never seen at 1; saw \(seen.sorted())")
+        XCTAssertTrue(seen.contains("Closing in 0"), "The ring never showed 0; saw \(seen.sorted())")
+        XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
         XCTAssertFalse(notSure.exists)
         attachScreenshot(app, "familiar-folded")
         reopen()
@@ -844,7 +861,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, -$10.40"]
+        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         try pickCategory(app, "Groceries")

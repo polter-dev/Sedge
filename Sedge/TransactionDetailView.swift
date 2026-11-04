@@ -114,8 +114,12 @@ struct TransactionDetailView: View {
     /// True for the 4 s the note's box says it was hidden, with Undo.
     @State private var noteUndo = false
     /// The familiar prompt's countdown, 4 down to 0, while the saved bar shows; nil shows the buttons.
-    /// At 0 the prompt is folded away until the screen is opened again.
     @State private var countdown: Int?
+    /// The answer the saved bar names. Kept apart from `detail`, so Undo's reload can't change
+    /// the bar's words while it fades out.
+    @State private var savedAnswer = Answers.Familiar.yes
+    /// True once the ring has shown 0: the prompt is folded away until the screen is opened again.
+    @State private var folded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -141,10 +145,16 @@ struct TransactionDetailView: View {
         // One tick a second: 4, 3, 2, 1, 0. Each tick changes `countdown`, which starts the next one;
         // Undo sets it to nil, which cancels the tick in progress.
         .task(id: countdown) {
-            guard let count = countdown, count > 0, (try? await Task.sleep(for: .seconds(1))) != nil else { return }
-            // Reaching 0 folds the prompt away. With Reduce Motion the number just changes and the
-            // prompt is removed without sliding the rest up.
-            withAnimation(reduceMotion ? nil : count == 1 ? .easeInOut(duration: 0.3) : .default) { countdown = count - 1 }
+            guard let count = countdown else { return }
+            // The ring holds 0 for 0.3 s, so it's seen, before the prompt folds away.
+            guard (try? await Task.sleep(for: .seconds(count > 0 ? 1 : 0.3))) != nil else { return }
+            // With Reduce Motion the number just changes and the prompt is removed without
+            // sliding the rest up.
+            if count > 0 {
+                withAnimation(reduceMotion ? nil : .default) { countdown = count - 1 }
+            } else {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { folded = true }
+            }
         }
     }
 
@@ -173,13 +183,13 @@ struct TransactionDetailView: View {
                 rule.padding(.vertical, 17)
             }
 
-            if countdown != 0 {
+            if !folded {
                 Text("Does this look familiar?")
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
                 Group {
                     if let countdown {
-                        savedBar(detail.familiar == "not_sure" ? "Not sure" : "Yes", countdown: countdown)
+                        savedBar(savedAnswer == .notSure ? "Not sure" : "Yes", countdown: countdown)
                     } else {
                         AnswerStack {
                             AnswerButton("Yes", chosen: detail.familiar == "yes", filled: detail.familiar != "not_sure") { setFamiliar(.yes) }
@@ -207,7 +217,7 @@ struct TransactionDetailView: View {
             .accessibilityValue(SpendingView.title(detail.category))
             if detail.merchant_id != nil {
                 NavigationLink {
-                    TransactionsView(rows: history, database: database)
+                    MerchantHistoryView(rows: history, database: database)
                         .navigationTitle(detail.store)
                         .navigationSubtitle("Merchant history")
                 } label: {
@@ -359,11 +369,6 @@ struct TransactionDetailView: View {
 
     private var rule: some View { Rectangle().fill(Color.line).frame(height: 1) }
 
-    /// Money out as "$48.00", money in as "+$2,140.55".
-    private func amountText(_ amount: Double) -> String {
-        amount < 0 ? (-amount).formatted(.currency(code: "USD").sign(strategy: .always())) : amount.formatted(.currency(code: "USD"))
-    }
-
     private func reload() {
         do {
             detail = try TransactionDetail.load(id, in: database)
@@ -386,6 +391,7 @@ struct TransactionDetailView: View {
         save { try Answers.setFamiliar(answer, transaction: id, in: database) }
         // Only a saved answer counts down; if saving failed, the buttons stay.
         guard detail?.familiar == answer.rawValue else { return }
+        savedAnswer = answer
         withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .easeOut(duration: 0.3)) { countdown = 4 }
     }
 
