@@ -140,6 +140,12 @@ To add a rule, add one line under its area in the same shape as the others: the 
 
 - The Ways to save screen, opened from Spending, shows the same cuts savings_options gives for the monthly goal typed in. — `Sedge/SavingsView.swift` `load`
 
+## About you screen
+
+- A tuition payment's term is its month's: January to May is the Spring Term, June and July the Summer Term, August to December the Fall Term; the tuition tile shows the term of the last payment. — `Sedge/ProfileView.swift` `ProfileView.term`, `ProfileView.chip`
+- An income, housing or loan tile's next date is the first day after `as_of` that the simulator's projection changes when that series is cancelled, found by store name; a series the simulator doesn't project (irregular, stopped, or renamed by a correction) shows no date. — `Sedge/ProfileView.swift` `ProfileView.nextDates`
+- The tuition tile's "spent" is everything paid and "back" is everything refunded, shown apart; with nothing refunded it shows only what was spent. — `Sedge/ProfileView.swift` `ProfileView.figure`, `ProfileView.refund`
+
 ## Transaction screen
 
 - Sedge's context compares a purchase with the same store's three posted purchases just before it (same-day ones by id; refunds, transfers and pending charges left out): above all three is higher, below all three is lower, anything else is in line. With fewer than three earlier purchases there is no comparison. — `Sedge/TransactionDetailView.swift` `StoreContext.compare`, `TransactionDetail.earlierCharges`
