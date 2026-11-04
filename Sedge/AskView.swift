@@ -304,7 +304,11 @@ private struct SedgeHeader: View {
 
 /// Shown while an answer is worked out: the sprout breathing next to one phrase. Side by side as
 /// in the design; when the phrase doesn't fit beside it (largest text sizes) it wraps underneath.
-private struct ThinkingRow: View {
+struct ThinkingRow: View {
+    /// Seconds for one half of a breath (1.0 to 1.08, or back). The animation below runs once per
+    /// half, so a full breath takes twice this: 1.2 seconds, as in the design's key frames.
+    static let halfBreath = 0.6
+
     let phrase: String
     /// False with Reduce Motion, so the sprout stays still and the phrase alone shows.
     let breathes: Bool
@@ -321,10 +325,10 @@ private struct ThinkingRow: View {
         Image(.chatSedge)
             .foregroundStyle(Color.accent)
             .accessibilityHidden(true)
-            // Grows to 1.08 and back, 1.2 seconds each way, for as long as the row shows.
+            // Grows to 1.08 and back over 1.2 seconds, for as long as the row shows.
             .phaseAnimator(breathes ? [1.0, 1.08] : [1.0]) { sprout, scale in
                 sprout.scaleEffect(scale)
-            } animation: { _ in .easeInOut(duration: 1.2) }
+            } animation: { _ in .easeInOut(duration: Self.halfBreath) }
     }
 
     private var words: some View {

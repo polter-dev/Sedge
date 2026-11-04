@@ -56,3 +56,8 @@ private struct FakeStatusSource {
         last = phrase
     }
 }
+
+/// One breath of the thinking sprout, out and back, takes 1.2 seconds as in the design.
+@MainActor @Test func sproutBreathIsOnePointTwoSecondsRoundTrip() {
+    #expect(ThinkingRow.halfBreath * 2 == 1.2)
+}
