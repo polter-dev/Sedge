@@ -104,7 +104,7 @@ struct SpendingView: View {
         }
     }
 
-    /// The bars for one category: each month's total over the same first days, oldest first.
+    /// The bars for one category: each month's total over its first days up to today's day, oldest first.
     static func bars(_ totals: [SpendingTotal], category: String, asOf: String) -> [(month: String, total: Double)] {
         months(endingAt: asOf).map { month in
             (month, totals.first { $0.month == month && $0.category == category }?.total ?? 0)
@@ -207,12 +207,7 @@ struct SpendingView: View {
     private func patterns(_ asOf: String) -> some View {
         let bars = Self.bars(totals, category: category, asOf: asOf)
         return VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Your patterns").font(.title2.bold())
-                Spacer()
-                Text(asOf.displayDate(.dateTime.month(.wide))).font(.row).foregroundStyle(Color.muted)
-            }
-            .foregroundStyle(Color.ink)
+            Text("Your patterns").font(.title2.bold()).foregroundStyle(Color.ink)
             HStack(spacing: 4) {
                 Menu {
                     Picker("Category", selection: $category) {
@@ -230,8 +225,6 @@ struct SpendingView: View {
                 }
                 .accessibilityLabel("Category")
                 .accessibilityValue(Self.title(category))
-                Text(day == 1 ? "· the first day of each month" : "· same first \(day) days each month")
-                    .foregroundStyle(Color.muted)
             }
             .font(.row)
             Text(bars.last?.total ?? 0, format: Self.dollars)
@@ -271,13 +264,9 @@ struct SpendingView: View {
     @ViewBuilder
     private var connected: some View {
         let stores = Self.stores(rows)
-        HStack(alignment: .firstTextBaseline) {
-            Text("Connected spending").font(.headline).foregroundStyle(Color.ink)
-            Spacer()
-            Text("Tap a merchant").font(.row).foregroundStyle(Color.muted)
-        }
-        .padding(.top, 18)
-        .padding(.bottom, 20)
+        Text("Connected spending").font(.headline).foregroundStyle(Color.ink)
+            .padding(.top, 18)
+            .padding(.bottom, 20)
         if stores.isEmpty {
             Text("No \(Self.title(category).lowercased()) spending so far this month.")
                 .font(.row)
@@ -308,10 +297,6 @@ struct SpendingView: View {
                 }
                 .accessibilityHidden(true)
             }
-            Text("Lines mean “categorized as.” Equal node sizes.")
-                .font(.row)
-                .foregroundStyle(Color.muted)
-                .padding(.top, 5)
             if let store = stores.first(where: { $0.name == selected }), let row = store.rows.first {
                 latest(row)
             }
