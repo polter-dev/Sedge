@@ -141,7 +141,7 @@ final class SedgeUITests: XCTestCase {
             XCTAssertFalse(app.staticTexts["No spending yet"].exists)
             attachScreenshot(app, "\(persona) spending")
 
-            app.navigationBars.buttons["Cash flow"].tap()
+            app.buttons["cashFlow"].tap()
             let field = app.textFields["Extra purchase in dollars"]
             XCTAssertTrue(field.waitForExistence(timeout: 10))
             field.tap()
@@ -310,7 +310,7 @@ final class SedgeUITests: XCTestCase {
         app.tabBars.buttons["Trends"].tap()
         XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
         attachScreenshot(app, "tab-trends-spending")
-        app.navigationBars.buttons["Cash flow"].tap()
+        app.buttons["cashFlow"].tap()
         XCTAssertTrue(app.textFields["Extra purchase in dollars"].waitForExistence(timeout: 10))
         attachScreenshot(app, "trends-cash-flow")
 
@@ -343,7 +343,7 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// Tapping a store in Maya's spending graph shows its latest transaction, which opens the
-    /// transaction; "Ask about a tradeoff" goes to the Ask tab. The screenshot is the screen
+    /// transaction; the Ask link goes to the Ask tab with its question typed in. The screenshot is the screen
     /// in light, or dark after `xcrun simctl ui <device> appearance dark`.
     @MainActor
     func testTappingAStoreShowsItsLatestTransaction() throws {
@@ -368,8 +368,64 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars.staticTexts["Transaction"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.firstMatch.tap()
 
-        app.buttons["Ask about a tradeoff →"].tap()
+        // The Ask link names dining, the category the screen opens on, and types its question in
+        // without sending it, so Ask still shows no conversation.
+        let askLink = app.buttons["Ask Sedge: what if I spent less on dining? →"]
+        app.scrollViews.firstMatch.swipeUp()
+        attachScreenshot(app, "trends-ask-link")
+        askLink.tap()
         XCTAssertTrue(app.tabBars.buttons["Ask"].isSelected)
+        // A vertical text field can show up as either kind of element.
+        let box = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        XCTAssertTrue(box.waitForExistence(timeout: 5))
+        XCTAssertEqual(box.value as? String, "What if I spent less on dining?")
+        XCTAssertTrue(app.staticTexts["Ask about your money"].exists)
+        attachScreenshot(app, "ask-typed-question")
+    }
+
+    /// Double-tapping a store in Maya's spending graph opens its latest transaction, the same
+    /// screen the row below the graph opens. VoiceOver's "Open latest transaction" action runs
+    /// the same line of code; UI tests have no way to perform a named accessibility action.
+    @MainActor
+    func testDoubleTappingAStoreOpensItsLatestTransaction() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let store = app.buttons.matching(identifier: "store").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 10))
+        let name = String(store.label.split(separator: ",")[0])
+        store.doubleTap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Transaction"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts[name].exists, "The transaction isn't from \(name)")
+    }
+
+    /// The Cash flow card on Maya's Trends screen gives the same low point, amount and day, as
+    /// the Cash flow screen it opens. The screenshots are light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testCashFlowCardShowsTheScreensLowPoint() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        // The toolbar link is gone; the card replaces it.
+        XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars.buttons["Cash flow"].exists)
+        let card = app.buttons["cashFlow"]
+        let low = NSPredicate(format: "label CONTAINS 'Low point $'")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: low, object: card)], timeout: 10), .completed)
+        attachScreenshot(app, "trends-cash-flow-card")
+        // E.g. "Cash flow, Low point $1,236.45 · Jul 1": the amount and the day.
+        let parts = card.label.components(separatedBy: "Low point ")[1].components(separatedBy: " · ")
+        XCTAssertEqual(parts.count, 2)
+
+        card.tap()
+        let lowest = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label BEGINSWITH 'Lowest projected balance' AND label CONTAINS %@ AND label CONTAINS %@", parts[0], parts[1])).firstMatch
+        XCTAssertTrue(lowest.waitForExistence(timeout: 10), "Cash flow doesn't show \(parts)")
     }
 
     /// Tapping May's bar on Maya's Spending screen shows May: its total, the change line, the
@@ -421,7 +477,7 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Trends"].tap()
-        app.navigationBars.buttons["Cash flow"].tap()
+        app.buttons["cashFlow"].tap()
         let projected = app.staticTexts["projected"]
         XCTAssertTrue(projected.waitForExistence(timeout: 10))
         attachScreenshot(app, "cash-flow")
@@ -467,7 +523,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Trends"].tap()
-        app.navigationBars.buttons["Cash flow"].tap()
+        app.buttons["cashFlow"].tap()
         XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
 
         // Switch "Change a bill" on to show its amount field.
@@ -490,7 +546,7 @@ final class SedgeUITests: XCTestCase {
             app.launchArguments = ["-persona", "maya"]
             app.launch()
             app.tabBars.buttons["Trends"].tap()
-            app.navigationBars.buttons["Cash flow"].tap()
+            app.buttons["cashFlow"].tap()
             XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
             if name.hasPrefix("Change") { flip(app.switches["bill"], in: app) }
             let field = app.textFields[name]
