@@ -769,12 +769,10 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     private func spent(_ app: XCUIApplication, _ category: String) throws -> Int {
         app.tabBars.buttons["Trends"].tap()
-        let menu = app.buttons["Category"]
-        XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        if menu.value as? String != category {
-            menu.tap()
-            app.buttons[category].tap()
-        }
+        let chip = app.buttons[category]
+        XCTAssertTrue(chip.waitForExistence(timeout: 10))
+        chip.tap()
+        XCTAssertTrue(chip.isSelected)
         let june = app.otherElements["June"]
         XCTAssertTrue(june.waitForExistence(timeout: 5))
         let value = try XCTUnwrap(june.value as? String).filter(\.isNumber)
@@ -840,7 +838,7 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// Both Trends screens read the data again each time they show: moving Maya's Jun 18 Corner
-    /// Cafe charge ($10.40) out of Dining, with the app open and the category picker untouched,
+    /// Cafe charge ($10.40) out of Dining, with the app open and the category chips untouched,
     /// lowers Dining on the All months screen and the June bar on the Spending screen. Moving it
     /// back restores them, so Maya's saved file ends as it was.
     @MainActor
@@ -850,9 +848,9 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Trends"].tap()
-        let menu = app.buttons["Category"]
-        XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        XCTAssertEqual(menu.value as? String, "Dining")
+        let chip = app.buttons["Dining"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 10))
+        XCTAssertTrue(chip.isSelected)
         let june = app.otherElements["June"]
         let before = try dollars(june)
         app.buttons["All months & categories →"].tap()
@@ -871,8 +869,8 @@ final class SedgeUITests: XCTestCase {
         let afterAll = try dollars(dining)
         XCTAssertTrue((10...11).contains(beforeAll - afterAll), "All months Dining went from \(beforeAll) to \(afterAll)")
         app.navigationBars.buttons.firstMatch.tap()
-        XCTAssertTrue(menu.waitForExistence(timeout: 5))
-        XCTAssertEqual(menu.value as? String, "Dining")
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        XCTAssertTrue(chip.isSelected)
         let after = try dollars(june)
         XCTAssertTrue((10...11).contains(before - after), "June Dining went from \(before) to \(after)")
 
@@ -881,6 +879,34 @@ final class SedgeUITests: XCTestCase {
         try pickCategory(app, "Dining")
         app.tabBars.buttons["Trends"].tap()
         XCTAssertEqual(try dollars(june), before)
+    }
+
+    /// Tapping Maya's Groceries chip on Spending selects it and shows Groceries' numbers: the
+    /// first 30 days of March to June are $104.73, $100.33, $115.23 and $86.97 (shown in whole
+    /// dollars), and June's only grocery store is Value Mart. The screenshot is light, or dark
+    /// after `xcrun simctl ui <device> appearance dark`. Nothing is changed in Maya's saved file.
+    @MainActor
+    func testCategoryChipSwitchesTheChart() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let dining = app.buttons["Dining"]
+        XCTAssertTrue(dining.waitForExistence(timeout: 10))
+        XCTAssertTrue(dining.isSelected)
+        let groceries = app.buttons["Groceries"]
+        XCTAssertGreaterThanOrEqual(groceries.frame.height, 44 - 0.001)
+        groceries.tap()
+
+        XCTAssertTrue(groceries.isSelected)
+        XCTAssertFalse(dining.isSelected)
+        XCTAssertTrue(app.staticTexts["$87"].waitForExistence(timeout: 5))
+        for (month, total) in [("March", "$105"), ("April", "$100"), ("May", "$115"), ("June", "$87")] {
+            XCTAssertEqual(app.otherElements[month].value as? String, total, month)
+        }
+        XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))
+        attachScreenshot(app, "spending-groceries")
     }
 
     /// Ways to save opens from Spending; a $200 goal lists Daniel's cuts ranked least valued first
