@@ -19,7 +19,7 @@ struct WorthALookView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Purchases from the last 30 days you haven’t said are familiar, that are well above your usual at that store or a first visit over $150.")
+                    Text("Purchases from the last 30 days you haven’t said are familiar, that are well above your usual at that store or a first visit of $150 or more.")
                         .font(.row)
                         .foregroundStyle(Color.muted)
                     VStack(spacing: 0) {

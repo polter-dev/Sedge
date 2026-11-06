@@ -100,8 +100,9 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// A question is saved as a chat: New chat clears the screen, Previous chats lists it, and
-    /// opening it shows its turn under the "answers best in a new chat" banner. A question asked
-    /// there is added to it. The chat is deleted at the end so Maya's file keeps no test chats.
+    /// opening it shows its turn under the "answers best in a new chat" banner, with no Rename
+    /// under its title until New chat. A question asked there is added to it. The chat is deleted
+    /// at the end so Maya's file keeps no test chats.
     /// Screenshots: the toolbar, the sheet and the continued chat; for dark ones, run it after
     /// `xcrun simctl ui <device> appearance dark`.
     @MainActor
@@ -133,8 +134,11 @@ final class SedgeUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Sedge answers best in a new chat."].waitForExistence(timeout: 5), "No banner")
         XCTAssertTrue(app.staticTexts["You · \(question)"].exists)
-        // The bar is named by its title; the title itself is a button because it opens the Rename menu.
+        // The bar is named by its title.
         XCTAssertTrue(app.navigationBars[question].exists, "The title isn't the chat's")
+        // That title names the chat, so tapping it must not offer Rename, which names the data.
+        app.navigationBars[question].descendants(matching: .any).matching(identifier: question).firstMatch.tap()
+        XCTAssertFalse(app.buttons["Rename…"].waitForExistence(timeout: 2), "A reopened chat's title offers Rename")
         field.tap()
         field.typeText("And coffee?")
         app.buttons["Send"].tap()
@@ -146,6 +150,11 @@ final class SedgeUITests: XCTestCase {
         // The banner's New chat leaves the old chat; reopening shows both turns were saved.
         app.buttons["bannerNewChat"].tap()
         XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2))
+        // A new chat is "Ask Sedge" again, and its title menu has Rename back.
+        app.navigationBars["Ask Sedge"].buttons["Ask Sedge"].tap()
+        XCTAssertTrue(app.buttons["Rename…"].waitForExistence(timeout: 2), "Rename didn't come back")
+        app.buttons["Rename…"].tap()
+        app.alerts.buttons["Cancel"].tap()
         app.navigationBars.buttons["Previous chats"].tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.tap()
