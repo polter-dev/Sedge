@@ -134,27 +134,30 @@ erDiagram
   refund_of or recurring edges.
 - **transactions.kind** and **linked_transaction_id** are also written by `Organizer.organize`.
   Money leaving one account and the same amount arriving in another of the person's accounts
-  within 3 days, with a transfer word in a name (or Plaid's transfer category), is one pair:
-  `card_payment` when a credit card is one side, `transfer` otherwise, and each side's
-  `linked_transaction_id` names the other. The rest are `spending` (money out), `refund`
-  (money in named "REFUND ...") or `income`. With `useReconciliation` off, nothing is paired
-  and every row is spending or income by its sign.
+  within 3 days, with a transfer word in a name (or Plaid's transfer or card-payment category),
+  is one pair: `card_payment` when a credit card is one side, `transfer` otherwise, and each
+  side's `linked_transaction_id` names the other. The rest are `spending` (money out), `refund`
+  (money in named "REFUND ...", or ending in "REFUND" and no more than what was paid at the
+  store; the full rule is in `docs/assumptions.md`) or `income`. With `useReconciliation` off,
+  nothing is paired and every row is spending or income by its sign.
 - **profile_facts** is rebuilt at the end of `Organizer.organize` (so after every sync) by
-  `Profile`, from the merchants, categories, recurring series and kinds above. Transfers and
-  card payments are never evidence. **profile_corrections** holds the person's own answers;
-  a rebuild never touches it, and a correction always replaces the fact with the same id.
+  `Profile`, from the merchants, categories, recurring series and kinds above. Transfers,
+  card payments and pending charges are never evidence. **profile_corrections** holds the
+  person's own answers; a rebuild never touches it, and a correction always replaces the fact
+  with the same id.
 - **saved_answers** holds the person's replies to `ask_user`, one per `fact_key`, so a
   clarifying question is asked only once. Before asking, `ask_user` checks this table and
   then profile_corrections (a correction whose kind starts the key, e.g. `housing` for
-  `housing_type`). Nothing rebuilds the table; the Ask screen's "Reset saved questions"
+  `housing_type`, or whose id is the key). Nothing rebuilds the table; the Saved answers
+  screen changes or removes one answer, and the Accounts screen's "Reset saved questions"
   clears it.
 - **accounts.owner**, **transactions.familiar** and **transactions.category_override** are the
   person's answers about one account or transaction, set and cleared by `Answers`. A category
   belongs to a store (its in_category edge); `category_override` moves one transaction to
   another category wherever spending is split by category (the tools' category input and the
-  Spending screen). Like merchant_id they aren't part of `Account` or `Transaction`, so reloading
-  the data or organizing again keeps them. A pending charge's answers stay with the pending
-  row, so they are dropped when it posts under a new id.
+  Spending and All months screens). Like merchant_id they aren't part of `Account` or
+  `Transaction`, so reloading the data or organizing again keeps them. A pending charge's
+  answers stay with the pending row, so they are dropped when it posts under a new id.
 - **accounts.nickname** is the person's own name for an account, typed in the account check
   and saved by `Answers.setNickname` (a blank name is stored as null). The app's screens show
   it in place of `name`; the tools keep reporting `name`. Like `owner`, reloading the data or a
@@ -172,11 +175,13 @@ Each dataset has its own SQLite file, and every file has the tables above:
 
 - `sedge-<persona>.sqlite` for each fake persona (`sedge-maya.sqlite`, `sedge-daniel.sqlite`,
   `sedge-jordan.sqlite`, `sedge-elena.sqlite`), loaded from `tools/data/<persona>/`.
-- One separate bank file for Plaid data (`sedge.sqlite`).
+- One separate bank file for Plaid data (`sedge.sqlite`). Debug builds launched with
+  `-emptyBank YES` (UI tests) use `sedge-empty-bank.sqlite` instead, a bank file that never syncs.
 
 The rule: Plaid data always goes into the bank file and never into a persona's file, and
 the app reads the chosen database at launch. The data picker remembers the choice (a
 persona's name or `bank`), and launching with `-persona <name>` picks that persona too.
 Opening a persona's file reloads it from the bundled fake data (so its `as_of` stays
-2026-06-30) and runs the organizer. Only the bank file is ever handed to the Plaid flow
+2026-06-30); the bank file keeps what the last sync saved. Either way the organizer runs
+again on open. Only the bank file is ever handed to the Plaid flow
 in `ConnectBankView.swift`, so a sync can't write into a persona's file.

@@ -6,30 +6,33 @@ To add a rule, add one line under its area in the same shape as the others: the 
 
 ## Data
 
-- "Today" is the dataset's `as_of` date, never the device clock. — `Simulator.swift` `simulate`
+- "Today" is the dataset's `as_of` date, never the device clock. — `Simulator.swift` `asOf`
 - The fake personas' today is 2026-06-30. — `Persona.swift` `asOf`
+- A persona loaded with an earlier `as_of` leaves out every later transaction and winds each balance back to the end of that day by undoing the later posted transactions. — `Persona.swift` `load`, `balances`
 - One database is one person, so every account in it belongs to the same person. — `Organizer.swift` `reconcile`
 - Dates are calendar days with no time zone. — `Organizer.swift` `calendar`
 - A week runs Monday to Sunday; in the month-by-month transactions list, a week that crosses into another month shows only the shown month's days. — `Sedge/TransactionsView.swift` `TransactionGroups.monday(of:)`, `TransactionGroups.parts`
-- A positive amount is money out; a credit card's balance is what is owed. — `Simulator.swift` `simulate`, `Tools.swift` `accountBalances`
+- A positive amount is money out; a credit card's balance is what is owed. — `Simulator.swift` `project`, `Tools.swift` `accountBalances`
 - Plaid data's today is its newest transaction date. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`
 - A Plaid transaction's name is the bank's original description when Plaid sends one, else Plaid's `name` (which Plaid rewrites for stores it recognizes, e.g. NETFLIX.COM to Netflix). — `Sedge/BankConnection/ConnectBankView.swift` `AllTransactionsResponse.init(from:)`
 - Plaid data is saved only into the bank database, never a persona's, and is organized again after every sync. — `Sedge/BankConnection/ConnectBankView.swift` `syncTransactions`, `ConnectBankView`
 
 ## Organizer
 
-- Two cleaned store names at least 80% alike are the same store. — `Organizer.swift` `similarityThreshold`, `sameStore`
+- Two cleaned store names at least 80% alike are the same store, and matches chain: if A matches B and B matches C, all three are one store. — `Organizer.swift` `similarityThreshold`, `sameStore`, `groupedMerchants`
+- A store is named after its most common cleaned name (counting transactions), a tie going to the shorter name and then the alphabetically first. — `Organizer.swift` `groupedMerchants`
 - A name that is the first whole words of a longer one is the same store ("shell" and "shell oil"). — `Organizer.swift` `sameStore`
 - "amzn" means amazon and "st" means street. — `Organizer.swift` `aliases`
 - One to three letters or "paypal" before a "*", and a leading "pos", "pos debit" or "pos purchase", are a payment-processor tag, not the store, so a store with a name that short loses it. — `Organizer.swift` `processorPrefix`, `clean`
+- Once any processor tag is gone, what follows a "*" is a descriptor, not the store ("TMOBILE*AUTOPAY" is tmobile), and ".com", ".net", ".org" and apostrophes are dropped ("joe's" is "joes"). — `Organizer.swift` `clean`
 - Words with a digit in them are store numbers or ids, not part of the store's name. — `Organizer.swift` `clean`
 - A statement name starting with "REFUND " is a refund. Money in whose name ends in the word "REFUND" after a store name (a trailing reference number is ignored, and the word may end a "*" descriptor, as in "AMAZON.COM*AB12C REFUND") is a refund only if it is no more than the purchases on or before it whose store name it names in full ("GEICO PREMIUM REFUND" names "GEICO"; "TAX REFUND" does not name "TAX PREP SERVICES", though the two merge by first word), and no more than what is left at the store (everything paid there on or before it, minus the refunds there before it; after "GEICO" $90, "GEICO AUTO" $500 and "GEICO AUTO REFUND" $500, a $90 "GEICO REFUND" counts). Only posted charges count as paid; a pending charge doesn't. A larger refund, or one with no such purchase, stays income ("STATE TAX REFUND"; "IRS TAX REFUND" $900 after "IRS TAX PAYMENT" $400; a second $300 "STATE U REFUND" after $500 paid and $300 already refunded). With the graph off each raw name is its own store, so such a name never finds its purchase and stays income. — `Organizer.swift` `clean`, `organize`
 - At a tuition store (by the profile's rule, on posted charges: a store whose category isn't housing where a name says tuition or bursar, or an education store has one charge of $1,000 or more), a refund named last may name less of the store than the payment does, so "STATE U REFUND" counts against "STATE U TUITION". — `Organizer.swift` `organize`
-- A store's category is the keyword list most of its names match; ties go to the earlier list, no match is "other". — `Organizer.swift` `category(of:)`
+- A store's category is the one most of its names vote for, each name voting for the first keyword list it matches as whole words; ties go to the earlier list, no match is "other". — `Organizer.swift` `category(of:)`
 - A subscription word beats a shopping word ("amazon prime membership" is a subscription). — `Organizer.swift` `categoryKeywords`
 - HOA dues are in the housing category. — `Organizer.swift` `categoryKeywords`
-- A refund belongs to the latest earlier purchase of the same amount at the same store. — `Organizer.swift` `organize`
-- Money in and money out at one store are separate series, and each direction has at most one series. — `Organizer.swift` `organize`
+- A refund belongs to the latest purchase on or before it, of the same amount, that it can be for by the rule above; a refund of any other amount belongs to no purchase. — `Organizer.swift` `organize`
+- Money in and money out at one store are separate series, each direction has at most one series, and refunds are never part of one. — `Organizer.swift` `organize`
 - A recurring series needs at least three charges. — `Organizer.swift` `recurrence(of:)`
 - Weekly charges are 6 to 8 days apart, biweekly 12 to 16, monthly 26 to 35. — `Organizer.swift` `cadences`
 - A series is twice-monthly when every charge is on one of two days of the month, the two days take turns, and each day's charges on their own are monthly (three or more, 26 to 35 days apart). Taking turns keeps a bill that moved to a new day monthly. — `Organizer.swift` `recurrence(of:)`, `byDay`
@@ -42,15 +45,16 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A series' typical amount is the middle of its last three charges; twice a month, of the next date's day's charges. — `Organizer.swift` `recurrence(of:)`
 - A series' next date is its latest charge plus a week, two weeks or a month; twice a month, a month after the older of the two days' latest charges. — `Organizer.swift` `recurrence(of:)`
 - The two sides of a transfer post at most 3 days apart. — `Organizer.swift` `transferWindowDays`, `reconcile`
-- A transfer pairs the same amount (to the cent) leaving one account and arriving in another, when either side's name says payment, transfer, xfer, pmt, pymt or autopay, or Plaid's category says transfer. — `Organizer.swift` `reconcile`
+- A transfer pairs the same amount (to the cent) leaving one account and arriving in another as money in that isn't a refund, when either side's name says payment, transfer, xfer, pmt, pymt or autopay, or Plaid's detailed category is a transfer (TRANSFER_…) or a credit card payment. — `Organizer.swift` `transferWords`, `reconcile`
 - A transfer whose name mentions one of the person's accounts goes to that account first; otherwise the closest date wins. — `Organizer.swift` `reconcile`
 - A matched pair that touches a credit card is a card payment; any other pair is a transfer. — `Organizer.swift` `reconcile`
 - Unmatched money out is spending; unmatched money in is income, or a refund when its name says so. — `Organizer.swift` `reconcile`
 
 ## Profile
 
+- The profile reads only posted spending, income and refunds: pending charges, transfers and card payments are never income, bills or evidence. — `Profile.swift` `infer`
 - A recurring series of deposits from one payer is income. — `Profile.swift` `infer`
-- Deposits from one payer in three or more months, but not on a cadence or not steady, are irregular income. — `Profile.swift` `infer`
+- Deposits from one payer in three or more months, but not on a cadence or not steady, are irregular income, with the middle deposit as the amount. — `Profile.swift` `infer`, `median`
 - Monthly income is everything from that payer divided by the months in the data; a partial month counts as a whole one. — `Profile.swift` `infer`
 - A housing bill is a mortgage if its name says "mortgage", rent if it says rent, apartment, property management, lease or leasing. — `Profile.swift` `rentWords`, `infer`
 - A rent or mortgage bill with no steady series, paid in three or more different months, is still housing: schedule irregular, amount the middle payment. In one or two months it is not housing. — `Profile.swift` `infer`
@@ -67,24 +71,26 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Two or more payments to a lender without a cadence are an irregular loan. — `Profile.swift` `infer`
 - A monthly bill's usual day is its most common day of the month; a tie goes to the earlier day. — `Profile.swift` `usualDay`
 - Twice-monthly rent or mortgage is housing like a monthly one, costing its two days' typical amounts a month (1000 on the 1st and 900 on the 16th is 1900). — `Profile.swift` `infer`
+- An account's type is the bank's subtype, or its type when there is no subtype. — `Profile.swift` `infer`
+- A fact's confidence is fixed by the rule that found it: 0.95 for a recurring deposit; 0.9 for a recurring housing bill or loan payment, or tuition named in a charge; 0.6 for a pattern found from size or repetition alone (irregular income, housing or loan payments, tuition by the $1,000 rule); 1 for an account or a correction. — `Profile.swift` `seriesConfidence`, `keywordConfidence`, `guessConfidence`, `infer`, `facts`
 - A correction the person makes always wins over a worked-out fact. — `Profile.swift` `facts`
 
 ## Simulator
 
-- Everyday spending is the last 28 days of spending (less refunds) outside any recurring series, spread evenly over each day, per account. — `Simulator.swift` `trailingDays`, `simulate`
-- Pending transactions are left out of everyday spending and card statements. — `Simulator.swift` `simulate`
-- An account without a current balance isn't projected. — `Simulator.swift` `simulate`
+- Everyday spending is the last 28 days of spending (less refunds) outside any recurring series, spread evenly over each day, per account. — `Simulator.swift` `trailingDays`, `everyday`, `project`
+- Pending transactions are left out of everyday spending and card statements. — `Simulator.swift` `everyday`, `project`
+- An account without a current balance isn't projected. — `Simulator.swift` `project`
 - A monthly series is due on its latest charge's day of the month. — `Simulator.swift` `dueDay`
 - When the latest charge is the last day of a short month (Feb 28, Apr 30), the due day is the later of that day and the day of the latest charge in a 31-day month (Mar 31, Apr 30, May 29, Jun 30 gives the 30th). — `Simulator.swift` `dueDay`
 - A due day past the end of a short month falls on that month's last day. — `Simulator.swift` `monthDay`
-- Weekly and biweekly series repeat every 7 or 14 days from the latest charge. — `Simulator.swift` `simulate`
-- A twice-monthly series is projected as two monthly series, one per day of the month (grouped by `Organizer.byDay`), each due on its own `dueDay` at its own typical amount. — `Simulator.swift` `simulate`
-- A recurring series is paid from, or into, the account its latest charge used. — `Simulator.swift` `simulate`
-- A charge up to 3 days past due is late, not stopped, and is projected for tomorrow; after that its series has stopped. — `Simulator.swift` `simulate`
-- A paycheck due on a weekend may arrive on the business day before or after; a paycheck within that shift is on time, not late. Every monthly or twice-monthly series of money in counted as income gets 2 more days before it counts as stopped; with reconciliation off, that includes transfer and card-payment deposits and refunds. — `Simulator.swift` `weekendShiftDays`, `simulate`
+- Weekly and biweekly series repeat every 7 or 14 days from the latest charge. — `Simulator.swift` `project`
+- A twice-monthly series is projected as two monthly series, one per day of the month (grouped by `Organizer.byDay`), each due on its own `dueDay` at its own typical amount. — `Simulator.swift` `project`
+- A recurring series is paid from, or into, the account its latest charge used. — `Simulator.swift` `project`
+- A charge up to 3 days past due is late, not stopped, and is projected for tomorrow; after that its series has stopped. — `Simulator.swift` `project`
+- A paycheck due on a weekend may arrive on the business day before or after; a paycheck within that shift is on time, not late. Every monthly or twice-monthly series of money in counted as income gets 2 more days before it counts as stopped; with reconciliation off, that includes transfer and card-payment deposits and refunds. — `Simulator.swift` `weekendShiftDays`, `project`
 - Projected monthly pay dates are not moved to business days, so pay on a fixed day can be projected up to 2 days before or after the real one. Pay on the 29th–31st or the last business day can be up to 5 days early (Fri Feb 26 makes Mar 26 while pay comes Mar 31), and pay a weekend moves into another month up to 5 days early or late (Sun Mar 1 paid Fri Feb 27 makes Mar 27 while pay comes Apr 1). — `Simulator.swift` `dueDay`, `monthDay`
-- Every card statement closes on the last day of the month and is paid in full. — `Simulator.swift` `simulate`
-- A card is paid from the account of its latest matched payment, on the day of the month of its latest payment, for what it owed at the last month end less what was paid since. — `Simulator.swift` `simulate`
+- Every card statement closes on the last day of the month and is paid in full. — `Simulator.swift` `project`
+- A card is paid from the account of its latest matched payment, on the `dueDay` of its payment dates (its latest payment's day of the month, with the same short-month rule as bills), for what it owed at the last month end less what was paid since; nothing is paid when that is $0 or less. — `Simulator.swift` `project`, `dueDay`
 - Card payments due the same day are made and listed in order of card name, then account id, so every run gives the same output. — `Simulator.swift` `project`
 - A what-if change to a recurring series finds it by store name and adds its signed amount to the size of every charge on or after its start day, so +200 makes a bill or a paycheck 200 bigger, and no charge shrinks below 0; a cancelled series has no charges from its start day. Card payments can't be changed this way. — `Simulator.swift` `Change`, `project`
 - The range reruns the projection with each account's highest and with its lowest four-week everyday spending among the three four-week windows ending today; an account with no spending in a window spent 0 there. — `Simulator.swift` `range`
@@ -120,13 +126,15 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - recurring_charges' totals add every series' amount (not just the 10 shown) once per kind and cadence, without converting between cadences (weekly and monthly stay apart). — `Tools.swift` `recurringCharges`
 - find_transactions' money in and money out sum every match (not just the 10 shown) by sign, whatever the kind: a negative amount is money in, a positive one money out, so transfers count too; pending charges are listed and counted but left out of both sums, as in total_spent. — `Tools.swift` `findTransactions`
 - compare_periods' higher is "same" only when the two totals are equal to the cent. — `Tools.swift` `comparePeriods`
-- simulate_balance reports the checking account (or the first bank account with a balance) and takes the extra purchase from it; bills there are the ones whose series last used it. — `Tools.swift` `simulateBalance`
+- compare_periods' percent change is the difference over the first range's total (taken as positive), to one decimal place, and is left out when that total is 0. — `Tools.swift` `comparePeriods`
+- simulate_balance reports the checking account (or else the first bank account with a balance, by name) and takes the extra purchase from it; bills there are the ones whose series last used it. — `Tools.swift` `simulateBalance`
 - simulate_balance's balance on a day is that account's projected balance at the end of the day, after any extra purchase that day; on today it is the current balance. — `Tools.swift` `simulateBalance`
+- simulate_balance says every bill is covered when the projected balance never goes below 0, and its room left is the lowest projected balance from the extra purchase's day (tomorrow if none) on; below 0 it is the shortfall. — `Tools.swift` `simulateBalance`
 - An answer shows at most 10 rows. — `Tools.swift` `maxRows`
 - A fact the person answered is never asked again; a skipped question may be asked next time. — `AskUser.swift` `run`
-- A profile correction answers a question about the same kind of fact ("housing" covers "housing_type"). — `AskUser.swift` `remembered`, `covers`
+- A profile correction answers a question about the same kind of fact ("housing" covers "housing_type"), or one whose key is the correction's id. — `AskUser.swift` `remembered`, `covers`
 - A saved answer or profile correction is used as the answer to related questions without asking; the person can change or remove it in Saved answers, and a removed one is asked again. — `AskUser.swift` `remembered`, `change`, `forget`; `Sedge/SavedAnswersView.swift`
-- A transaction the person moved to another category counts in that category instead of its store's, in the tools' category totals and the Spending screen; totals by store and overall don't change, and the profile still reads the store's category. — `Tools.swift` `spendingFilter`; `Sedge/SpendingView.swift` `SpendingTotal.all`; `Profile.swift` `infer`
+- A transaction the person moved to another category counts in that category instead of its store's, in the tools' category totals and the Spending and All months screens; totals by store and overall don't change, and the profile still reads the store's category. — `Tools.swift` `spendingFilter`; `Sedge/SpendingView.swift` `SpendingTotal.all`; `Profile.swift` `infer`
 - An account's owner (mine or shared) and a transaction's familiar answer (yes or not_sure) are only reported to the model; they don't change any total. — `Answers.swift`; `Tools.swift` `accountBalances`, `findTransactions`
 - An answer about a pending charge is lost when the charge posts under a new id. — `SedgeDatabase.swift` `save`
 - An account's nickname is the person's own name for it, shown by the app in place of the bank's name; a blank one (after trimming spaces) is no nickname, and the tools keep reporting the bank's name. — `Answers.swift` `setNickname`; `Sedge/AccountCheckView.swift` `ListedAccount.title`
@@ -141,9 +149,9 @@ To add a rule, add one line under its area in the same shape as the others: the 
 
 - Months are compared over the same first days: the day of the month of `as_of` (a shorter month just ends sooner), for `as_of`'s month and the three before it. — `Sedge/SpendingView.swift` `SpendingTotal.all`, `SpendingView.months`
 - The All months screen counts whole months, and money moved between the person's own accounts (transfers and card payments) counts only when its switch is on, as its own category bar, using only the side leaving an account so the arriving side doesn't cancel it. — `Sedge/SpendingView.swift` `SpendingTotal.all`; `Sedge/AllMonthsView.swift` `byMonth`, `byCategory`
-- A tapped month's categories on All months leave money moved out, as its bar does, so they add up to that bar; the month chart pages in six-month windows counted back from the newest month in the data, and the oldest window may start before the data. — `Sedge/AllMonthsView.swift` `breakdown`, `windows`
+- A tapped month's categories on All months leave money moved out, as its bar does, so they add up to that bar; the month chart pages in six-month windows counted back from the newest month in the data, and the oldest window may start before the data. A tapped category shows its total in each month of the window on screen, $0 in a month without any. — `Sedge/AllMonthsView.swift` `breakdown`, `windows`, `monthly`
 - The spending mosaic shows a category's three biggest stores in the page's month and adds the rest up as "Other stores", or every store when there are four or fewer; with "All" it does the same with categories ("Other categories"). — `Sedge/SpendingView.swift` `SpendingView.stores`, `SpendingView.categoryBlocks`
-- A month page on the Spending screen (swiped to, or a tapped bar) shows that month's 1st through the same day of the month as `as_of` (a shorter month just ends sooner), the same days as its bar, in the total, the mosaic and the latest row; its change line compares the bar with the month before's bar and gives no percentage when the month before is $0 or less. — `Sedge/SpendingView.swift` `SpendingView.window`, `SpendingView.changeLine`
+- A month page on the Spending screen (swiped to, or a tapped bar) shows that month's 1st through the same day of the month as `as_of` (a shorter month just ends sooner), the same days as its bar, in the total, the mosaic and the latest row; its change line compares the bar with the month before's bar as a whole percent and is left out when the month before is $0 or less. — `Sedge/SpendingView.swift` `SpendingView.window`, `SpendingView.changeLine`
 - "All" on the Spending screen is every category's bar added up in whole cents; money moved between the person's own accounts isn't in it. — `Sedge/SpendingView.swift` `SpendingView.bars`
 - The Spending chart's dollar axis starts at $0 and tops out at the largest bar rounded up to the smallest step of 25, 50, 100, 250, 500, 1,000, 2,500, 5,000 … (on and up) that reaches it in at most 4 steps; a bar of $0 or less still gets one step. — `Sedge/SpendingView.swift` `SpendingView.axisTop`
 - The biggest change on Trends is the store in the category (with "All", the category) whose spending changed most, up or down, between the page's month and the month before, both over the same first days; a store missing from one month spent $0 then, the first name alphabetically wins a tie, and nothing shows when nothing changed. With "All" only a category the category sheet lists (spent in the four months shown) can be named, so on the oldest page a category spent only in the month before is left out. It is shown signed in whole dollars, red when spending rose and green when it fell. — `Sedge/SpendingView.swift` `SpendingView.biggestChange`, `SpendingView.categoryChange`, `SpendingView.changeText`
@@ -161,6 +169,6 @@ To add a rule, add one line under its area in the same shape as the others: the 
 ## Transaction screen
 
 - Sedge's context compares a purchase with the same store's three posted purchases just before it (same-day ones by id; refunds, transfers and pending charges left out): above all three is higher, below all three is lower, anything else is in line. With fewer than three earlier purchases there is no comparison. — `Sedge/TransactionDetailView.swift` `StoreContext.compare`, `TransactionDetail.earlierCharges`
-- A purchase is worth a look when it is posted spending in the 30 days up to today (30 days back still counts), has no "Does this look familiar?" answer, and either is at least 1.5× and at least $25 more than the highest of the same store's three posted purchases just before it (same-day ones by id; answered ones still count as history; with one or two earlier purchases it is never flagged), or is the store's first purchase and is $150 or more. The store is the organizer's grouping, never Plaid's merchant name or category. — `WorthALook.swift` `flagged`; `Sedge/SpendingView.swift` `worthALookRow`
+- A purchase is worth a look when it is posted spending in the 30 days up to today (30 days back still counts), has no "Does this look familiar?" answer, and either is at least 1.5× and at least $25 more than the highest of the same store's three posted purchases just before it (same-day ones by id; answered ones still count as history; with one or two earlier purchases it is never flagged), or is the store's first purchase and is $150 or more. The store is the organizer's grouping, never Plaid's merchant name or category. — `WorthALook.swift` `flagged`; `Sedge/SpendingView.swift` `countWorthALook`; `Sedge/WorthALookView.swift`
 - Choosing a transaction's store category again clears the person's category answer instead of saving it. — `Sedge/TransactionDetailView.swift` `setCategory`
 - After a bank connection, each account with no owner answer is asked about once; Later saves nothing, so it is asked again after the next connection. — `Sedge/AccountCheckView.swift` `AccountChecksAfterConnecting`
