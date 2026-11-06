@@ -483,7 +483,7 @@ final class SedgeUITests: XCTestCase {
 
         // Each screen below opens from the Accounts list; the first nav bar button goes back to it.
         app.buttons["Transactions"].tap()
-        XCTAssertTrue(app.navigationBars.staticTexts["Transactions"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Month"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["No transactions"].exists)
         attachScreenshot(app, "accounts-transactions")
         app.navigationBars.buttons.firstMatch.tap()
@@ -782,7 +782,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
+        let row = app.buttons["Corner Cafe, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         XCTAssertTrue(app.staticTexts["Higher than your last three visits."].waitForExistence(timeout: 10))
@@ -815,7 +815,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Bean Street Coffee, SQ *BEAN ST COFFEE, $2.68"]
+        let row = app.buttons["Bean Street Coffee, $2.68"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
@@ -844,7 +844,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Bean Street Coffee, SQ *BEAN ST COFFEE, $2.68"]
+        let row = app.buttons["Bean Street Coffee, $2.68"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
@@ -856,6 +856,44 @@ final class SedgeUITests: XCTestCase {
         let card = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH '26 visits since'")).firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 10))
         XCTAssertTrue(subtitle.contains("26 visits"), "subtitle was '\(subtitle)', history shows '\(card.label)'")
+    }
+
+    /// Maya's transactions open on June: the in/out card (In +$1,040.00, Out $966.00) and one
+    /// run of week headers, the payroll week carrying both its in and out. The month menu moves
+    /// to May, and back in June a row opens the Transaction screen. The screenshot is the screen
+    /// in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testTransactionsWeekListAndMonthMenu() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let any = app.descendants(matching: .any)
+        let label = { (start: String) in any.matching(NSPredicate(format: "label BEGINSWITH %@", start)).firstMatch }
+        XCTAssertTrue(label("In, +$1,040.00").waitForExistence(timeout: 10))
+        XCTAssertTrue(label("Out, $966.00").exists)
+        XCTAssertTrue(app.staticTexts["$74.00 left over"].exists)
+        XCTAssertTrue(label("Jun 29 – Jul 5, $28.19").exists)
+        XCTAssertTrue(label("Jun 15 – 21, +$520.00, $118.21").exists)
+        XCTAssertFalse(app.staticTexts["Income"].exists)
+        attachScreenshot(app, "transactions-weeks")
+
+        let menu = app.buttons["Month"]
+        XCTAssertEqual(menu.value as? String, "June 2026")
+        menu.tap()
+        app.buttons["May 2026"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == 'Month' AND value == 'May 2026'")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(label("May 25 – 31").waitForExistence(timeout: 5))
+        XCTAssertFalse(label("Jun 15 – 21").exists)
+
+        menu.tap()
+        app.buttons["June 2026"].tap()
+        let row = app.buttons["Bean Street Coffee, $2.68"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch.waitForExistence(timeout: 10))
     }
 
     /// Answering "Is this account yours?" from Your accounts shows the answer on that account,
@@ -1010,7 +1048,7 @@ final class SedgeUITests: XCTestCase {
         // A run stopped halfway may have left the note hidden; start with it shown.
         if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
 
-        let corner = "Corner Cafe, CORNER CAFE, $10.40"
+        let corner = "Corner Cafe, $10.40"
         let note = app.staticTexts["This is a spending observation, not a fraud determination."]
         let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
         let closing = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
@@ -1065,7 +1103,7 @@ final class SedgeUITests: XCTestCase {
         // A run stopped halfway may have left the note hidden; start with it shown.
         if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
 
-        let corner = "Corner Cafe, CORNER CAFE, $10.40"
+        let corner = "Corner Cafe, $10.40"
         let note = app.staticTexts["This is a spending observation, not a fraud determination."]
         let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
         openTransaction(app, corner)
@@ -1112,7 +1150,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        let corner = "Corner Cafe, CORNER CAFE, $10.40"
+        let corner = "Corner Cafe, $10.40"
         let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
         /// Goes back to the transactions list and opens the same transaction again, which reloads it.
         func reopen() {
@@ -1181,7 +1219,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        let corner = "Corner Cafe, CORNER CAFE, $10.40"
+        let corner = "Corner Cafe, $10.40"
         openTransaction(app, corner)
         let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
         let countdown = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Saved. Closing in '")).firstMatch
@@ -1233,17 +1271,19 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// From the Accounts tab, opens the transaction whose row reads `label`. The list shows one
-    /// month at a time and opens on the data's latest month, so this steps back a month at a time
-    /// until the row turns up or there is no earlier month.
+    /// month at a time and opens on the data's latest month, so this swipes back a month at a time
+    /// until the row turns up or the month menu shows no earlier month.
     @MainActor
     private func openTransaction(_ app: XCUIApplication, _ label: String) {
         app.buttons["Transactions"].tap()
-        let row = app.buttons[label], previous = app.buttons["Previous month"]
-        XCTAssertTrue(previous.waitForExistence(timeout: 10))
+        let row = app.buttons[label], menu = app.buttons["Month"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
         while true {
             for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
-            if (row.exists && row.isHittable) || !previous.isEnabled { break }
-            previous.tap()
+            let shown = menu.value as? String
+            if row.exists && row.isHittable { break }
+            app.swipeRight()
+            if menu.value as? String == shown { break }
         }
         row.tap()
     }
@@ -1405,7 +1445,7 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
-        let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
+        let row = app.buttons["Corner Cafe, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
         try pickCategory(app, "Coffee")
