@@ -184,7 +184,9 @@ struct CashFlowView: View {
         // The number pad has no return key, so scrolling is the way to put it away and reach the tabs.
         .scrollDismissesKeyboard(.immediately)
         .toolbar {
+            // One color: the app's two-color foregroundStyle would paint its second layer `muted`.
             Button("What’s included?", systemImage: "info.circle") { showingIncluded = true }
+                .symbolRenderingMode(.monochrome)
         }
         .sheet(isPresented: $showingIncluded) { included }
         .overlay {

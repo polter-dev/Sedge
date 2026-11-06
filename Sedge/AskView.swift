@@ -95,6 +95,8 @@ struct AskView: View {
     /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
     @State private var demoLoaded = false
     @State private var showingChats = false
+    /// Where the chat is scrolled to, so a new turn or a reopened chat can jump to its end.
+    @State private var position = ScrollPosition()
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private var blank: Bool { question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -113,7 +115,8 @@ struct AskView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            // Not lazy: jumping to the end needs every turn's real height, and a chat is short.
+            VStack(alignment: .leading, spacing: 0) {
                 if session.reopenedTitle != nil {
                     NewChatBanner(newChat: newChat)
                         .padding(.horizontal, 20)
@@ -139,8 +142,9 @@ struct AskView: View {
             .animation(.easeOut(duration: 0.25), value: session.status)
             .padding(.bottom, 16)
         }
-        // A new answer pushes the conversation up, so the newest turn stays in view.
-        .defaultScrollAnchor(.bottom, for: .sizeChanges)
+        // A sent question, its answer and a reopened chat each jump to the end, so the newest turn
+        // sits just above the question box. A bottom anchor alone left it behind the keyboard.
+        .scrollPosition($position)
         // Any drag on the chat puts the keyboard away. Interactively, the finger first had to
         // travel down past the question box to reach the keyboard.
         .scrollDismissesKeyboard(.immediately)
@@ -183,6 +187,8 @@ struct AskView: View {
         // the status means whatever answers questions only has to report it.
         .onChange(of: session.status) { old, _ in
             if old == .thinking { saveNewestTurn() }
+            // Covers sending (the thinking row appears) and the answer coming in.
+            position.scrollTo(edge: .bottom)
         }
         .task {
             #if DEBUG
@@ -301,6 +307,7 @@ struct AskView: View {
             }
             session.open(chat.id, titled: chat.title, turns: turns)
             isDemo = false
+            position.scrollTo(edge: .bottom)
         } catch {
             print("Could not open the chat:", error)
         }

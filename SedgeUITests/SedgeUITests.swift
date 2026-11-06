@@ -258,6 +258,27 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(down, .completed, "The keyboard stayed up after dragging the chat")
     }
 
+    /// A chat grown past the screen with the keyboard up: the newest reply stays above the box.
+    @MainActor
+    func testAskNewestTurnStaysAboveTheKeyboard() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        for i in 1...9 {
+            field.typeText("Question number \(i)")
+            app.buttons["Send"].tap()
+            let replies = app.staticTexts.matching(identifier: "The assistant isn't connected yet.")
+            wait(for: [expectation(for: NSPredicate(format: "count == \(i)"), evaluatedWith: replies)], timeout: 8)
+            Thread.sleep(forTimeInterval: 0.6)
+            let last = replies.element(boundBy: i - 1)
+            XCTAssertLessThanOrEqual(last.frame.maxY, field.frame.minY, "reply \(i) hidden behind the box")
+        }
+    }
+
     /// With Reduce Motion on, the example question stays on the first one.
     @MainActor
     func testAskExampleStaysWithReduceMotion() throws {
