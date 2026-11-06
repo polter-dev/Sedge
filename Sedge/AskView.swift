@@ -90,7 +90,7 @@ struct AskView: View {
     /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
     @State private var session = ChatSession()
-    /// True when the turns are demo content, so the screen says it is demo state.
+    /// True when the turns are demo content, which is never saved.
     @State private var isDemo = false
     /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
     @State private var demoLoaded = false
@@ -141,7 +141,9 @@ struct AskView: View {
         }
         // A new answer pushes the conversation up, so the newest turn stays in view.
         .defaultScrollAnchor(.bottom, for: .sizeChanges)
-        .scrollDismissesKeyboard(.interactively)
+        // Any drag on the chat puts the keyboard away. Interactively, the finger first had to
+        // travel down past the question box to reach the keyboard.
+        .scrollDismissesKeyboard(.immediately)
         .overlay {
             if session.turns.isEmpty && session.status == .idle {
                 ContentUnavailableView {
@@ -156,13 +158,17 @@ struct AskView: View {
         // An older chat shows its own title, as in the design.
         .navigationTitle(session.reopenedTitle ?? "Ask Sedge")
         .toolbar {
+            // Both symbols in one color: the app's two-color foregroundStyle would paint their
+            // second layer `muted`, which fades on the dark top bar.
             ToolbarItem(placement: .topBarLeading) {
                 Button("Previous chats", systemImage: "clock.arrow.circlepath", action: showChats)
+                    .symbolRenderingMode(.monochrome)
                     // Opening another chat mid-answer would save that answer into the wrong chat.
                     .disabled(session.status == .thinking)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("New chat", systemImage: "square.and.pencil", action: newChat)
+                    .symbolRenderingMode(.monochrome)
             }
         }
         .fullScreenCover(isPresented: $showingChats) {
@@ -206,62 +212,54 @@ struct AskView: View {
         }
     }
 
-    /// The question box with its send button, and the line that says where answers come from.
+    /// The question box with its send button.
     private var composer: some View {
-        // 9 points, so the 8-point underlay clears the "Local analysis" line below it.
-        VStack(spacing: 9) {
-            HStack(alignment: .bottom, spacing: 2) {
-                TextField("Question", text: $question,
-                          prompt: Text(limited ? "Start a new session to keep asking" : "Ask about your money…")
-                              .foregroundStyle(Color.muted),
-                          axis: .vertical)
-                    .font(.subheadline)
-                    .lineLimit(1...5)
-                    .padding(.vertical, 12)
-                    .onSubmit(send)
-                    // At the limit the box stays in place but takes no typing until a new session.
-                    .disabled(limited)
-                Button("Send", image: .chatSend, action: send)
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(canSend ? Color.contrast : Color.muted)
-                    // The glow: an accent circle with a soft accent shadow fades in behind the arrow.
-                    .background {
-                        Circle()
-                            .fill(Color.accent)
-                            .frame(width: 34, height: 34)
-                            .shadow(color: Color.accent.opacity(0.35), radius: 8)
-                            .opacity(canSend ? 1 : 0)
-                    }
-                    .animation(.easeInOut(duration: 0.25), value: canSend)
-                    // Apple's minimum tap area, around the 20-point arrow.
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-                    .disabled(!canSend)
-            }
-            .padding(.leading, 16)
-            .padding(.trailing, 2)
-            .background(Color.surface, in: RoundedRectangle(cornerRadius: 23))
-            .overlay(RoundedRectangle(cornerRadius: 23).stroke(Color.line))
-            // While there is text, a soft underlay springs up 8 points beyond the box on every side.
-            // As a background it grows with the box when the question wraps to more lines.
-            .background {
-                if !blank {
-                    RoundedRectangle(cornerRadius: 31)
-                        .fill(Color.soft)
-                        .padding(-8)
-                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94)))
+        HStack(alignment: .bottom, spacing: 2) {
+            TextField("Question", text: $question,
+                      prompt: Text(limited ? "Start a new session to keep asking" : "Ask about your money…")
+                          .foregroundStyle(Color.muted),
+                      axis: .vertical)
+                .font(.subheadline)
+                .lineLimit(1...5)
+                .padding(.vertical, 12)
+                .onSubmit(send)
+                // At the limit the box stays in place but takes no typing until a new session.
+                .disabled(limited)
+            Button("Send", image: .chatSend, action: send)
+                .labelStyle(.iconOnly)
+                .foregroundStyle(canSend ? Color.contrast : Color.muted)
+                // The glow: an accent circle with a soft accent shadow fades in behind the arrow.
+                .background {
+                    Circle()
+                        .fill(Color.accent)
+                        .frame(width: 34, height: 34)
+                        .shadow(color: Color.accent.opacity(0.35), radius: 8)
+                        .opacity(canSend ? 1 : 0)
                 }
-            }
-            .animation(blank || reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.35, dampingFraction: 0.7),
-                       value: blank)
-            HStack(spacing: 4) {
-                Image(.chatLocal).accessibilityHidden(true)
-                Text(isDemo ? "Local analysis · demo state" : "Local analysis")
-            }
-            .font(.note)
-            .foregroundStyle(Color.muted)
+                .animation(.easeInOut(duration: 0.25), value: canSend)
+                // Apple's minimum tap area, around the 20-point arrow.
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+                .disabled(!canSend)
         }
+        .padding(.leading, 16)
+        .padding(.trailing, 2)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 23))
+        .overlay(RoundedRectangle(cornerRadius: 23).stroke(Color.line))
+        // While there is text, a soft underlay springs up 8 points beyond the box on every side.
+        // As a background it grows with the box when the question wraps to more lines.
+        .background {
+            if !blank {
+                RoundedRectangle(cornerRadius: 31)
+                    .fill(Color.soft)
+                    .padding(-8)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94)))
+            }
+        }
+        .animation(blank || reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.35, dampingFraction: 0.7),
+                   value: blank)
         .padding(.horizontal, 14)
+        // The underlay's 8 points above and below, so it stays on this bar's background.
         .padding(.vertical, 8)
         .background(Color.background)
     }
@@ -697,7 +695,7 @@ extension FormatStyle where Self == FloatingPointFormatStyle<Double>.Currency {
 extension ChatTurn {
     /// The design's sample conversation, with every figure worked out from `database` by the
     /// assistant's own tools, so the demo shows real numbers. The wording around them is demo
-    /// content, which is why the screen says "demo state".
+    /// content, which is why it is never saved as a chat.
     static func sample(in database: SedgeDatabase) throws -> ChatTurn {
         guard let asOf = try database.asOf() else { throw CocoaError(.fileReadNoSuchFile) }
         let now = monthToDate(asOf, monthsBack: 0)
