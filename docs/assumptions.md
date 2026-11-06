@@ -117,6 +117,9 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - Refunds count against spending, and pending charges don't count until they post. — `Tools.swift` `spendingFilter`
 - A store whose refunds cancel out its spending isn't a top store. — `Tools.swift` `topMerchants`
 - A series that stopped is still listed by recurring_charges, with a next date before today. — `Tools.swift` `recurringCharges`
+- recurring_charges' totals add every series' amount (not just the 10 shown) once per kind and cadence, without converting between cadences (weekly and monthly stay apart). — `Tools.swift` `recurringCharges`
+- find_transactions' money in and money out sum every match (not just the 10 shown) by sign, whatever the kind: a negative amount is money in, a positive one money out, so transfers count too; pending charges are listed and counted but left out of both sums, as in total_spent. — `Tools.swift` `findTransactions`
+- compare_periods' higher is "same" only when the two totals are equal to the cent. — `Tools.swift` `comparePeriods`
 - simulate_balance reports the checking account (or the first bank account with a balance) and takes the extra purchase from it; bills there are the ones whose series last used it. — `Tools.swift` `simulateBalance`
 - simulate_balance's balance on a day is that account's projected balance at the end of the day, after any extra purchase that day; on today it is the current balance. — `Tools.swift` `simulateBalance`
 - An answer shows at most 10 rows. — `Tools.swift` `maxRows`
