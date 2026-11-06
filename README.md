@@ -35,14 +35,14 @@ The three tabs:
   - When a chat gets too long, it ends with "This chat has reached its limit." and a **Start new
     session** button. Nothing reaches the limit yet, so use `-demoTokenLimit YES` (below) to see it.
 - **Trends**: the **Spending** screen.
-  - Swipe the chart sideways to page through the last four months, compared up to the same day of
-    each month.
+  - Swipe the chart sideways to page through the last four months, or tap a month's bar to pick it,
+    compared up to the same day of each month.
   - The category chip opens a grid of categories, with **All** first for every category added up.
   - The page's month as a mosaic of stores (or categories with **All**), and its biggest change from
     the month before.
   - A **Cash flow** card with the projected checking balance for the next 30 days. It opens the Cash
     flow screen (30, 60 or 90 days, with scenarios to switch on and off).
-  - Links to **All months & categories** and **Ways to save**, and, when there are any, the recent
+  - A link to **All months & categories** and, when there are any, the recent
     purchases **Worth a look**.
 - **Accounts**:
   - **Transactions**: one month at a time (arrows step between months), split into income, spending

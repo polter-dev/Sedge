@@ -220,7 +220,7 @@ struct SpendingView: View {
         return biggestChange(now: cents(totals, month: month), before: cents(totals, month: monthBefore(month)).filter { listed.contains($0.key) })
     }
 
-    /// How a page turn from a bar tap or VoiceOver moves: the default slide, or none with Reduce Motion.
+    /// How a VoiceOver page turn moves: the default slide, or none with Reduce Motion.
     static func pageTurn(reduceMotion: Bool) -> Animation? { reduceMotion ? nil : .default }
 
     /// The biggest change for people, always signed, e.g. "+$22 vs May" or "-$4 vs May". Under
@@ -312,7 +312,7 @@ struct SpendingView: View {
                     pager(asOf)
                     cashFlowCard
                     connected
-                    links
+                    allMonthsLink
                     if let store = Self.stores(rows).first(where: { $0.name == selected }), let row = store.rows.first {
                         latest(row)
                     }
@@ -483,15 +483,16 @@ struct SpendingView: View {
                 }
                 .allowsHitTesting(false)
             }
-            // A tap anywhere in a month's column turns to its page, without stopping the screen from scrolling.
+            // A tap anywhere in a month's column picks that month, without stopping the screen from scrolling.
             .chartXSelection(value: $tapped)
             .chartGesture { proxy in
                 SpatialTapGesture().onEnded { proxy.selectXValue(at: $0.location.x) }
             }
             .onChange(of: tapped) {
                 guard let tapped else { return }
-                // Tapping the page's own month again goes back to today's month.
-                withAnimation(Self.pageTurn(reduceMotion: reduceMotion)) { page = tapped == page ? thisMonth : tapped }
+                // Set without animation: every page draws the same bars, so jumping to the month's page
+                // reads as picking it in place, while an animated jump slid the strip like a swipe.
+                page = tapped
                 self.tapped = nil
             }
             .frame(height: 175)
@@ -650,29 +651,13 @@ struct SpendingView: View {
         .accessibilityIdentifier("biggestChange")
     }
 
-    /// "All months & categories" and "Ways to save" in one row, stacked once they no longer fit.
-    private var links: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 16) { linkButtons }
-            VStack(alignment: .leading, spacing: 0) { linkButtons }
-        }
-    }
-
-    @ViewBuilder
-    private var linkButtons: some View {
-        // The longer view drills down from the short one it widens.
+    /// "All months & categories": the longer view drills down from the short one it widens.
+    private var allMonthsLink: some View {
         NavigationLink {
             AllMonthsView(database: database).navigationTitle("All months")
         } label: {
             // The whole 44 pt row takes the tap, not only the words.
             Text("All months & categories →").frame(minHeight: 44).contentShape(.rect)
-        }
-        .font(.link)
-        // From spending to where it could be cut.
-        NavigationLink {
-            SavingsView(database: database).navigationTitle("Ways to save")
-        } label: {
-            Text("Ways to save →").frame(minHeight: 44).contentShape(.rect)
         }
         .font(.link)
     }
