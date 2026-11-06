@@ -403,10 +403,26 @@ public enum Organizer {
         let next = (twiceMonthly ? days! : [Array(series.indices)]).min { dates[$0.last!] < dates[$1.last!] }!
         let typical = Self.typical(next.map { amounts[$0] })
         let latest = dates[next.last!]
-        let nextDate = cadence == "monthly" || twiceMonthly
-            ? calendar.date(byAdding: .month, value: 1, to: latest)!
-            : calendar.date(byAdding: .day, value: cadence == "weekly" ? 7 : 14, to: latest)!
+        // A monthly series on a fixed weekday (the 2nd Wednesday) is next due on that weekday, not on the same day.
+        let nextDate = if cadence == "monthly", let weekday = weekdayOfMonth(dates) {
+            calendar.nextDate(after: latest, matching: weekday, matchingPolicy: .strict)!
+        } else if cadence == "monthly" || twiceMonthly {
+            calendar.date(byAdding: .month, value: 1, to: latest)!
+        } else {
+            calendar.date(byAdding: .day, value: cadence == "weekly" ? 7 : 14, to: latest)!
+        }
         return (cadence, typical, nextDate.formatted(.iso8601.year().month().day()))
+    }
+
+    /// The weekday and which one of its month it is (Social Security on the 2nd Wednesday) when every
+    /// date of a monthly series shares both, for `Calendar.nextDate(after:matching:)`; nil otherwise,
+    /// so a bill on a fixed day of the month keeps its day. Needs three dates, because two charges on
+    /// the same day of February and March share a weekday by chance. Only the 1st to 4th count: not
+    /// every month has a 5th of each weekday.
+    static func weekdayOfMonth(_ dates: [Date]) -> DateComponents? {
+        let found = Set(dates.map { calendar.dateComponents([.weekday, .weekdayOrdinal], from: $0) })
+        guard dates.count >= 3, found.count == 1, let only = found.first, (1...4).contains(only.weekdayOrdinal!) else { return nil }
+        return only
     }
 
     /// The middle of the last three amounts: after a price change it is the new price. With fewer
