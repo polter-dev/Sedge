@@ -58,6 +58,9 @@ public enum Organizer {
     /// Whole words in a statement name that say money is moving between accounts.
     static let transferWords: Set<String> = ["payment", "transfer", "xfer", "pmt", "pymt", "autopay"]
 
+    /// Apps that send money between people. Money back through one is never a store's credit.
+    static let peerToPeerNames: Set<String> = ["venmo", "zelle", "paypal", "cash app", "cashapp"]
+
     /// Rebuilds the graph from the saved transactions, replacing any earlier result.
     /// `useGraph: false` is the "no graph" ablation: each raw statement name is its own
     /// store, and nothing is linked as recurring or as a refund.
@@ -125,8 +128,13 @@ public enum Organizer {
                 // A store return can also be named "<store> CREDIT" ("CEDAR HOME CREDIT"). "Credit" also means a payment
                 // or a transfer, so it counts only when posted, with a posted purchase it names in full of exactly the
                 // same amount on the same account: a card's "ONLINE PAYMENT CREDIT" (paid from checking) stays a payment.
-                let isStoreCredit = { (line: Line) in
-                    !line.pending && clean(line.raw).name.hasSuffix(" credit")
+                // A name with a transfer word or a person-to-person app ("ONLINE TRANSFER CREDIT", "VENMO CREDIT") never
+                // counts, even after the same amount left under that name: that is money coming back, not a return.
+                let isStoreCredit = { (line: Line) -> Bool in
+                    // The raw name's words, padded with spaces so " cash app " matches whole words only.
+                    let rawWords = " " + line.raw.lowercased().split { !$0.isLetter }.joined(separator: " ") + " "
+                    return !line.pending && clean(line.raw).name.hasSuffix(" credit")
+                        && transferWords.union(peerToPeerNames).allSatisfy { !rawWords.contains(" \($0) ") }
                         && paidBefore(line).contains { $0.account == line.account && abs($0.amount + line.amount) < 0.005 }
                 }
                 var refunds: [Line] = [], refundedSoFar = 0.0
