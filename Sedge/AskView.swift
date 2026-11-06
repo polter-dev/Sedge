@@ -122,7 +122,9 @@ struct AskView: View {
                 ForEach(session.turns) { TurnView(turn: $0, database: database, open: open) }
                 // Both fade in over 0.25 seconds like any answer; Reduce Motion keeps the fade.
                 if session.status == .thinking {
-                    ThinkingRow(phrase: session.phrase, breathes: !reduceMotion)
+                    ThinkingRow(phrase: session.phrase, moves: !reduceMotion)
+                        // Changes the phrase every 2.2 seconds; ends when the row goes away.
+                        .task { await session.cyclePhrases() }
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
                         .transition(.opacity)
@@ -398,16 +400,16 @@ private struct SedgeHeader: View {
     }
 }
 
-/// Shown while an answer is worked out: the sprout breathing next to one phrase. Side by side as
-/// in the design; when the phrase doesn't fit beside it (largest text sizes) it wraps underneath.
+/// Shown while an answer is worked out: the sprout drawing itself next to a phrase that a light
+/// band sweeps across, with a new phrase pushing up every 2.2 seconds. Side by side as in the
+/// design; when the phrase doesn't fit beside it (largest text sizes) it wraps underneath.
 struct ThinkingRow: View {
-    /// Seconds for one half of a breath (1.0 to 1.08, or back). The animation below runs once per
-    /// half, so a full breath takes twice this: 1.2 seconds, as in the design's key frames.
-    static let halfBreath = 0.6
+    /// Seconds for the light band to cross the phrase once, as in the design.
+    static let shimmerSeconds = 1.9
 
     let phrase: String
-    /// False with Reduce Motion, so the sprout stays still and the phrase alone shows.
-    let breathes: Bool
+    /// False with Reduce Motion: the sprout stays still, nothing sweeps, and phrases cross-fade.
+    let moves: Bool
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -417,21 +419,37 @@ struct ThinkingRow: View {
         .frame(minHeight: 28)
     }
 
-    private var sprout: some View {
-        Image(.chatSedge)
-            .foregroundStyle(Color.accent)
-            .accessibilityHidden(true)
-            // Grows to 1.08 and back over 1.2 seconds, for as long as the row shows.
-            .phaseAnimator(breathes ? [1.0, 1.08] : [1.0]) { sprout, scale in
-                sprout.scaleEffect(scale)
-            } animation: { _ in .easeInOut(duration: Self.halfBreath) }
-    }
+    private var sprout: some View { ThinkingSprout(draws: moves) }
 
     private var words: some View {
-        Text(phrase)
-            .font(.footnote)
-            .foregroundStyle(Color.muted)
-            .accessibilityIdentifier("thinkingRow")
+        ZStack(alignment: .leading) {
+            TimelineView(.animation(paused: !moves)) { context in
+                Text(phrase).font(.footnote).foregroundStyle(shimmer(at: context.date))
+            }
+            // A new id makes each phrase a new view, so the old one leaves as the new one arrives.
+            .id(phrase)
+            .transition(moves ? .push(from: .bottom) : .opacity)
+        }
+        .clipped() // keeps the sliding phrases inside the row
+        .animation(moves ? .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.45) : .easeInOut(duration: 0.3), value: phrase)
+        // One element that reads the current phrase. It stays the same element as phrases change,
+        // so VoiceOver keeps its place and doesn't announce each new phrase.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(phrase)
+        .accessibilityAddTraits(.isStaticText)
+        .accessibilityIdentifier("thinkingRow")
+    }
+
+    /// The phrase's color: muted, with a band of ink sweeping left to right every `shimmerSeconds`.
+    /// Without motion the band waits off the left edge, so the phrase is plain muted.
+    private func shimmer(at date: Date) -> LinearGradient {
+        let sweep = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: Self.shimmerSeconds) / Self.shimmerSeconds
+        // The band's middle, in fractions of the phrase's width: it starts just off the left edge
+        // and ends just off the right, so it enters and leaves whole.
+        let middle = moves ? -0.25 + 1.5 * sweep : -1
+        return LinearGradient(colors: [.muted, .ink, .muted],
+                              startPoint: UnitPoint(x: middle - 0.25, y: 0.5),
+                              endPoint: UnitPoint(x: middle + 0.25, y: 0.5))
     }
 }
 
