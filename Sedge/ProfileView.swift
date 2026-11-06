@@ -57,7 +57,7 @@ struct ProfileView: View {
                                 .frame(width: oneColumn || income.isEmpty ? nil : sideWidth)
                         }
                     }
-                    // Lets the income tile stretch to the height of the column beside it.
+                    // Lets the income tile and the column beside it stretch to the taller one's height.
                     .fixedSize(horizontal: false, vertical: true)
                     ForEach(housing) { fact in tile(fact) { housingTile(fact, oneColumn: oneColumn) } }
                     if !accounts.isEmpty { accountsStrip(oneColumn: oneColumn) }
@@ -132,29 +132,30 @@ struct ProfileView: View {
         .padding(12)
     }
 
-    /// Loans, tuition and any other kind: glyph and label on top, the figure and chip under them.
+    /// Loans, tuition and any other kind, laid out like income in a narrower column: the glyph on
+    /// top, then the label, figure and chip at the bottom, so the tile fills the column's height.
     private func sideTile(_ fact: Profile.Fact) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                badge(Self.symbol(fact), size: 22, glyph: 13)
-                Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 12) {
+            badge(Self.symbol(fact), size: 22, glyph: 13)
+            VStack(alignment: .leading, spacing: 6) {
                 label(fact.kind)
-            }
-            if let refund = Self.refund(fact.value) {
-                // Money back in green, what was paid in red.
-                Text(refund.back).foregroundStyle(Color.moneyBack)
-                Text(refund.spent).foregroundStyle(Color.moneySpent)
-            } else if let figure = Self.figure(fact) {
-                VStack(alignment: .leading, spacing: 0) {
-                    amount(figure, font: .tileValue)
-                    if fact.kind == "tuition" { Text("spent").font(.note).foregroundStyle(Color.muted) }
+                if let refund = Self.refund(fact.value) {
+                    // Money back in green, what was paid in red.
+                    Text(refund.back).foregroundStyle(Color.moneyBack)
+                    Text(refund.spent).foregroundStyle(Color.moneySpent)
+                } else if let figure = Self.figure(fact) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        amount(figure, font: .tileValue)
+                        if fact.kind == "tuition" { Text("spent").font(.note).foregroundStyle(Color.muted) }
+                    }
                 }
+                chip(Self.chip(fact, next: next))
             }
-            chip(Self.chip(fact, next: next))
+            .frame(maxHeight: .infinity, alignment: .bottomLeading)
         }
         .font(.row.weight(.semibold))
         .contentTransition(.opacity)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(12)
     }
 

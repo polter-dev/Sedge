@@ -926,6 +926,66 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch.waitForExistence(timeout: 10))
     }
 
+    /// Sideways swipes on Transactions, slow or fast, change the month and stay on the screen. A
+    /// row's screen still goes back with a swipe across it, and the swipe from the screen's left
+    /// edge still leaves Transactions.
+    @MainActor
+    func testTransactionsSwipeChangesMonthAndStays() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let menu = app.buttons["Month"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        XCTAssertEqual(menu.value as? String, "June 2026")
+        let month = { (name: String) in app.buttons.matching(NSPredicate(format: "label == 'Month' AND value == %@", name)).firstMatch }
+        // A drag across the list between two fractions of the screen's width.
+        let swipe = { (from: CGFloat, to: CGFloat, velocity: XCUIGestureVelocity) in
+            app.coordinate(withNormalizedOffset: CGVector(dx: from, dy: 0.55))
+                .press(forDuration: 0, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: to, dy: 0.56)), withVelocity: velocity, thenHoldForDuration: 0)
+        }
+        // "About you" is a row on the Accounts list, so seeing it means the screen went back.
+        let accounts = app.buttons["About you"]
+        let stillHere = {
+            XCTAssertTrue(menu.exists, "Transactions is no longer showing")
+            XCTAssertFalse(accounts.exists, "The swipe went back to Accounts")
+        }
+
+        swipe(0.2, 0.85, .slow)
+        XCTAssertTrue(month("May 2026").waitForExistence(timeout: 5), "A slow swipe right didn't show May")
+        stillHere()
+        app.swipeRight()
+        XCTAssertTrue(month("April 2026").waitForExistence(timeout: 5), "A swipe right didn't show April")
+        stillHere()
+        swipe(0.15, 0.6, .fast)
+        XCTAssertTrue(month("March 2026").waitForExistence(timeout: 5), "A fast swipe right didn't show March")
+        stillHere()
+        swipe(0.85, 0.2, .slow)
+        XCTAssertTrue(month("April 2026").waitForExistence(timeout: 5), "A slow swipe left didn't show April")
+        app.swipeLeft()
+        XCTAssertTrue(month("May 2026").waitForExistence(timeout: 5), "A swipe left didn't show May")
+        swipe(0.85, 0.4, .fast)
+        XCTAssertTrue(month("June 2026").waitForExistence(timeout: 5), "A fast swipe left didn't show June")
+        stillHere()
+
+        // The swipe-anywhere back gesture is only off on Transactions: a row's screen keeps it.
+        let row = app.buttons["Bean Street Coffee, $2.68"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 10))
+        swipe(0.1, 0.65, .fast)
+        XCTAssertTrue(history.waitForNonExistence(timeout: 5), "A swipe on the row's screen didn't go back")
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+
+        // The swipe from the left edge of the screen still goes back.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.55))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.55)))
+        XCTAssertTrue(accounts.waitForExistence(timeout: 5), "The edge swipe didn't go back")
+    }
+
 
     /// Opens the Accounts screen from the Accounts tab's row. The row and the tab share the name
     /// "Accounts", so the row is looked for in the list.

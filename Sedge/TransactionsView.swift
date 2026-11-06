@@ -185,6 +185,7 @@ struct TransactionsView: View {
             guard abs(x) > 60, abs(x) > 2 * abs(drag.translation.height) else { return }
             step(x < 0 ? 1 : -1)
         })
+        .background(NoContentBackSwipe())
         .overlay {
             if rows.isEmpty { ContentUnavailableView("No transactions", systemImage: "tray", description: Text("This data has no transactions yet.")) }
         }
@@ -333,6 +334,28 @@ struct TransactionsView: View {
         .font(.row.weight(.medium))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// Turns off the swipe-anywhere back gesture while its screen shows. Since iOS 26 a sideways pan
+/// anywhere on a pushed screen can go back, and it is not tied to the month swipe, so a swipe
+/// meant to change month could leave the screen instead. The back button and the swipe from the
+/// screen's left edge are separate gestures and still go back.
+private struct NoContentBackSwipe: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> Controller { Controller() }
+    func updateUIViewController(_ controller: Controller, context: Context) {}
+
+    final class Controller: UIViewController {
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = false
+        }
+
+        // Turned back on as the screen leaves, so the screens before and after it keep the gesture.
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = true
+        }
     }
 }
 
