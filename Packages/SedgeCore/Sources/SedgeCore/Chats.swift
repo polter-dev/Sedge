@@ -13,6 +13,8 @@ public enum Chats {
         public let created: Date
         /// When the last turn was saved. Previous chats shows this date and sorts by it.
         public let updated: Date
+        /// How many questions (turns) the chat holds.
+        public let questions: Int
     }
 
     /// One question and its answer, in the order they were asked.
@@ -49,7 +51,11 @@ public enum Chats {
     public static func list(in database: SedgeDatabase) throws -> [Chat] {
         try database.dbQueue.read { db in
             // Ties (two saves in the same instant) go to the newer chat.
-            try Chat.fetchAll(db, sql: "SELECT id, title, created, updated FROM chats ORDER BY updated DESC, id DESC")
+            try Chat.fetchAll(db, sql: """
+                SELECT id, title, created, updated,
+                       (SELECT COUNT(*) FROM chat_turns WHERE chat_id = chats.id) AS questions
+                FROM chats ORDER BY updated DESC, id DESC
+                """)
         }
     }
 

@@ -130,9 +130,9 @@ struct AskView: View {
                         .transition(.opacity)
                 }
                 if limited {
-                    LimitTurn(startNewSession: newChat)
+                    LimitTurn(startNewSession: newChat, openChats: showChats)
                         .padding(.horizontal, 20)
-                        .padding(.top, 24)
+                        .padding(.top, 20)
                         .transition(.opacity)
                 }
             }
@@ -157,7 +157,7 @@ struct AskView: View {
         .navigationTitle(session.reopenedTitle ?? "Ask Sedge")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Previous chats", systemImage: "clock.arrow.circlepath") { showingChats = true }
+                Button("Previous chats", systemImage: "clock.arrow.circlepath", action: showChats)
                     // Opening another chat mid-answer would save that answer into the wrong chat.
                     .disabled(session.status == .thinking)
             }
@@ -165,10 +165,12 @@ struct AskView: View {
                 Button("New chat", systemImage: "square.and.pencil", action: newChat)
             }
         }
-        .sheet(isPresented: $showingChats) {
+        .fullScreenCover(isPresented: $showingChats) {
             // Deleting the chat on screen starts a new one, so the next question isn't saved
             // into a chat that is gone.
-            PreviousChatsView(database: database, open: openChat) { if $0 == session.chatID { newChat() } }
+            PreviousChatsView(database: database, openID: session.chatID, open: openChat) {
+                if $0 == session.chatID { newChat() }
+            }
         }
         .onChange(of: session.reopenedTitle) { reopened = $1 != nil }
         // A turn is saved once it settles: its answer came in, or the chat hit its limit. Watching
@@ -268,6 +270,14 @@ struct AskView: View {
     private func newChat() {
         session.startNewSession()
         isDemo = false
+    }
+
+    /// Shows the Previous chats panel. The cover appears without the system's slide-up, so the
+    /// panel can slide in from the left by itself.
+    private func showChats() {
+        var instant = Transaction()
+        instant.disablesAnimations = true
+        withTransaction(instant) { showingChats = true }
     }
 
     /// Saves the newest turn to the open chat, starting a saved chat on its first turn.
@@ -453,32 +463,44 @@ struct ThinkingRow: View {
     }
 }
 
-/// The turn shown when the chat reaches its length limit: an ordinary reply, not an error,
-/// with a button that clears the chat so the person can keep asking.
+/// The turn shown when the chat reaches its length limit (design B4 tinted): a `group` card, not
+/// an error, with a button that clears the chat so the person can keep asking and one that opens
+/// Previous chats. The tints are `amountNow` and `nodeStore`; the 10 % fill is opacity only.
 private struct LimitTurn: View {
     let startNewSession: () -> Void
-    @Environment(\.dynamicTypeSize) private var typeSize
+    let openChats: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SedgeHeader()
-            Text("This chat has reached its limit.").font(.answer.weight(.semibold))
-            Text("Sedge keeps each chat short so answers stay sharp. Your questions so far stay in Previous chats.")
-                .font(.row)
-                .foregroundStyle(Color.muted)
-            Button(action: startNewSession) {
-                Text("Start new session")
-                    .font(.link)
-                    .padding(.horizontal, 16)
-                    // Full width at the largest text sizes, as the design notes ask.
-                    .frame(maxWidth: typeSize.isAccessibilitySize ? .infinity : nil, minHeight: 44)
-                    .contentShape(Rectangle())
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(.chatSedge).resizable().frame(width: 20, height: 20)
+                    .foregroundStyle(Color.amountNow)
+                    .accessibilityHidden(true)
+                Text("This chat is full").font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.contrast)
-            .background(Color.accent, in: RoundedRectangle(cornerRadius: 10))
-            .padding(.top, 2)
+            Text("Sedge has reached its limit for this chat. Start a new session to keep asking; this one stays in Previous chats.")
+                .font(.footnote)
+                .foregroundStyle(Color.muted)
+                .padding(.bottom, 4)
+            button("Start new session", weight: .semibold, fill: Color.nodeStore, action: startNewSession)
+            button("Open previous chats", weight: .medium, fill: Color.amountNow.opacity(0.1), action: openChats)
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.group, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// A full-width 44-point button with an `amountNow` label on a tinted fill.
+    private func button(_ title: String, weight: Font.Weight, fill: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.footnote.weight(weight))
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.amountNow)
+        .background(fill, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

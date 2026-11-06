@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import SedgeCore
 import Testing
 @testable import Sedge
 
@@ -128,16 +129,28 @@ private struct FakeStatusSource {
     #expect(back.quickCheck?.factKey == "own_transfer_2026_06_20" && back.quickCheck?.options == ["Yes, mine", "No"])
 }
 
-/// Previous chats labels a chat by its last use: Today, Yesterday, days ago within the week,
-/// then a short date.
-@MainActor @Test func previousChatsDateLabels() {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = .current
-    let now = calendar.date(from: DateComponents(year: 2026, month: 6, day: 30, hour: 9))!
-    func daysBefore(_ days: Int) -> Date { calendar.date(byAdding: .day, value: -days, to: now)! }
-    #expect(PreviousChatsView.when(now.addingTimeInterval(-3600), now: now, calendar: calendar) == "Today")
-    #expect(PreviousChatsView.when(daysBefore(1), now: now, calendar: calendar) == "Yesterday")
-    #expect(PreviousChatsView.when(daysBefore(2), now: now, calendar: calendar) == "2 days ago")
-    #expect(PreviousChatsView.when(daysBefore(9), now: now, calendar: calendar)
-            == daysBefore(9).formatted(.dateTime.month(.abbreviated).day()))
+/// Previous chats groups the saved chats by the month each was last used, newest first, and each
+/// row reads "date · n questions". Chats in June and May of a scratch database, plus one from the
+/// year before, whose month label also names its year.
+@MainActor @Test func previousChatsGroupByMonthWithQuestionCounts() throws {
+    let database = try SedgeDatabase() // in memory: a scratch database
+    func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
+    }
+    let rent = try Chats.append(question: "Rent and utilities in May", answer: nil, to: nil, at: day(2026, 5, 12), in: database)
+    let food = try Chats.append(question: "Overspending on food?", answer: nil, to: nil, at: day(2026, 6, 2), in: database)
+    try Chats.append(question: "Savings since January", answer: nil, to: nil, at: day(2026, 5, 30), in: database)
+    try Chats.append(question: "Netflix last year", answer: nil, to: nil, at: day(2025, 6, 9), in: database)
+    // Continuing two chats adds questions and moves them up by their newest turn.
+    try Chats.append(question: "What about coffee?", answer: nil, to: food, at: day(2026, 6, 28), in: database)
+    try Chats.append(question: "And dining?", answer: nil, to: food, at: day(2026, 6, 30), in: database)
+    try Chats.append(question: "And June?", answer: nil, to: rent, at: day(2026, 6, 14), in: database)
+
+    let months = PreviousChatsView.months(try Chats.list(in: database))
+    #expect(months.map(\.title) == ["JUNE", "MAY", "JUNE 2025"])
+    #expect(months.map { $0.chats.map(\.title) } == [["Overspending on food?", "Rent and utilities in May"],
+                                                     ["Savings since January"], ["Netflix last year"]])
+    #expect(months.map { $0.chats.map(\.questions) } == [[3, 2], [1], [1]])
+    let rows = months.flatMap(\.chats).map(PreviousChatsView.subtitle)
+    #expect(rows == ["Jun 30 · 3 questions", "Jun 14 · 2 questions", "May 30 · 1 question", "Jun 9 · 1 question"])
 }

@@ -86,25 +86,32 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
-        XCTAssertTrue(app.staticTexts["This chat has reached its limit."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["This chat is full"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.alerts.firstMatch.exists, "The limit must not be an alert")
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
         XCTAssertFalse(field.isEnabled, "The question box should be off at the limit")
         attachScreenshot(app, "ask-token-limit")
 
+        // "Open previous chats" opens the panel; the backdrop closes it again.
+        app.buttons["Open previous chats"].tap()
+        XCTAssertTrue(app.staticTexts["Chats"].waitForExistence(timeout: 2), "The panel didn't open")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertTrue(app.buttons["Start new session"].waitForExistence(timeout: 2), "The panel didn't close")
+
         app.buttons["Start new session"].tap()
         XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "No empty screen")
-        XCTAssertFalse(app.staticTexts["This chat has reached its limit."].exists)
+        XCTAssertFalse(app.staticTexts["This chat is full"].exists)
         XCTAssertTrue(field.isEnabled)
         XCTAssertTrue(app.staticTexts["Local analysis"].exists)
     }
 
-    /// A question is saved as a chat: New chat clears the screen, Previous chats lists it, and
-    /// opening it shows its turn under the "answers best in a new chat" banner, with no Rename
-    /// under its title until New chat. A question asked there is added to it. The chat is deleted
-    /// at the end so Maya's file keeps no test chats.
-    /// Screenshots: the toolbar, the sheet and the continued chat; for dark ones, run it after
-    /// `xcrun simctl ui <device> appearance dark`.
+    /// A question is saved as a chat: New chat clears the screen and the Previous chats panel
+    /// lists it, while New chat on an empty chat adds nothing. Opening it shows its turn under the
+    /// "answers best in a new chat" banner, with no Rename under its title until New chat. A
+    /// question asked there is added to it. The chat is deleted through Edit and the confirmation
+    /// at the end, so Maya's file keeps no test chats.
+    /// Screenshots: the toolbar, the panel, edit mode, the empty panel (when no other chats are
+    /// saved) and the continued chat; for dark ones, run it after `xcrun simctl ui <device> appearance dark`.
     @MainActor
     func testPreviousChatsReopenAndContinueAChat() throws {
         let app = XCUIApplication()
@@ -125,11 +132,20 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "New chat didn't clear")
 
         app.navigationBars.buttons["Previous chats"].tap()
-        // In the list only: once the chat is reopened, the bar's title is a button with the same text.
-        let row = app.collectionViews.buttons.containing(NSPredicate(format: "label CONTAINS %@", question)).firstMatch
+        // Rows only: once the chat is reopened, the bar's title is a button with the same text.
+        let rows = app.buttons.matching(identifier: "chatRow")
+        let row = rows.matching(NSPredicate(format: "label CONTAINS %@", question)).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5), "The chat isn't in Previous chats")
-        XCTAssertTrue(row.label.contains("Today"), "Row was: \(row.label)")
-        attachScreenshot(app, "previous-chats-sheet")
+        XCTAssertTrue(row.label.contains("1 question"), "Row was: \(row.label)")
+        let saved = rows.count
+
+        // The backdrop closes the panel. New chat on an empty chat leaves nothing behind.
+        let backdrop = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        backdrop.tap()
+        app.navigationBars.buttons["New chat"].tap()
+        app.navigationBars.buttons["Previous chats"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertEqual(rows.count, saved, "New chat on an empty chat saved a chat")
         row.tap()
 
         XCTAssertTrue(app.staticTexts["Sedge answers best in a new chat."].waitForExistence(timeout: 5), "No banner")
@@ -160,14 +176,28 @@ final class SedgeUITests: XCTestCase {
         row.tap()
         XCTAssertTrue(app.staticTexts["You · And coffee?"].waitForExistence(timeout: 5), "The new turn wasn't saved")
 
-        // Swipe to delete removes it from the list. It was the chat on screen, so Ask starts a
-        // new one instead of saving the next question into a chat that is gone.
+        // Edit, its minus circle, Delete and the confirmation remove it from the list. It was the
+        // chat on screen, so Ask starts a new one instead of saving the next question into a chat
+        // that is gone.
         app.navigationBars.buttons["Previous chats"].tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.swipeLeft()
+        XCTAssertTrue(row.label.contains("2 questions"), "Row was: \(row.label)")
+        XCTAssertTrue(row.isSelected, "The open chat isn't marked")
+        attachScreenshot(app, "chats-panel")
+        app.buttons["Edit"].tap()
+        app.buttons["Delete \(question)"].tap()
+        attachScreenshot(app, "chats-panel-edit")
         app.buttons["Delete"].tap()
+        let confirm = app.sheets.buttons["Delete"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 2), "No confirmation")
+        attachScreenshot(app, "chats-delete-confirmation")
+        confirm.tap()
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The chat wasn't deleted")
-        app.buttons["Done"].tap()
+        if rows.count == 0 {
+            XCTAssertTrue(app.staticTexts["No chats yet"].exists)
+            attachScreenshot(app, "chats-panel-empty")
+        }
+        backdrop.tap()
         XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "Still showing the deleted chat")
     }
 

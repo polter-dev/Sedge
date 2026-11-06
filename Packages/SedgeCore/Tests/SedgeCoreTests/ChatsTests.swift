@@ -30,6 +30,7 @@ import Testing
     let chats = try Chats.list(in: database)
     #expect(chats.map(\.id) == [food, netflix])
     #expect(chats[0].created == monday && chats[0].updated == later)
+    #expect(chats.map(\.questions) == [2, 1])
 
     // Load: the turns come back in the order they were asked, answers as saved.
     #expect(try Chats.turns(of: food, in: database) == [
