@@ -804,6 +804,60 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(try spent(app, "Groceries"), before.groceries)
     }
 
+    /// Maya's Jun 30 Bean Street Coffee charge opens the store's Merchant history: June's $12.71
+    /// total, the six-month chart ending at June, and June's first week. The screenshot is the
+    /// screen in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testMerchantHistoryShowsTotalChartAndWeeks() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let row = app.buttons["Bean Street Coffee, SQ *BEAN ST COFFEE, $2.68"]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 10))
+        for _ in 0..<5 where !history.isHittable { app.swipeUp() }
+        history.tap()
+
+        let any = app.descendants(matching: .any)
+        XCTAssertTrue(any.matching(NSPredicate(format: "label BEGINSWITH '$12.71'")).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(any["storeChart"].exists)
+        XCTAssertTrue(any.matching(NSPredicate(format: "label == 'January, $10.25'")).firstMatch.exists)
+        XCTAssertTrue(any.matching(NSPredicate(format: "label == 'June, $12.71'")).firstMatch.exists)
+        XCTAssertTrue(any.matching(NSPredicate(format: "label BEGINSWITH 'Jun 29 – Jul 5'")).firstMatch.exists)
+        // The bars grow in about half a second; the screenshot waits for them.
+        sleep(1)
+        attachScreenshot(app, "merchant-history")
+    }
+
+    /// The Transaction screen's "Merchant history" subtitle counts the rows the history lists:
+    /// Maya's Bean Street history lists 26 visits, so the subtitle says 26, not every row there (41).
+    @MainActor
+    func testMerchantHistorySubtitleMatchesHistory() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let row = app.buttons["Bean Street Coffee, SQ *BEAN ST COFFEE, $2.68"]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 10))
+        let subtitle = history.label
+        for _ in 0..<5 where !history.isHittable { app.swipeUp() }
+        history.tap()
+
+        let card = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH '26 visits since'")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(subtitle.contains("26 visits"), "subtitle was '\(subtitle)', history shows '\(card.label)'")
+    }
+
     /// Answering "Is this account yours?" from Your accounts shows the answer on that account,
     /// and Later leaves it unanswered. Clears the answers at the end, so Maya's saved file ends as it was.
     @MainActor
