@@ -953,6 +953,19 @@ final class SedgeUITests: XCTestCase {
             XCTAssertFalse(accounts.exists, "The swipe went back to Accounts")
         }
 
+        // A finger often rests a moment before it moves. Without the fix, this drag went back to Accounts.
+        let restThenSwipe = { (from: CGFloat, to: CGFloat) in
+            app.coordinate(withNormalizedOffset: CGVector(dx: from, dy: 0.55))
+                .press(forDuration: 0.4, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: to, dy: 0.55)), withVelocity: 1500, thenHoldForDuration: 0)
+        }
+        restThenSwipe(0.3, 0.6)
+        sleep(1)
+        XCTAssertFalse(accounts.exists, "A resting swipe went back to Accounts")
+        XCTAssertTrue(month("May 2026").waitForExistence(timeout: 5), "A resting swipe right didn't show May")
+        restThenSwipe(0.7, 0.4)
+        XCTAssertTrue(month("June 2026").waitForExistence(timeout: 5), "A resting swipe left didn't show June")
+        stillHere()
+
         swipe(0.2, 0.85, .slow)
         XCTAssertTrue(month("May 2026").waitForExistence(timeout: 5), "A slow swipe right didn't show May")
         stillHere()
