@@ -97,6 +97,24 @@ public enum Simulator {
                 high: try project(db, days: days, purchases: purchases, changes: changes, daily: pick { $0.min()! }))
     }
 
+    /// The account_id of the everyday bank account: among bank accounts with a current balance,
+    /// the checking account with the most posted transactions, else the busiest bank account;
+    /// a tie goes to the first by name. Nil when there is no bank account with a balance.
+    /// Busiest, not first by name, so someone with a bill-paying checking account and an idle one
+    /// gets the one the bills come out of.
+    public static func checkingAccount(_ db: Database) throws -> String? {
+        // IS, not =, so an account with no subtype counts as 0 (not checking) rather than NULL,
+        // and is then ranked by how busy it is like any other bank account.
+        try String.fetchOne(db, sql: """
+            SELECT account_id FROM accounts a
+            WHERE type = 'depository' AND json_extract(balances, '$.current') IS NOT NULL
+            ORDER BY subtype IS 'checking' DESC,
+                     (SELECT COUNT(*) FROM transactions t WHERE t.account_id = a.account_id AND NOT t.pending) DESC,
+                     name
+            LIMIT 1
+            """)
+    }
+
     /// The dataset's today.
     static func asOf(_ db: Database) throws -> Date {
         guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'") else {

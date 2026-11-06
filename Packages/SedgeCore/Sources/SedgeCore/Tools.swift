@@ -40,7 +40,8 @@ public struct Tool: Sendable {
     /// v9 added savings_options (in Savings.swift) (#19).
     /// v10 = simulate_balance takes on_date and reports the balance at the end of that day (#110).
     /// v11 = recurring_charges adds totals, find_transactions money_in and money_out, compare_periods higher (#168).
-    public static let version = "v11"
+    /// v12 = simulate_balance projects the busiest checking account, not the first by name (#200).
+    public static let version = "v12"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
@@ -461,13 +462,10 @@ extension Tool {
                 /// so answers without it stay exactly as before.
                 let balance_on_date: Double?
             }
-            // shortcut: the bank account bills come out of is taken to be the checking account (or the
-            // first bank account); let the model pick an account if someone has two checking accounts.
-            guard let checking = try Row.fetchOne(db, sql: """
-                SELECT account_id, name, json_extract(balances, '$.current') FROM accounts
-                WHERE type = 'depository' AND json_extract(balances, '$.current') IS NOT NULL
-                ORDER BY subtype = 'checking' DESC, name LIMIT 1
-                """) else { throw ToolError("There is no bank account with a balance.") }
+            // The bank account bills come out of is taken to be the busiest checking account.
+            guard let id = try Simulator.checkingAccount(db), let checking = try Row.fetchOne(db, sql: """
+                SELECT account_id, name, json_extract(balances, '$.current') FROM accounts WHERE account_id = ?
+                """, arguments: [id]) else { throw ToolError("There is no bank account with a balance.") }
             let account: String = checking[0]
             let days = input.int("days")!
             guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'") else {
