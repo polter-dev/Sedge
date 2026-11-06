@@ -59,3 +59,19 @@ private func databaseWithOneAccount() throws -> (SedgeDatabase, ListedAccount) {
     try AccountsListView.save(.mine, for: account, in: database)
     #expect(try ListedAccount.all(in: database).filter { $0.owner == nil }.isEmpty)
 }
+
+/// Connecting saves the bank's name in the bank file, so the account reads "<bank> ••<last 4>";
+/// a file without that name (a sample person's) keeps the account's own name.
+@Test func connectingSavesTheBankName() async throws {
+    let json = #"[{"account_id": "chk", "name": "Plaid Checking", "mask": "0000", "type": "depository", "subtype": "checking", "balances": {}}]"#
+    let accounts = try JSONDecoder().decode([Account].self, from: Data(json.utf8))
+    let bank = try SedgeDatabase()
+    let failure = await finishConnecting(publicToken: "public-test", institution: "Wells Fargo", database: bank,
+                                         exchange: { _ in },
+                                         sync: { try $0.save(accounts: accounts, transactions: [], asOf: "2026-06-30") })
+    #expect(failure == nil)
+    #expect(try ListedAccount.all(in: bank).map { $0.displayName() } == ["Wells Fargo ••0000"])
+    let noName = try SedgeDatabase()
+    try noName.save(accounts: accounts, transactions: [], asOf: "2026-06-30")
+    #expect(try ListedAccount.all(in: noName).map { $0.displayName() } == ["Plaid Checking ••0000"])
+}

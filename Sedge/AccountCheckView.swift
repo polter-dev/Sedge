@@ -21,6 +21,8 @@ struct ListedAccount: Decodable, Identifiable, FetchableRecord {
     /// The bank's current balance and its currency, when the bank gave one.
     let balance: Double?
     let currency: String?
+    /// The bank's name, saved when it connected; nil in the sample people's files.
+    let institution: String?
 
     var id: String { account_id }
     /// How the app names an account: "<bank> ••<last 4>", the account's own name with its last
@@ -33,10 +35,9 @@ struct ListedAccount: Decodable, Identifiable, FetchableRecord {
         return spoken ? "\(base) ending in \(mask)" : "\(base) ••\(mask)"
     }
 
-    /// This account named by `named`. shortcut: no table stores the bank's name, so the account's
-    /// own name is used; pass the bank's name here once the bank file keeps it.
+    /// This account named by `named`.
     func displayName(spoken: Bool = false) -> String {
-        Self.named(name, nickname: nickname, institution: nil, mask: mask, spoken: spoken)
+        Self.named(name, nickname: nickname, institution: institution, mask: mask, spoken: spoken)
     }
 
     /// Saves an answer to "Is this account yours?": the name (blank clears it), and the owner
@@ -61,7 +62,8 @@ struct ListedAccount: Decodable, Identifiable, FetchableRecord {
             try ListedAccount.fetchAll(db, sql: """
                 SELECT account_id, name, mask, owner, nickname, COALESCE(subtype, type) AS kind,
                        json_extract(balances, '$.current') AS balance,
-                       json_extract(balances, '$.iso_currency_code') AS currency
+                       json_extract(balances, '$.iso_currency_code') AS currency,
+                       (SELECT value FROM meta WHERE key = 'institution_name') AS institution
                 FROM accounts ORDER BY COALESCE(nickname, name), account_id
                 """)
         }
@@ -395,7 +397,7 @@ struct AccountChecksAfterConnecting: ViewModifier {
     NavigationStack {
         AccountCheckView(database: try! SedgeDatabase(),
                          account: ListedAccount(account_id: "1", name: "Rainy-day savings", mask: "1084", owner: nil, nickname: nil,
-                                                kind: "savings", balance: 11_000, currency: "USD"),
+                                                kind: "savings", balance: 11_000, currency: "USD", institution: nil),
                          step: (2, 4))
     }
 }

@@ -133,10 +133,10 @@ struct SedgeTests {
     @Test func syncFailureAfterConnectingShowsMessage() async throws {
         struct DownloadFailed: Error {}
         let database = try SedgeDatabase()
-        let failed = await finishConnecting(publicToken: "public-test", database: database,
+        let failed = await finishConnecting(publicToken: "public-test", institution: "Test Bank", database: database,
                                             exchange: { _ in }, sync: { _ in throw DownloadFailed() })
         #expect(failed == bankSyncFailedMessage)
-        let worked = await finishConnecting(publicToken: "public-test", database: database,
+        let worked = await finishConnecting(publicToken: "public-test", institution: "Test Bank", database: database,
                                             exchange: { _ in }, sync: { _ in })
         #expect(worked == nil)
     }

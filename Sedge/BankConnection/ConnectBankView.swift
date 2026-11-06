@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import GRDB
 import LinkKit
 import SedgeCore
 import SwiftUI
@@ -87,11 +88,15 @@ func syncTransactions(into database: SedgeDatabase) async throws {
 /// The line the bank screen shows when Plaid connected but the transactions didn't arrive.
 let bankSyncFailedMessage = "Your bank connected, but its transactions couldn't be downloaded. Try connecting again."
 
-/// Runs after Plaid Link succeeds: swaps the public token on the server, then downloads.
+/// Runs after Plaid Link succeeds: swaps the public token on the server, downloads, then saves
+/// the bank's name (`institution`, from Link) so accounts read "<bank> ••<last 4>".
 /// Returns nil when it worked, or the line to show on screen when it didn't. The two steps
 /// are parameters so a test can make one fail without the quickstart server.
+// shortcut: one name per file, so after a second bank connects the first bank's accounts (still
+// in the file) take the new name too; store it per account if the app ever keeps two connections.
 func finishConnecting(
     publicToken: String,
+    institution: String,
     database: SedgeDatabase,
     exchange: (String) async throws -> Void = exchangePublicToken,
     sync: (SedgeDatabase) async throws -> Void = syncTransactions(into:)
@@ -99,6 +104,11 @@ func finishConnecting(
     do {
         try await exchange(publicToken)
         try await sync(database)
+        try await database.dbQueue.write { db in
+            try db.execute(
+                sql: "INSERT INTO meta (key, value) VALUES ('institution_name', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                arguments: [institution])
+        }
         return nil
     } catch {
         // localizedDescription is a fixed sentence like "Could not connect to the server.",
@@ -197,7 +207,9 @@ struct ConnectBankView: View
                 onSuccess: { success in
                     // Send success.publicToken to the server. It is never printed.
                     Task {
-                        syncFailure = await finishConnecting(publicToken: success.publicToken, database: database)
+                        syncFailure = await finishConnecting(publicToken: success.publicToken,
+                                                             institution: success.metadata.institution.name,
+                                                             database: database)
                         if syncFailure == nil {
                             // The main tabs then ask "Is this account yours?" for each new account.
                             UserDefaults.standard.set(true, forKey: AccountChecksAfterConnecting.pendingKey)

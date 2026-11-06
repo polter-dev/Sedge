@@ -52,7 +52,7 @@ erDiagram
     }
 
     meta {
-        text key PK "today only as_of"
+        text key PK "as_of, or institution_name in the bank file"
         text value "not null"
     }
 
@@ -116,7 +116,8 @@ erDiagram
 - **merchant_name** and **personal_finance_category** are Plaid's own cleanup. They are kept
   as the comparison baseline only, and the organizer never reads them, except that transfer
   matching may use the category as a hint. The fake personas leave them empty.
-- **meta** holds facts about the dataset. Today that is only `as_of`, the dataset's "today".
+- **meta** holds facts about the dataset: `as_of`, the dataset's "today", and in the bank file
+  only, `institution_name`, the connected bank's name from Plaid Link (one file, one connection).
 - **entities** and **edges** are the merchant graph, rebuilt by `Organizer.organize`.
   `edges.source` and `edges.target` hold either a `transaction_id` or an `entities.id`,
   depending on `kind`, so SQLite doesn't enforce them as foreign keys:
