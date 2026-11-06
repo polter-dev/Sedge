@@ -977,30 +977,37 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(yes.isSelected)
         XCTAssertFalse(notSure.isSelected)
 
-        // Undo before 0: the buttons come back and nothing is saved.
+        // The countdown line under the buttons, "Saved. Closing in 4" down to 0.
+        let countdown = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Saved. Closing in '")).firstMatch
+
+        // Undo before 0: the answer is cleared and nothing is saved.
         yes.tap()
-        XCTAssertTrue(app.staticTexts["Saved · Yes"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch.exists)
+        XCTAssertTrue(countdown.waitForExistence(timeout: 2))
+        // Both buttons stay while it counts, the chosen one selected.
+        XCTAssertTrue(yes.isSelected)
+        XCTAssertTrue(notSure.exists)
         attachScreenshot(app, "familiar-countdown")
         app.buttons["Undo"].tap()
-        XCTAssertTrue(yes.waitForExistence(timeout: 2))
+        XCTAssertTrue(countdown.waitForNonExistence(timeout: 2))
         XCTAssertFalse(yes.isSelected)
+        XCTAssertFalse(notSure.isSelected)
         reopen()
         XCTAssertFalse(yes.isSelected)
         XCTAssertFalse(notSure.isSelected)
 
         // Waiting past 0: the whole prompt folds away and the answer stays.
         notSure.tap()
-        XCTAssertTrue(app.staticTexts["Saved · Not sure"].waitForExistence(timeout: 2))
-        // The ring reaches 0 before the prompt folds away. 0 shows for well under a second and
-        // waitForExistence checks only about once a second, so this reads the ring's label in a
-        // tight loop until the ring is gone. One snapshot per read, so a fold mid-read can't fail.
-        let ring = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
+        XCTAssertTrue(countdown.waitForExistence(timeout: 2))
+        XCTAssertTrue(notSure.isSelected)
+        XCTAssertFalse(yes.isSelected)
+        // The countdown reaches 0 before the prompt folds away. 0 shows for well under a second and
+        // waitForExistence checks only about once a second, so this reads the line's label in a
+        // tight loop until it's gone. One snapshot per read, so a fold mid-read can't fail.
         var seen: Set<String> = []
         let end = Date().addingTimeInterval(7)
-        while Date() < end, let label = try? ring.snapshot().label { seen.insert(label) }
-        XCTAssertTrue(seen.contains("Closing in 1"), "The ring was never seen at 1; saw \(seen.sorted())")
-        XCTAssertTrue(seen.contains("Closing in 0"), "The ring never showed 0; saw \(seen.sorted())")
+        while Date() < end, let label = try? countdown.snapshot().label { seen.insert(label) }
+        XCTAssertTrue(seen.contains("Saved. Closing in 1"), "The countdown was never seen at 1; saw \(seen.sorted())")
+        XCTAssertTrue(seen.contains("Saved. Closing in 0"), "The countdown never showed 0; saw \(seen.sorted())")
         XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
         XCTAssertFalse(notSure.exists)
         attachScreenshot(app, "familiar-folded")

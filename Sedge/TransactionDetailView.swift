@@ -113,12 +113,11 @@ struct TransactionDetailView: View {
     @AppStorage("hideSpendingNote") private var noteHidden = false
     /// True for the 4 s the note's box says it was hidden, with Undo.
     @State private var noteUndo = false
-    /// The familiar prompt's countdown, 4 down to 0, while the saved bar shows; nil shows the buttons.
+    /// The familiar prompt's countdown, 4 down to 0, while the track shows under the buttons; nil hides it.
     @State private var countdown: Int?
-    /// The answer the saved bar names. Kept apart from `detail`, so Undo's reload can't change
-    /// the bar's words while it fades out.
-    @State private var savedAnswer = Answers.Familiar.yes
-    /// True once the ring has shown 0: the prompt is folded away until the screen is opened again.
+    /// False while the track is full, true once it's set to drain: a 4 s linear animation empties it.
+    @State private var draining = false
+    /// True once the countdown has shown 0: the prompt is folded away until the screen is opened again.
     @State private var folded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -146,7 +145,12 @@ struct TransactionDetailView: View {
         // Undo sets it to nil, which cancels the tick in progress.
         .task(id: countdown) {
             guard let count = countdown else { return }
-            // The ring holds 0 for 0.3 s, so it's seen, before the prompt folds away.
+            // The track is drawn full by now; one 4 s animation drains it in step with the number.
+            // With Reduce Motion it follows the number instead, a step a second.
+            if count == 4 && !reduceMotion {
+                withAnimation(.linear(duration: 4)) { draining = true }
+            }
+            // The countdown holds 0 for 0.3 s, so it's seen, before the prompt folds away.
             guard (try? await Task.sleep(for: .seconds(count > 0 ? 1 : 0.3))) != nil else { return }
             // With Reduce Motion the number just changes and the prompt is removed without
             // sliding the rest up.
@@ -187,19 +191,17 @@ struct TransactionDetailView: View {
                 Text("Does this look familiar?")
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
-                Group {
-                    if let countdown {
-                        savedBar(savedAnswer == .notSure ? "Not sure" : "Yes", countdown: countdown)
-                    } else {
-                        AnswerStack {
-                            AnswerButton("Yes", chosen: detail.familiar == "yes", filled: detail.familiar != "not_sure") { setFamiliar(.yes) }
-                            AnswerButton("Not sure", chosen: detail.familiar == "not_sure") { setFamiliar(.notSure) }
-                        }
-                    }
+                // The buttons stay while the countdown runs, the chosen one filled.
+                AnswerStack {
+                    AnswerButton("Yes", chosen: detail.familiar == "yes", filled: detail.familiar != "not_sure") { setFamiliar(.yes) }
+                    AnswerButton("Not sure", chosen: detail.familiar == "not_sure") { setFamiliar(.notSure) }
                 }
-                // The design's swap between the buttons and the saved bar; Reduce Motion keeps only the fade.
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
                 .padding(.top, 10)
+                if let countdown {
+                    savedTrack(countdown: countdown)
+                        .padding(.top, 8)
+                        .transition(.opacity)
+                }
                 rule.padding(.vertical, 17)
             }
 
@@ -299,32 +301,34 @@ struct TransactionDetailView: View {
         }
     }
 
-    /// "Saved · Yes", the countdown ring and Undo, in place of the answer buttons.
-    private func savedBar(_ answer: String, countdown: Int) -> some View {
-        let text = Text("Saved · \(answer)").font(.row).frame(maxWidth: .infinity, alignment: .leading)
-        let ring = Text("\(countdown)")
-            .font(.note.weight(.semibold))
+    /// The 4 pt track that drains under the answer buttons, with "Saved. Closing in 3" and Undo.
+    private func savedTrack(countdown: Int) -> some View {
+        // With Reduce Motion the track follows the number, a step a second, instead of sliding.
+        let remaining = reduceMotion ? Double(countdown) / 4 : (draining ? 0 : 1)
+        // The accent part is squeezed from the right, so it shrinks toward the leading edge.
+        let track = Rectangle().fill(Color.accent)
+            .scaleEffect(x: remaining, anchor: .leading)
+            .background(Color.line)
+            .frame(height: 4)
+            .clipShape(.rect(cornerRadius: 2))
+            .accessibilityHidden(true)
+        let text = Text("Saved. Closing in \(countdown)")
+            .font(.row)
+            .foregroundStyle(.secondary)
             .monospacedDigit()
             .contentTransition(.numericText(countsDown: true))
-            // The ring stays 24 pt at every text size, so its number stops growing before it would spill out.
-            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-            .foregroundStyle(Color.accent)
-            .frame(width: 24, height: 24)
-            .overlay(Circle().stroke(Color.accent, lineWidth: 2))
-            .accessibilityLabel("Closing in \(countdown)")
-        let undo = undoButton(undoFamiliar)
-        // At the largest text sizes the ring and Undo drop under the text.
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { text; ring; undo }
-            VStack(alignment: .leading, spacing: 0) {
-                text.padding(.top, 12)
-                HStack(spacing: 8) { ring; undo }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        // The design puts Undo's word flush with the right edge; its 44 pt target may reach past it.
+        let undo = undoButton(undoFamiliar).padding(.trailing, -8)
+        return VStack(spacing: 0) {
+            track
+            // At the largest text sizes Undo drops under the text instead of squeezing it.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) { text; undo }
+                VStack(alignment: .leading, spacing: 0) { text.padding(.top, 12); undo }
             }
+            .frame(minHeight: 44)
         }
-        .padding(.leading, 12)
-        .padding(.trailing, 4)
-        .frame(maxWidth: .infinity, minHeight: 44)
-        .background(Color.surface, in: .rect(cornerRadius: 10))
     }
 
     /// The design's text-only Undo, with a 44 pt target.
@@ -386,19 +390,22 @@ struct TransactionDetailView: View {
         }
     }
 
-    /// Saves the answer at once, then swaps the buttons for the saved bar and its countdown.
+    /// Saves the answer at once, then shows the draining track and its countdown under the buttons.
     private func setFamiliar(_ answer: Answers.Familiar) {
         save { try Answers.setFamiliar(answer, transaction: id, in: database) }
-        // Only a saved answer counts down; if saving failed, the buttons stay.
-        guard detail?.familiar == answer.rawValue else { return }
-        savedAnswer = answer
-        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .easeOut(duration: 0.3)) { countdown = 4 }
+        // Only a saved answer counts down; if saving failed, nothing changes. Switching answers
+        // while it counts saves the new one and keeps the countdown going.
+        guard detail?.familiar == answer.rawValue, countdown == nil else { return }
+        // The track appears full; the countdown's first tick starts it draining.
+        draining = false
+        // With Reduce Motion the track just appears, without sliding the rest down.
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { countdown = 4 }
     }
 
-    /// Undo on the saved bar: the answer goes back to empty and the buttons come back.
+    /// Undo under the buttons: the answer goes back to empty and the track goes away.
     private func undoFamiliar() {
         save { try Answers.setFamiliar(nil, transaction: id, in: database) }
-        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .easeOut(duration: 0.3)) { countdown = nil }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { countdown = nil }
     }
 
     private func setCategory(_ category: String) {
