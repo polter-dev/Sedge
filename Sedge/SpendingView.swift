@@ -52,7 +52,8 @@ struct SpendingTotal: Decodable, FetchableRecord {
 
 extension ListedTransaction {
     /// Spending (and refunds) in one category between two dates, newest first, counted the
-    /// same way as `SpendingTotal.all` and the tools' `total_spent`.
+    /// same way as `SpendingTotal.all` and the tools' `total_spent`. With `SpendingTotal.movedCategory`
+    /// it lists money moved instead, only the side leaving an account, as `SpendingTotal.all` counts it.
     static func spending(in database: SedgeDatabase, category: String, from start: String, through end: String) throws -> [ListedTransaction] {
         try database.dbQueue.read { db in
             try ListedTransaction.fetchAll(db, sql: """
@@ -60,10 +61,12 @@ extension ListedTransaction {
                 FROM transactions t
                 LEFT JOIN entities m ON m.id = t.merchant_id
                 \(SpendingTotal.categoryJoins)
-                WHERE NOT t.pending AND t.kind IN ('spending', 'refund')
-                  AND t.date BETWEEN ? AND ? AND \(SpendingTotal.categoryOf) = ?
+                WHERE NOT t.pending
+                  AND (t.kind IN ('spending', 'refund') OR (t.kind IN ('transfer', 'card_payment') AND t.amount > 0))
+                  AND t.date BETWEEN ? AND ?
+                  AND CASE WHEN t.kind IN ('transfer', 'card_payment') THEN ? ELSE \(SpendingTotal.categoryOf) END = ?
                 ORDER BY t.date DESC, t.transaction_id DESC
-                """, arguments: [start, end, category])
+                """, arguments: [start, end, SpendingTotal.movedCategory, category])
         }
     }
 }

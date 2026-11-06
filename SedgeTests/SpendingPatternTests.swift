@@ -20,6 +20,14 @@ private func totalSpent(_ category: String?, _ start: String, _ end: String, in 
     return try JSONDecoder().decode(Result.self, from: Data(output.utf8)).total
 }
 
+/// A month's last day, "YYYY-MM-DD", for `total_spent` over the whole month.
+private func lastDay(_ month: String) throws -> String {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .gmt
+    let days = try #require(calendar.range(of: .day, in: .month, for: try Date(month + "-01T12:00:00Z", strategy: .iso8601))).count
+    return month + String(format: "-%02d", days)
+}
+
 /// For Maya at her `as_of` (June 30), every category's four bars equal `total_spent` over the
 /// first 30 days of March to June, and the stores in the graph add up to June's bar.
 @Test func patternBarsMatchTotalSpent() throws {
@@ -115,39 +123,6 @@ func pickedMonthMatchesItsBar(persona: String) throws {
 /// Stepping back from January lands in the year before.
 @Test func patternMonthsCrossTheYear() {
     #expect(SpendingView.months(endingAt: "2026-02-14") == ["2025-11", "2025-12", "2026-01", "2026-02"])
-}
-
-/// For Maya, each month's bar on the All months screen equals `total_spent` over that whole
-/// month, each category's bar equals `total_spent` over all the data, and the money-moved
-/// switch adds its own category bar without changing any other bar.
-@Test func allMonthsBarsMatchTotalSpent() throws {
-    let database = try inMemory("maya") // in memory: running alongside SedgeTests, the shared file would be locked
-    let asOf = try #require(try database.asOf())
-    let totals = try SpendingTotal.all(in: database, includeMoved: false)
-    let months = AllMonthsView.byMonth(totals)
-    #expect(months.count >= 6)
-    for bar in months {
-        // The month's last day: the day before the first of the next month.
-        let first = try Date(bar.label + "-01T12:00:00Z", strategy: .iso8601)
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        let days = try #require(calendar.range(of: .day, in: .month, for: first)).count
-        let tool = try totalSpent(nil, bar.label + "-01", bar.label + String(format: "-%02d", days), in: database)
-        #expect(abs(bar.total - tool) < 0.005, "\(bar.label): bar \(bar.total), total_spent \(tool)")
-    }
-
-    let categories = Set(totals.map(\.category))
-    for bar in AllMonthsView.byCategory(totals) {
-        let category = try #require(categories.first { SpendingView.title($0) == bar.label })
-        let tool = try totalSpent(category, "2000-01-01", asOf, in: database)
-        #expect(abs(bar.total - tool) < 0.005, "\(category): bar \(bar.total), total_spent \(tool)")
-    }
-
-    let withMoved = try SpendingTotal.all(in: database, includeMoved: true)
-    #expect(AllMonthsView.byMonth(withMoved).map(\.total) == months.map(\.total))
-    let movedBars = AllMonthsView.byCategory(withMoved)
-    #expect(movedBars.contains { $0.label == "Moved between accounts" && $0.total > 0 })
-    #expect(movedBars.filter { $0.label != "Moved between accounts" }.map(\.total) == AllMonthsView.byCategory(totals).map(\.total))
 }
 
 /// The chart's axis tops out at the largest bar rounded up to the smallest step of 25, 50, 100,
@@ -316,21 +291,32 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     #expect(SpendingView.categoryOrder(totals, asOf: "2026-06-30", month: "2026-05") == ["dining", "coffee"])
 }
 
-/// For Maya and Daniel, each month's categories on the All months card add up to that month's
-/// bar to the cent, the six-month windows cover every month from the oldest to the newest once,
-/// and each category's mini chart months add up to its bar (their data fits in one window).
-@Test(arguments: ["maya", "daniel"]) func allMonthsBreakdownsAndWindowsAddUp(persona: String) throws {
+/// For Maya and Daniel, every month's list on All months adds up: Total is that month's bar (as
+/// Trends adds categories, in cents) and `total_spent` over the whole month to the cent, the
+/// categories come biggest first and their whole dollars add up exactly to Total's, with money
+/// moved too, which stays out of the bars. The six-month windows cover every month from the
+/// oldest to the newest once.
+@Test(arguments: ["maya", "daniel"]) func allMonthsListAddsUpToTotal(persona: String) throws {
     let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
-    // Money moved loaded too, to check the card leaves it out as the month bars do.
-    let totals = try SpendingTotal.all(in: database, includeMoved: true)
-    #expect(totals.contains { $0.category == SpendingTotal.movedCategory })
+    let totals = try SpendingTotal.all(in: database, includeMoved: false)
+    let withMoved = try SpendingTotal.all(in: database, includeMoved: true)
+    #expect(withMoved.contains { $0.category == SpendingTotal.movedCategory })
     let months = AllMonthsView.byMonth(totals)
     #expect(months.count == 6)
+    #expect(AllMonthsView.byMonth(withMoved).map(\.total) == months.map(\.total))
     for month in months {
-        let parts = AllMonthsView.breakdown(totals, month: month.label)
-        let cents = parts.reduce(0) { $0 + Int(($1.total * 100).rounded()) }
-        #expect(cents == Int((month.total * 100).rounded()), "\(persona) \(month.label): categories \(cents), bar \(month.total)")
-        #expect(!parts.contains { $0.label == "Moved between accounts" })
+        let parts = AllMonthsView.parts(totals, month: month.label)
+        let total = parts.reduce(0) { $0 + $1.cents }
+        #expect(total == Int((month.total * 100).rounded()), "\(persona) \(month.label): Total \(total), bar \(month.total)")
+        let tool = try totalSpent(nil, month.label + "-01", try lastDay(month.label), in: database)
+        #expect(total == Int((tool * 100).rounded()), "\(persona) \(month.label): Total \(total), total_spent \(tool)")
+        #expect(parts.reduce(0) { $0 + $1.dollars } == AllMonthsView.rounded(total), "\(persona) \(month.label)")
+        #expect(parts.map(\.cents) == parts.map(\.cents).sorted(by: >), "\(persona) \(month.label): not biggest first")
+
+        // With money moved on, it is one more row and the rows still add up to Total.
+        let moved = AllMonthsView.parts(withMoved, month: month.label)
+        #expect(moved.filter { $0.category != SpendingTotal.movedCategory }.map(\.cents) == parts.map(\.cents))
+        #expect(moved.reduce(0) { $0 + $1.dollars } == AllMonthsView.rounded(moved.reduce(0) { $0 + $1.cents }))
     }
 
     let windows = AllMonthsView.windows(months.map(\.label))
@@ -343,12 +329,41 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
         #expect(SpendingView.months(endingAt: later, count: 2).first == earlier, "\(persona): gap between \(earlier) and \(later)")
     }
     #expect(Set(months.map(\.label)).isSubset(of: Set(laidOut)))
+}
 
-    #expect(windows.count == 1)
-    for category in AllMonthsView.byCategory(totals) {
-        let cents = AllMonthsView.monthly(totals, category: category.label, months: windows[0])
-            .reduce(0) { $0 + Int(($1.total * 100).rounded()) }
-        #expect(cents == Int((category.total * 100).rounded()), "\(persona) \(category.label)")
+/// Largest-remainder rounding keeps the rows on Total where rounding each row is $1 off, either way.
+@Test func wholeDollarsAddUpWherePlainRoundingIsOff() {
+    // $1.50 + $1.50 + $1.00 = $4.00, but rounded one by one it is $2 + $2 + $1 = $5.
+    #expect([150, 150, 100].map(AllMonthsView.rounded).reduce(0, +) == 5)
+    #expect(AllMonthsView.wholeDollars([150, 150, 100]) == [2, 1, 1])
+    // $1.40 + $1.40 + $1.20 = $4.00, but rounded one by one it is $1 + $1 + $1 = $3.
+    #expect([140, 140, 120].map(AllMonthsView.rounded).reduce(0, +) == 3)
+    #expect(AllMonthsView.wholeDollars([140, 140, 120]) == [2, 1, 1])
+    // A category refunded more than it spent is rounded the same way, and the rows still add up to $669.
+    #expect(AllMonthsView.wholeDollars([65_000, 1_951, -30]) == [650, 19, 0])
+    #expect(AllMonthsView.wholeDollars([]).isEmpty)
+}
+
+/// For Maya and Daniel, the sheet a category row opens lists transactions that add up to the
+/// row's cents in every month and category, money moved included. A transaction the person moved
+/// to another category is listed there and not under its store's category.
+@Test(arguments: ["maya", "daniel"]) func allMonthsSheetMatchesItsRow(persona: String) throws {
+    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
+    let june = (from: "2026-06-01", through: "2026-06-31")
+    let dining = try ListedTransaction.spending(in: database, category: "dining", from: june.from, through: june.through)
+    let moved = try #require(dining.first)
+    try Answers.setCategory("groceries", transaction: moved.id, in: database)
+    let groceries = try ListedTransaction.spending(in: database, category: "groceries", from: june.from, through: june.through)
+    #expect(groceries.contains { $0.id == moved.id })
+    #expect(try !ListedTransaction.spending(in: database, category: "dining", from: june.from, through: june.through)
+        .contains { $0.id == moved.id })
+
+    let totals = try SpendingTotal.all(in: database, includeMoved: true)
+    for month in Set(totals.map(\.month)) {
+        for part in AllMonthsView.parts(totals, month: month) {
+            let rows = try ListedTransaction.spending(in: database, category: part.category, from: month + "-01", through: month + "-31")
+            #expect(rows.reduce(0) { $0 + $1.cents } == part.cents, "\(persona) \(month) \(part.category)")
+        }
     }
 }
 

@@ -7,9 +7,10 @@ import Charts
 import SedgeCore
 import SwiftUI
 
-/// Every month's spending and every category's over all the data, with a switch that adds
-/// money moved between the person's own accounts as its own category bar. Opened from the Spending screen.
-/// Tapping a month shows its categories under the chart; tapping a category shows its months under its row.
+/// Every month's spending, with the selected month split into its categories under the chart.
+/// It opens on the newest month; tapping another month selects it, and tapping a category row
+/// opens that category's transactions for the month. A switch adds money moved between the
+/// person's own accounts as its own row. Opened from the Spending screen.
 struct AllMonthsView: View {
     let database: SedgeDatabase
     /// Off by default: moving money to savings or paying a card isn't spending, and the
@@ -20,16 +21,32 @@ struct AllMonthsView: View {
     @State private var page = 0
     /// Whether the last chevron tapped went back in time, so the chart slides in from that side.
     @State private var pagedBack = true
-    /// The tapped month ("YYYY-MM") whose categories show under the chart, or nil.
+    /// The tapped month ("YYYY-MM"); nil is the window's newest month.
     @State private var selectedMonth: String?
-    /// The tapped category row, by its title, whose months show under it, or nil.
-    @State private var selectedCategory: String?
+    /// The tapped category row, whose transactions the sheet lists; nil when no sheet is open.
+    @State private var opened: Opened?
 
     /// One bar: what it's labeled with and its total in dollars.
     struct Bar: Identifiable {
         let label: String
         let total: Double
         var id: String { label }
+    }
+
+    /// One row of the "By category" list: a stored category, its exact total in cents and the
+    /// whole dollars it shows.
+    struct Part: Identifiable {
+        let category: String
+        let cents: Int
+        let dollars: Int
+        var id: String { category }
+    }
+
+    /// A tapped category row: the category and month the sheet lists.
+    struct Opened: Identifiable, Hashable {
+        let category: String
+        let month: String
+        var id: Self { self }
     }
 
     /// Adds up the totals that share a label in whole cents, as the tools add.
@@ -45,22 +62,28 @@ struct AllMonthsView: View {
         bars(totals.filter { $0.category != SpendingTotal.movedCategory }, by: \.month).sorted { $0.label < $1.label }
     }
 
-    /// Each category's total over all the data, biggest first, money moved included when loaded.
-    static func byCategory(_ totals: [SpendingTotal]) -> [Bar] {
-        bars(totals) { SpendingView.title($0.category) }.sorted { ($0.total, $1.label) > ($1.total, $0.label) }
+    /// One month's categories, biggest first (by name on a tie), money moved included only when
+    /// it was loaded. Their whole dollars add up exactly to the month's total in whole dollars.
+    static func parts(_ totals: [SpendingTotal], month: String) -> [Part] {
+        let cents = SpendingView.cents(totals, month: month)
+            .sorted { ($0.value, SpendingView.title($1.key)) > ($1.value, SpendingView.title($0.key)) }
+        return zip(cents, wholeDollars(cents.map(\.value))).map { Part(category: $0.key, cents: $0.value, dollars: $1) }
     }
 
-    /// One month's categories, biggest first. Money moved is left out, as it is from the month
-    /// bars, so they add up to that month's bar.
-    static func breakdown(_ totals: [SpendingTotal], month: String) -> [Bar] {
-        byCategory(totals.filter { $0.month == month && $0.category != SpendingTotal.movedCategory })
-    }
+    /// Cents rounded to the nearest whole dollar, 50 cents to the even dollar, as the bars' dollar
+    /// format rounds, so Total always reads the same as its month's bar.
+    static func rounded(_ cents: Int) -> Int { Int((Double(cents) / 100).rounded(.toNearestOrEven)) }
 
-    /// One category's total (by its title) in each of `months`, in their order, $0 where it has none.
-    static func monthly(_ totals: [SpendingTotal], category: String, months: [String]) -> [Bar] {
-        months.map { month in
-            Bar(label: month, total: byCategory(totals.filter { $0.month == month }).first { $0.label == category }?.total ?? 0)
-        }
+    /// Whole dollars for amounts in cents that add up exactly to their total rounded to the
+    /// dollar (largest-remainder rounding): each is rounded down, then the dollars still missing
+    /// go one each to the biggest leftover cents, the earlier amount first on a tie. Rounding each
+    /// on its own can be $1 off: $1.50 + $1.50 + $1.00 is $4, but $2 + $2 + $1 is $5.
+    static func wholeDollars(_ cents: [Int]) -> [Int] {
+        let floors = cents.map { Int((Double($0) / 100).rounded(.down)) }
+        let left = cents.indices.map { cents[$0] - floors[$0] * 100 }
+        let missing = rounded(cents.reduce(0, +)) - floors.reduce(0, +)
+        let raised = Set(cents.indices.sorted { (left[$0], $1) > (left[$1], $0) }.prefix(missing))
+        return cents.indices.map { floors[$0] + (raised.contains($0) ? 1 : 0) }
     }
 
     /// Six-month windows over `months` ("YYYY-MM"), newest window first, each with its oldest
@@ -87,25 +110,14 @@ struct AllMonthsView: View {
         return (start..<end).formatted(Date.IntervalFormatStyle(timeZone: .gmt).month(.abbreviated).year())
     }
 
-    /// The category bar money moved gets, as `SpendingView.title` writes it.
-    private static let movedLabel = SpendingView.title(SpendingTotal.movedCategory)
-
     /// Whole dollars on the axes and labels; cents only clutter a chart.
     private static let dollars = FloatingPointFormatStyle<Double>.Currency(code: "USD").precision(.fractionLength(0))
 
     /// The reader's text size setting.
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The name column in the month card, 112 pt in the design; it grows with the text size.
-    @ScaledMetric(relativeTo: .caption) private var nameWidth: CGFloat = 112
-
-    /// How a card or a mini chart opens: it unfolds from the top, or only fades in with Reduce Motion.
-    private var reveal: AnyTransition { reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)) }
-
-    /// Runs a tap's change with the design's 0.3 s snappy animation, or a 0.15 s fade with Reduce Motion.
-    private func animate(_ change: () -> Void) {
-        withAnimation(reduceMotion ? .easeInOut(duration: 0.15) : .snappy(duration: 0.3), change)
-    }
+    /// The name column in the category list, 112 pt in the design; it grows with the text size.
+    @ScaledMetric(relativeTo: .footnote) private var nameWidth: CGFloat = 112
 
     /// "2026-03" written for people: "March 2026" (or "Mar" / "M" with `month`).
     private static func monthName(_ month: String, _ style: Date.FormatStyle = .dateTime.month(.wide).year()) -> String {
@@ -113,40 +125,63 @@ struct AllMonthsView: View {
     }
 
     var body: some View {
-        let months = Self.byMonth(totals), categories = Self.byCategory(totals)
+        let months = Self.byMonth(totals)
         let windows = Self.windows(months.map(\.label))
         let window = windows.indices.contains(page) ? windows[page] : []
+        let shown = selectedMonth ?? window.last ?? ""
+        let parts = Self.parts(totals, month: shown)
+        let total = parts.reduce(0) { $0 + $1.cents }
         ScrollView {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("By month").font(.title2.bold()).foregroundStyle(Color.ink)
-                Text("Tap a month to see its categories. Tap it again to clear.").font(.row).foregroundStyle(Color.muted)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("By Month").font(.title2.bold()).foregroundStyle(Color.ink)
                 pager(window, count: windows.count)
-                chart(months, window)
+                chart(months, window, shown: shown, parts: parts)
                     // A new window is a new chart, so it slides in while the old one slides out.
                     .id(page)
                     .transition(reduceMotion ? .opacity : .push(from: pagedBack ? .leading : .trailing))
                     .frame(height: 220)
                     .padding(.top, 8)
-                if let month = selectedMonth {
-                    card(month, total: months.first { $0.label == month }?.total ?? 0, parts: Self.breakdown(totals, month: month))
-                        .padding(.top, 12)
-                        .transition(reveal)
-                }
 
-                Text("By category").font(.headline).foregroundStyle(Color.ink).padding(.top, 24)
-                Text("All the data, biggest first. Tap a category to see its months.").font(.row).foregroundStyle(Color.muted)
-                // The switch sits right above the chart it changes.
+                // Side by side, or stacked at the largest text sizes so neither is cut off.
+                let heading = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+                    : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+                heading {
+                    Text("By category").font(.headline).foregroundStyle(Color.ink)
+                    Spacer(minLength: 8)
+                    // Empty until the totals load, which would read "-01".
+                    if !shown.isEmpty {
+                        Text(Self.monthName(shown)).font(.footnote).foregroundStyle(Color.muted)
+                            .accessibilityIdentifier("listMonth")
+                    }
+                }
+                .padding(.top, 24)
+                // The switch sits right above the list it changes.
                 Toggle("Include money moved between my accounts", isOn: $includeMoved)
                     .font(.subheadline)
                     .foregroundStyle(Color.ink)
                     .padding(.horizontal, 12)
                     .frame(minHeight: 52)
                     .background(Color.group, in: .rect(cornerRadius: 12))
-                    .padding(.vertical, 8)
-                // Plain rows rather than a chart: a chart's axis label stays on one line and runs off
-                // the screen at large text sizes, while a row's text wraps and the row grows to fit.
-                ForEach(categories) { bar in
-                    row(bar, largest: categories[0].total, window: window)
+                    .padding(.top, 8)
+                row("Total", dollars: Self.rounded(total), share: 1, color: .accent, bold: true)
+                    .padding(.top, 12)
+                    .padding(.bottom, 6)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Total")
+                    .accessibilityValue(Double(Self.rounded(total)).formatted(Self.dollars))
+                ForEach(parts) { part in
+                    let title = SpendingView.title(part.category)
+                    Button { opened = Opened(category: part.category, month: shown) } label: {
+                        // Scaled against Total, so even the biggest category's bar is shorter than Total's.
+                        row(title, dollars: part.dollars, share: total > 0 ? Double(part.cents) / Double(total) : 0,
+                            color: Color.category(title))
+                            // The design draws 34 pt rows; the whole 44 pt row takes the tap.
+                            .frame(minHeight: 44)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(title)
+                    .accessibilityValue(Double(part.dollars).formatted(Self.dollars))
                 }
             }
             .padding(.horizontal, 20)
@@ -162,6 +197,7 @@ struct AllMonthsView: View {
                 print("Could not read spending:", error)
             }
         }
+        .sheet(item: $opened) { MonthTransactions(database: database, opened: $0) }
     }
 
     /// The chevrons that step through six-month windows, with the window's name between them.
@@ -189,8 +225,8 @@ struct AllMonthsView: View {
         .accessibilityLabel(label)
     }
 
-    /// Moves `step` windows back in time (or forward when negative), closing the month card,
-    /// which belongs to the window it was opened in.
+    /// Moves `step` windows back in time (or forward when negative). The new window opens on its
+    /// newest month, since the tapped month belongs to the window it was tapped in.
     private func turn(by step: Int) {
         pagedBack = step > 0
         withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .easeOut(duration: 0.3)) {
@@ -199,21 +235,22 @@ struct AllMonthsView: View {
         }
     }
 
-    /// The month bars of one window. The tapped month is split into its categories' colors and
-    /// the other months fade to the line color; with none tapped, every month is the accent.
-    private func chart(_ months: [Bar], _ window: [String]) -> some View {
+    /// The month bars of one window. The shown month is split into its categories' colors with a
+    /// bold label; the other months are the accent.
+    private func chart(_ months: [Bar], _ window: [String], shown: String, parts: [Part]) -> some View {
         Chart {
             ForEach(window, id: \.self) { month in
                 let total = months.first { $0.label == month }?.total ?? 0
-                if month == selectedMonth {
-                    // Reversed so the biggest category sits on top, as it leads the card's list.
-                    ForEach(Self.breakdown(totals, month: month).reversed()) { part in
-                        BarMark(x: .value("Month", month), y: .value("Spent", part.total), width: .ratio(0.55))
-                            .foregroundStyle(Color.category(part.label))
-                            // VoiceOver reads the categories in the card; a stack would be read as "2026-03, total".
+                if month == shown {
+                    // Money moved is left out, as it is from every bar. Reversed so the biggest
+                    // category sits on top, as it leads the list.
+                    ForEach(parts.filter { $0.category != SpendingTotal.movedCategory }.reversed()) { part in
+                        BarMark(x: .value("Month", month), y: .value("Spent", Double(part.cents) / 100), width: .ratio(0.55))
+                            .foregroundStyle(Color.category(SpendingView.title(part.category)))
+                            // VoiceOver reads the categories in the list; a stack would be read as "2026-03, total".
                             .accessibilityHidden(true)
                     }
-                    // An invisible line over the stack gives VoiceOver the month as one element, as before the tap.
+                    // An invisible line over the stack gives VoiceOver the month as one element, as the other bars.
                     RuleMark(x: .value("Month", month), yStart: .value("Spent", 0), yEnd: .value("Spent", total))
                         .foregroundStyle(.clear)
                         .accessibilityLabel(Self.monthName(month))
@@ -221,7 +258,7 @@ struct AllMonthsView: View {
                 } else {
                     BarMark(x: .value("Month", month), y: .value("Spent", total), width: .ratio(0.55))
                         .cornerRadius(5)
-                        .foregroundStyle(selectedMonth == nil ? Color.accent : Color.line)
+                        .foregroundStyle(Color.accent)
                         .accessibilityLabel(Self.monthName(month))
                         .accessibilityValue(total.formatted(Self.dollars))
                 }
@@ -236,8 +273,8 @@ struct AllMonthsView: View {
                     // At the accessibility text sizes "Jan" becomes "J", so six months still fit side by side.
                     AxisValueLabel {
                         Text(Self.monthName(month, .dateTime.month(textSize.isAccessibilitySize ? .narrow : .abbreviated)))
-                            .fontWeight(month == selectedMonth ? .semibold : nil)
-                            .foregroundStyle(month == selectedMonth ? Color.ink : Color.muted)
+                            .fontWeight(month == shown ? .semibold : nil)
+                            .foregroundStyle(month == shown ? Color.ink : Color.muted)
                     }
                 }
             }
@@ -255,130 +292,106 @@ struct AllMonthsView: View {
                     .onTapGesture { location in
                         guard let plot = proxy.plotFrame else { return }
                         if let month: String = proxy.value(atX: location.x - geometry[plot].origin.x) {
-                            animate { selectedMonth = selectedMonth == month ? nil : month }
+                            // The bars recolor and the list's bars resize with the system spring; at once with Reduce Motion.
+                            withAnimation(reduceMotion ? nil : .spring(duration: 0.35)) { selectedMonth = month }
                         }
                     }
             }
         }
     }
 
-    /// The card under the chart for a tapped month: its total and each category's share.
-    private func card(_ month: String, total: Double, parts: [Bar]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(Self.monthName(month)).font(.cardTitle).foregroundStyle(Color.ink)
-                    Text("\(total, format: Self.dollars) across ^[\(parts.count) category](inflect: true)")
-                        .font(.row).foregroundStyle(Color.muted)
-                }
-                Spacer()
-                Button { animate { selectedMonth = nil } } label: {
-                    Label("Clear", systemImage: "xmark")
-                }
-                .font(.link)
-                .frame(minHeight: 44)
-                .padding(.top, -10)
-            }
-            ForEach(parts) { part in
-                let layout = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
-                    : AnyLayout(HStackLayout(spacing: 8))
-                layout {
-                    HStack(spacing: 8) {
-                        Circle().fill(Color.category(part.label)).frame(width: 10, height: 10)
-                        Text(part.label).font(.row).foregroundStyle(Color.ink)
-                    }
-                    .frame(width: textSize.isAccessibilitySize ? nil : nameWidth, alignment: .leading)
-                    // The biggest category fills the space and the others are its share.
-                    GeometryReader { space in
-                        Capsule().fill(Color.category(part.label))
-                            .frame(width: space.size.width * max(0, part.total) / max(parts[0].total, 1))
-                    }
-                    .frame(minWidth: 60)
-                    .frame(height: 6)
-                    Text(part.total, format: Self.dollars).font(.row).foregroundStyle(Color.muted)
-                        .frame(minWidth: 48, alignment: textSize.isAccessibilitySize ? .leading : .trailing)
-                }
-                .frame(minHeight: 28)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(part.label)
-                .accessibilityValue(part.total.formatted(Self.dollars))
-            }
-            .padding(.top, 4)
+    /// One list row: a color dot and the name, a bar at `share` of its width, and whole dollars.
+    /// At the largest text sizes the name sits over the bar and amount, so nothing is cut off.
+    private func row(_ name: String, dollars: Int, share: Double, color: Color, bold: Bool = false) -> some View {
+        let label = HStack(spacing: 8) {
+            Circle().fill(color).frame(width: 10, height: 10)
+            Text(name).foregroundStyle(Color.ink)
         }
-        .padding(12)
-        .background(Color.group, in: .rect(cornerRadius: 12))
+        let bar = GeometryReader { space in
+            // A category refunded more than it spent has no bar, and none is wider than Total's.
+            Capsule().fill(color).frame(width: space.size.width * min(1, max(0, share)))
+        }
+        .frame(minWidth: 60)
+        .frame(height: 6)
+        let amount = Text(Double(dollars), format: Self.dollars)
+            .foregroundStyle(bold ? Color.ink : Color.muted)
+            .frame(minWidth: 48, alignment: .trailing)
+        let layout = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
+            label.frame(width: textSize.isAccessibilitySize ? nil : nameWidth, alignment: .leading)
+            HStack(spacing: 8) { bar; amount }
+        }
+        .font(bold ? .footnote.weight(.semibold) : .footnote)
     }
+}
 
-    /// One category's row: its name, total and bar. Tapped, it shows its months in `window` under it.
-    private func row(_ bar: Bar, largest: Double, window: [String]) -> some View {
-        let selected = bar.label == selectedCategory
-        // Money moved in the quieter chart gray; its name above says what it is. A tapped row takes its category's color.
-        let color = selected ? Color.category(bar.label) : bar.label == Self.movedLabel ? Color.second : Color.accent
-        return VStack(alignment: .leading, spacing: 0) {
-            Button { animate { selectedCategory = selected ? nil : bar.label } } label: {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("\(bar.label)  \(Text(bar.total, format: Self.dollars).foregroundStyle(Color.muted))")
-                            .font(.row)
-                            .foregroundStyle(Color.ink)
-                        Spacer()
-                        if selected { Image(systemName: "chevron.down").font(.row.weight(.semibold)).foregroundStyle(Color.muted) }
-                    }
-                    // Biggest first, so the first bar fills the width and the others are its share.
-                    GeometryReader { space in
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(color)
-                            .frame(width: space.size.width * max(0, bar.total) / max(largest, 1))
-                    }
-                    .frame(height: 18)
+/// The sheet a category row opens: that category's transactions in one month, oldest first,
+/// under their count and exact total, counted the same way as the row.
+private struct MonthTransactions: View {
+    let database: SedgeDatabase
+    let opened: AllMonthsView.Opened
+    @State private var rows: [ListedTransaction] = []
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var textSize
+    /// The date column, 56 pt in the design; it grows with the text size.
+    @ScaledMetric(relativeTo: .footnote) private var dateWidth: CGFloat = 56
+
+    var body: some View {
+        let cents = rows.reduce(0) { $0 + $1.cents }
+        // Side by side, or stacked at the largest text sizes so no word is split across lines.
+        let line = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                line {
+                    Text("\(SpendingView.title(opened.category)) · \((opened.month + "-01").displayDate(.dateTime.month(.wide).year()))")
+                        .font(.title3.bold())
+                        .foregroundStyle(Color.ink)
+                    Spacer(minLength: 8)
+                    Button("Done") { dismiss() }.font(.headline).frame(minHeight: 44)
                 }
-                .frame(minHeight: 44)
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            // One VoiceOver element per category, read as its name and total.
-            .accessibilityLabel(bar.label)
-            .accessibilityValue(bar.total.formatted(Self.dollars))
-            .accessibilityAddTraits(selected ? .isSelected : [])
-
-            if selected {
-                miniChart(Self.monthly(totals, category: bar.label, months: window), category: bar.label, window: window)
-                    .transition(reveal)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(selected ? Color.group : .clear, in: .rect(cornerRadius: 12))
-        // The row's content lines up with the rest of the screen; only its tapped background reaches wider.
-        .padding(.horizontal, -12)
-    }
-
-    /// Six small columns: one category's total in each month of the window.
-    private func miniChart(_ bars: [Bar], category: String, window: [String]) -> some View {
-        let top = max(bars.map(\.total).max() ?? 0, 1)
-        return VStack(alignment: .leading, spacing: 6) {
-            Text("\(category) · each month, \(Self.span(window))").font(.row).foregroundStyle(Color.muted)
-            HStack(alignment: .bottom, spacing: 6) {
-                ForEach(bars) { bar in
-                    VStack(spacing: 3) {
-                        // At the largest sizes the amounts don't fit six across; VoiceOver still reads them.
-                        if !textSize.isAccessibilitySize {
-                            Text(bar.total, format: Self.dollars).font(.note).foregroundStyle(Color.muted)
-                        }
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.category(category))
-                            .frame(height: 56 * max(0, bar.total) / top)
-                        Text(Self.monthName(bar.label, .dateTime.month(textSize.isAccessibilitySize ? .narrow : .abbreviated)))
-                            .font(.note).foregroundStyle(Color.muted)
+                line {
+                    Text("^[\(rows.count) transaction](inflect: true)").foregroundStyle(Color.muted)
+                    Spacer(minLength: 8)
+                    Text(Double(cents) / 100, format: .currency(code: "USD")).fontWeight(.semibold).foregroundStyle(Color.ink)
+                }
+                .font(.footnote)
+                .padding(.top, 6)
+                .padding(.bottom, 10)
+                ForEach(rows) { row in
+                    let date = Text(row.date.displayDate(.dateTime.month(.abbreviated).day())).font(.footnote).foregroundStyle(Color.muted)
+                    let store = Text(row.store).font(.subheadline).foregroundStyle(Color.ink)
+                    let amount = Text(row.amount, format: .currency(code: "USD")).font(.subheadline).foregroundStyle(Color.ink)
+                    // At the largest text sizes the date sits over the store, and the amount gets its own line.
+                    let layout = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+                        : AnyLayout(HStackLayout(spacing: 12))
+                    layout {
+                        date.frame(width: textSize.isAccessibilitySize ? nil : dateWidth, alignment: .leading)
+                        store.frame(maxWidth: .infinity, alignment: .leading)
+                        amount
                     }
-                    .frame(maxWidth: .infinity)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Self.monthName(bar.label))
-                    .accessibilityValue(bar.total.formatted(Self.dollars))
+                    .padding(.vertical, textSize.isAccessibilitySize ? 6 : 0)
+                    .frame(minHeight: 36)
+                    .accessibilityElement(children: .combine)
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
-        .padding(.top, 8)
+        // About eight rows at medium and all of them at large; at the largest text sizes it opens at large.
+        .presentationDetents(textSize.isAccessibilitySize ? [.large] : [.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.background)
+        .task {
+            do {
+                // The 31st covers every month, as a shorter month's dates all sort before it.
+                rows = try ListedTransaction.spending(in: database, category: opened.category, from: opened.month + "-01",
+                                                      through: opened.month + "-31").reversed()
+            } catch {
+                print("Could not read transactions:", error)
+            }
+        }
     }
 }
 
