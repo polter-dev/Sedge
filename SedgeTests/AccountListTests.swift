@@ -40,8 +40,10 @@ private func databaseWithOneAccount() throws -> (SedgeDatabase, ListedAccount) {
         let (inPlace, account) = try databaseWithOneAccount()
         let (check, _) = try databaseWithOneAccount()
         try AccountsListView.save(owner, for: account, in: inPlace)
-        // What AccountCheckView.answer sends with its untouched field.
-        try ListedAccount.save(owner, nickname: account.nickname ?? "", account: account.account_id, in: check)
+        // What the account check saved before the two shared a save: its untouched name field,
+        // then the owner unless the answer is Decide later.
+        try Answers.setNickname(account.nickname ?? "", account: account.account_id, in: check)
+        if let owner { try Answers.setOwner(owner, account: account.account_id, in: check) }
         let saved = try #require(try ListedAccount.all(in: inPlace).first)
         let checked = try #require(try ListedAccount.all(in: check).first)
         #expect(saved.owner == checked.owner && saved.nickname == checked.nickname)

@@ -259,7 +259,7 @@ struct AccountsListView: View {
         let answered = accounts.filter { $0.owner != nil }
         List {
             if !toAnswer.isEmpty {
-                Section("To answer") {
+                Section {
                     ForEach(toAnswer) { account in
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Is this account yours?").font(.headline)
@@ -274,12 +274,16 @@ struct AccountsListView: View {
                         // for its account, and its answers are found inside it.
                         .accessibilityElement(children: .contain)
                         .accessibilityLabel(account.displayName(spoken: true))
+                        // Answering slides the card up and fades it out (see `answer` for Reduce Motion).
+                        .transition(.move(edge: .top).combined(with: .opacity))
                     }
+                } header: {
+                    sectionHeader("To answer")
                 }
                 .listRowBackground(Color.group)
             }
             if !answered.isEmpty {
-                Section("Answered") {
+                Section {
                     ForEach(answered) { account in
                         NavigationLink {
                             AccountCheckView(database: database, account: account)
@@ -289,6 +293,8 @@ struct AccountsListView: View {
                         .accessibilityLabel(account.displayName(spoken: true))
                         .accessibilityValue(account.ownerLabel)
                     }
+                } header: {
+                    sectionHeader("Answered")
                 }
                 .listRowBackground(Color.group)
             }
@@ -296,6 +302,15 @@ struct AccountsListView: View {
         .themedBackground()
         // Runs again on coming back from a check, so a new name or answer shows.
         .task { reload() }
+    }
+
+    /// A small capitals section title in the muted color, as the design draws it.
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.footnote)
+            .foregroundStyle(Color.muted)
+            .textCase(.uppercase)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// Saves what the account check saves when its name field is left as it was. Decide later

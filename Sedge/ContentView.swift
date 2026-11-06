@@ -273,7 +273,11 @@ struct AccountsView: View {
                 } label: {
                     Label("About you", systemImage: "person.text.rectangle")
                 }
-                if !accounts.isEmpty {
+            }
+            .listRowBackground(Color.group)
+            // Accounts sits in its own group, so its open questions stand apart from the screens above.
+            if !accounts.isEmpty {
+                Section {
                     let unanswered = accounts.count { $0.owner == nil }
                     NavigationLink {
                         AccountsListView(database: database)
@@ -307,8 +311,8 @@ struct AccountsView: View {
                     .accessibilityLabel("Accounts")
                     .accessibilityValue(unanswered > 0 ? "\(unanswered) still to answer" : "")
                 }
+                .listRowBackground(Color.group)
             }
-            .listRowBackground(Color.group)
             Section {
                 NavigationLink {
                     SavedAnswersView(database: database)
