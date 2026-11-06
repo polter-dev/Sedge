@@ -226,7 +226,10 @@ struct TransactionDetailView: View {
                         .navigationTitle(detail.store)
                         .navigationSubtitle("Merchant history")
                 } label: {
-                    listRow("Merchant history", history.count == 1 ? "1 transaction" : "\(history.count) transactions", value: "View")
+                    // Counts what the history lists: its purchases, or every row at a store with none.
+                    let purchases = MerchantHistoryView.purchases(history)
+                    listRow("Merchant history", MerchantHistoryView.count(purchases.isEmpty ? history.count : purchases.count, visits: !purchases.isEmpty),
+                            value: "View")
                 }
             }
 

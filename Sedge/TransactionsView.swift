@@ -279,7 +279,9 @@ struct MerchantHistoryView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The store's purchases. A store with none (a payroll, a transfer) lists all its rows instead.
-    private var purchases: [ListedTransaction] { rows.filter { $0.kind == "spending" } }
+    /// Static so the Transaction screen's "Merchant history" row counts the same rows.
+    static func purchases(_ rows: [ListedTransaction]) -> [ListedTransaction] { rows.filter { $0.kind == "spending" } }
+    private var purchases: [ListedTransaction] { Self.purchases(rows) }
     private var shown: [ListedTransaction] { purchases.isEmpty ? rows : purchases }
 
     var body: some View {
@@ -315,8 +317,9 @@ struct MerchantHistoryView: View {
     }
 
     /// "1 visit", "2 visits"; a store with no purchases counts transactions instead.
-    private func count(_ count: Int) -> String {
-        let word = purchases.isEmpty ? "transaction" : "visit"
+    private func count(_ count: Int) -> String { Self.count(count, visits: !purchases.isEmpty) }
+    static func count(_ count: Int, visits: Bool) -> String {
+        let word = visits ? "visit" : "transaction"
         return count == 1 ? "1 \(word)" : "\(count) \(word)s"
     }
 
@@ -467,7 +470,7 @@ struct StoreSummary: Equatable {
 extension StoreSummary {
     /// `asOf` is the data's "today"; "this month" is its month. Nil when the store has no purchases.
     init?(_ rows: [ListedTransaction], asOf: String) {
-        let purchases = rows.filter { $0.kind == "spending" }
+        let purchases = MerchantHistoryView.purchases(rows)
         guard let first = purchases.map(\.date).min(),
               let year = Int(asOf.prefix(4)), let monthNumber = Int(asOf.dropFirst(5).prefix(2)) else { return nil }
         let month = purchases.filter { $0.month == asOf.prefix(7) }

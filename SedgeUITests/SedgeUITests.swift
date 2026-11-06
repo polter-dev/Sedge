@@ -834,6 +834,30 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "merchant-history")
     }
 
+    /// The Transaction screen's "Merchant history" subtitle counts the rows the history lists:
+    /// Maya's Bean Street history lists 26 visits, so the subtitle says 26, not every row there (41).
+    @MainActor
+    func testMerchantHistorySubtitleMatchesHistory() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let row = app.buttons["Bean Street Coffee, SQ *BEAN ST COFFEE, $2.68"]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 10))
+        let subtitle = history.label
+        for _ in 0..<5 where !history.isHittable { app.swipeUp() }
+        history.tap()
+
+        let card = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH '26 visits since'")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(subtitle.contains("26 visits"), "subtitle was '\(subtitle)', history shows '\(card.label)'")
+    }
+
     /// Answering "Is this account yours?" from Your accounts shows the answer on that account,
     /// and Later leaves it unanswered. Clears the answers at the end, so Maya's saved file ends as it was.
     @MainActor
