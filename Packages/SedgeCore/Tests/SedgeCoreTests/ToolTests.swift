@@ -108,6 +108,21 @@ func totalSpentInACategory(persona: String, category: String, store: String) thr
     #expect(answer["percent_change"] as? Double == ((q2 - q1) / q1 * 1000).rounded() / 10)
 }
 
+/// `higher` names the bigger total, and says "same" when the two are equal to the cent:
+/// Netflix was $15.49 in January and February, then $17.99 by June.
+@Test func compareSaysWhichIsHigher() throws {
+    let database = try organizedPersona("maya")
+    func higher(_ first: String, _ second: String) throws -> String? {
+        let input = ["merchant": "Netflix", "first_start": "\(first)-01", "first_end": "\(first)-28",
+                     "second_start": "\(second)-01", "second_end": "\(second)-28"]
+        let answer = try call("compare_periods", input, on: database)
+        return answer["higher"] as? String
+    }
+    #expect(try higher("2026-01", "2026-02") == "same")
+    #expect(try higher("2026-01", "2026-06") == "second")
+    #expect(try higher("2026-06", "2026-01") == "first")
+}
+
 // MARK: - recurring_charges
 
 /// Each answer-key series as "kind cadence amount next-date": the last charge's amount, and
@@ -146,6 +161,20 @@ func recurringChargesMatchTheKey(persona: String) throws {
     #expect(series(bills) == (try expectedSeries("maya", kinds: ["spending"])))
     #expect(series(income) == ["income biweekly 520.0 2026-07-03"])
     #expect(series(bills).count == 6)
+}
+
+/// `totals` adds up every series per kind and cadence, matching the answer key's series.
+@Test(arguments: ["maya", "daniel"])
+func recurringTotalsMatchTheKey(persona: String) throws {
+    let answer = try call("recurring_charges", ["kind": "all"], on: organizedPersona(persona))
+    var expected: [String: Int] = [:] // in cents
+    for line in try expectedSeries(persona, kinds: ["spending", "income"]) {
+        let parts = line.split(separator: " ")
+        expected["\(parts[0]) \(parts[1])", default: 0] += Int((Double(parts[2])! * 100).rounded())
+    }
+    let got = Dictionary(uniqueKeysWithValues: rows(answer, "totals").map { ("\($0["kind"]!) \($0["cadence"]!)", $0["amount"] as! Double) })
+    #expect(got == expected.mapValues { Double($0) / 100 })
+    if persona == "maya" { #expect(got["income biweekly"] == 520) }
 }
 
 // MARK: - top_merchants
@@ -193,6 +222,32 @@ func findLargeTransactions(persona: String) throws {
     #expect(rows(answer).count == min(10, expected.count))
     // Newest first: the 10 rows are the 10 latest dates.
     #expect(rows(answer).map { $0["date"] as! String } == Array(expected.map(\.date).sorted(by: >).prefix(10)))
+    // Sums cover all matches, in cents: a negative amount is money in.
+    let cents = expected.map { Int(($0.amount * 100).rounded()) }
+    #expect(answer["money_in"] as? Double == Double(-cents.filter { $0 < 0 }.reduce(0, +)) / 100)
+    #expect(answer["money_out"] as? Double == Double(cents.filter { $0 > 0 }.reduce(0, +)) / 100)
+}
+
+/// Money in and out cover every match, not just the 10 rows shown, and leave pending charges out.
+@Test func findTransactionsSumsEveryMatch() throws {
+    let database = try SedgeDatabase()
+    // 12 posted coffees ($4.25 each = $51.00), one refund back, one pending coffee, one paycheck.
+    let coffees = (1...12).map { Transaction(transaction_id: "c\($0)", account_id: "chk", date: String(format: "2026-05-%02d", $0),
+                                             name: "CORNER CAFE", amount: 4.25, pending: false) }
+    try database.save(
+        accounts: [Account(account_id: "chk", name: "Checking", type: "depository", balances: Balances())],
+        transactions: coffees + [
+            Transaction(transaction_id: "r1", account_id: "chk", date: "2026-05-13", name: "REFUND CORNER CAFE", amount: -4.25, pending: false),
+            Transaction(transaction_id: "p1", account_id: "chk", date: "2026-05-14", name: "CORNER CAFE", amount: 4.25, pending: true),
+            Transaction(transaction_id: "pay", account_id: "chk", date: "2026-05-15", name: "ACME PAYROLL", amount: -1200.10, pending: false),
+        ],
+        asOf: "2026-06-30")
+    try Organizer.organize(database)
+    let answer = try call("find_transactions", ["start_date": "2026-05-01"], on: database)
+    #expect(answer["total_count"] as? Int == 15)
+    #expect(rows(answer).count == 10)
+    #expect(answer["money_out"] as? Double == 51)
+    #expect(answer["money_in"] as? Double == 1204.35)
 }
 
 @Test func findSmallMarchCharges() throws {

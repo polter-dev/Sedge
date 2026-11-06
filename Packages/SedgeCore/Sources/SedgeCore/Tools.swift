@@ -39,7 +39,8 @@ public struct Tool: Sendable {
     /// v8 = account_balances reports each account's owner, and transaction rows the person's familiar and category answers (#76).
     /// v9 added savings_options (in Savings.swift) (#19).
     /// v10 = simulate_balance takes on_date and reports the balance at the end of that day (#110).
-    public static let version = "v10"
+    /// v11 = recurring_charges adds totals, find_transactions money_in and money_out, compare_periods higher (#168).
+    public static let version = "v11"
 
     /// Every tool, in the order models see them.
     public static let all = [totalSpent, comparePeriods, recurringCharges, topMerchants, findTransactions, accountBalances,
@@ -301,12 +302,16 @@ extension Tool {
                 let first, second, difference: Double
                 /// Missing when the first total is 0, since a change from nothing has no percent.
                 let percent_change: Double?
+                /// "first", "second" or "same", so the answer to "did I spend more?" is read, not worked out.
+                let higher: String
             }
             let one = try input.range("first_start", "first_end"), two = try input.range("second_start", "second_end")
             let first = try total(spendingFilter(input, from: one.start, to: one.end, db), db).total
             let second = try total(spendingFilter(input, from: two.start, to: two.end, db), db).total
             let percent = first == 0 ? nil : ((second - first) / abs(first) * 1000).rounded() / 10
-            return Result(first: first, second: second, difference: cents(second - first), percent_change: percent)
+            // Both totals are already whole cents, so == means equal to the cent.
+            let higher = first == second ? "same" : first > second ? "first" : "second"
+            return Result(first: first, second: second, difference: cents(second - first), percent_change: percent, higher: higher)
         })
 
     static let recurringCharges = Tool(
@@ -320,7 +325,8 @@ extension Tool {
                 let amount: Double
                 let next: String
             }
-            struct Result: Encodable { let series: [Series]; let total_count: Int? }
+            struct Total: Encodable { let kind, cadence: String; let amount: Double }
+            struct Result: Encodable { let series: [Series]; let total_count: Int?; let totals: [Total] }
             // The organizer marks every charge in a series with the same cadence, amount and
             // next date, so one group per merchant and kind is one series. Card payments and
             // transfers are neither bills nor income, so they never show up here.
@@ -335,7 +341,13 @@ extension Tool {
                 WHERE e.kind = 'recurring' AND t.kind IN \(kinds)
                 GROUP BY e.target, t.kind ORDER BY next, store
                 """)
-            return Result(series: Array(series.prefix(maxRows)), total_count: series.count > maxRows ? series.count : nil)
+            // One sum per kind and cadence over every series, not just the 10 shown, so the model
+            // never adds the list itself. Cadences aren't converted: weekly and monthly stay apart.
+            let totals = Dictionary(grouping: series) { [$0.kind, $0.cadence] }
+                .map { Total(kind: $0.key[0], cadence: $0.key[1], amount: cents($0.value.map(\.amount).reduce(0, +))) }
+                .sorted { ($0.kind, $0.cadence) < ($1.kind, $1.cadence) }
+            return Result(series: Array(series.prefix(maxRows)), total_count: series.count > maxRows ? series.count : nil,
+                          totals: totals)
         })
 
     static let topMerchants = Tool(
@@ -369,7 +381,7 @@ extension Tool {
                  dateInput("start_date", "First day, inclusive", required: false),
                  dateInput("end_date", "Last day, inclusive", required: false)],
         run: { input, db in
-            struct Result: Encodable { let rows: [TransactionRow]; let total_count: Int }
+            struct Result: Encodable { let rows: [TransactionRow]; let total_count: Int; let money_in, money_out: Double }
             // Every kind is shown (with its `kind`), including transfers and pending charges:
             // this tool finds transactions, it doesn't total spending.
             var filter = Filter()
@@ -378,10 +390,18 @@ extension Tool {
             if let max = input.number("max_amount") { filter.add("ABS(t.amount) <= ?", [max + 0.005]) }
             if let start = input.text("start_date") { filter.add("t.date >= ?", [start]) }
             if let end = input.text("end_date") { filter.add("t.date <= ?", [end]) }
-            let count = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM transactions t \(filter.sql)", arguments: filter.arguments)!
+            // Sums cover every match, not just the 10 rows shown. A negative amount is money in, a
+            // positive one money out (Plaid's sign), whatever the kind. Pending charges are listed and
+            // counted but left out of the sums until they post, as total_spent does.
+            let sums = try Row.fetchOne(db, sql: """
+                SELECT COUNT(*), COALESCE(SUM(CASE WHEN t.amount < 0 AND NOT t.pending THEN -ROUND(t.amount * 100) END), 0),
+                       COALESCE(SUM(CASE WHEN t.amount > 0 AND NOT t.pending THEN ROUND(t.amount * 100) END), 0)
+                FROM transactions t \(filter.sql)
+                """, arguments: filter.arguments)!
             let rows = try TransactionRow.fetchAll(db, sql: "\(rowSelect) \(filter.sql) ORDER BY t.date DESC, t.transaction_id DESC LIMIT \(maxRows)",
                                                    arguments: filter.arguments)
-            return Result(rows: rows, total_count: count)
+            return Result(rows: rows, total_count: sums[0], money_in: cents((sums[1] as Double) / 100),
+                          money_out: cents((sums[2] as Double) / 100))
         })
 
     static let accountBalances = Tool(
