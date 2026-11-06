@@ -1015,30 +1015,37 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(yes.isSelected)
         XCTAssertFalse(notSure.isSelected)
 
-        // Undo before 0: the buttons come back and nothing is saved.
+        // The countdown line under the buttons, "Saved. Closing in 4" down to 0.
+        let countdown = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Saved. Closing in '")).firstMatch
+
+        // Undo before 0: the answer is cleared and nothing is saved.
         yes.tap()
-        XCTAssertTrue(app.staticTexts["Saved · Yes"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch.exists)
+        XCTAssertTrue(countdown.waitForExistence(timeout: 2))
+        // Both buttons stay while it counts, the chosen one selected.
+        XCTAssertTrue(yes.isSelected)
+        XCTAssertTrue(notSure.exists)
         attachScreenshot(app, "familiar-countdown")
         app.buttons["Undo"].tap()
-        XCTAssertTrue(yes.waitForExistence(timeout: 2))
+        XCTAssertTrue(countdown.waitForNonExistence(timeout: 2))
         XCTAssertFalse(yes.isSelected)
+        XCTAssertFalse(notSure.isSelected)
         reopen()
         XCTAssertFalse(yes.isSelected)
         XCTAssertFalse(notSure.isSelected)
 
         // Waiting past 0: the whole prompt folds away and the answer stays.
         notSure.tap()
-        XCTAssertTrue(app.staticTexts["Saved · Not sure"].waitForExistence(timeout: 2))
-        // The ring reaches 0 before the prompt folds away. 0 shows for well under a second and
-        // waitForExistence checks only about once a second, so this reads the ring's label in a
-        // tight loop until the ring is gone. One snapshot per read, so a fold mid-read can't fail.
-        let ring = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
+        XCTAssertTrue(countdown.waitForExistence(timeout: 2))
+        XCTAssertTrue(notSure.isSelected)
+        XCTAssertFalse(yes.isSelected)
+        // The countdown reaches 0 before the prompt folds away. 0 shows for well under a second and
+        // waitForExistence checks only about once a second, so this reads the line's label in a
+        // tight loop until it's gone. One snapshot per read, so a fold mid-read can't fail.
         var seen: Set<String> = []
         let end = Date().addingTimeInterval(7)
-        while Date() < end, let label = try? ring.snapshot().label { seen.insert(label) }
-        XCTAssertTrue(seen.contains("Closing in 1"), "The ring was never seen at 1; saw \(seen.sorted())")
-        XCTAssertTrue(seen.contains("Closing in 0"), "The ring never showed 0; saw \(seen.sorted())")
+        while Date() < end, let label = try? countdown.snapshot().label { seen.insert(label) }
+        XCTAssertTrue(seen.contains("Saved. Closing in 1"), "The countdown was never seen at 1; saw \(seen.sorted())")
+        XCTAssertTrue(seen.contains("Saved. Closing in 0"), "The countdown never showed 0; saw \(seen.sorted())")
         XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
         XCTAssertFalse(notSure.exists)
         attachScreenshot(app, "familiar-folded")
@@ -1052,6 +1059,67 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Undo"].tap()
         reopen()
         XCTAssertFalse(notSure.isSelected)
+    }
+
+    /// The countdown pauses while Merchant history is open. Coming back, the track must still match
+    /// the number: at "Closing in 2" or more it's at least a quarter full, so its leading edge is
+    /// the accent color, not the empty track's color. At 1 an empty track is right, so a trip that
+    /// comes back that late (a busy machine) can't tell and is tried again. The answer is undone at the end.
+    @MainActor
+    func testFamiliarTrackKeepsStepAfterMerchantHistory() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
+        openTransaction(app, corner)
+        let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
+        let countdown = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Saved. Closing in '")).firstMatch
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        for _ in 0..<3 {
+            XCTAssertTrue(yes.waitForExistence(timeout: 10))
+            XCTAssertTrue(history.exists)
+            // Leaves right after answering, so the count is still high when it comes back.
+            yes.tap()
+            history.tap()
+            // Stay away longer than the whole 4 s countdown.
+            Thread.sleep(forTimeInterval: 5)
+            app.navigationBars.buttons.firstMatch.tap()
+            XCTAssertTrue(countdown.waitForExistence(timeout: 2))
+            // The screenshot comes first, so the number read after it is never higher than the one it shows.
+            let shot = app.screenshot()
+            let label = countdown.label
+            guard label.hasSuffix(" 2") || label.hasSuffix(" 3") || label.hasSuffix(" 4") else {
+                // Too late to tell: let it fold, then open the transaction again and retry.
+                XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
+                app.navigationBars.buttons.firstMatch.tap()
+                app.buttons[corner].tap()
+                continue
+            }
+            // The track sits 4 pt tall just above the 44 pt line that holds the countdown text.
+            let left = yes.frame.minX, right = notSure.frame.maxX, y = countdown.frame.midY - 22 - 2
+            let near = pixel(shot.image, x: left + (right - left) * 0.05, y: y)
+            let far = pixel(shot.image, x: left + (right - left) * 0.98, y: y)
+            app.buttons["Undo"].tap()
+            XCTAssertNotEqual(near, far, "At '\(label)' the track's leading edge has the same color as its empty end")
+            return
+        }
+        // Clean up the saved answer before failing.
+        yes.tap()
+        app.buttons["Undo"].tap()
+        XCTFail("Never came back from Merchant history at 'Closing in 2' or more")
+    }
+
+    /// The RGBA bytes of one point of a screenshot, `x` and `y` in points.
+    private func pixel(_ image: UIImage, x: CGFloat, y: CGFloat) -> [UInt8] {
+        let cg = image.cgImage!
+        let px = Int(x * image.scale), py = Int(y * image.scale)
+        var out = [UInt8](repeating: 0, count: 4)
+        let ctx = CGContext(data: &out, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        // Draws the image shifted so the wanted pixel lands on the 1 x 1 canvas (Core Graphics counts y from the bottom).
+        ctx.draw(cg, in: CGRect(x: -px, y: py - cg.height + 1, width: cg.width, height: cg.height))
+        return out
     }
 
     /// From the Accounts tab, opens the transaction whose row reads `label`. The list shows one
