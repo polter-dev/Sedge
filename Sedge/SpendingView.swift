@@ -209,6 +209,17 @@ struct SpendingView: View {
         return top
     }
 
+    /// With "All", the category whose spending changed most from the month before `month`, among
+    /// the ones the category sheet lists, so tapping it always picks a listed category. On the
+    /// oldest page the month before is not one of the four shown, so a category spent only then is left out.
+    static func categoryChange(_ totals: [SpendingTotal], asOf: String, month: String) -> (name: String, cents: Int)? {
+        let listed = Set(categoryOrder(totals, asOf: asOf, month: month))
+        return biggestChange(now: cents(totals, month: month), before: cents(totals, month: monthBefore(month)).filter { listed.contains($0.key) })
+    }
+
+    /// How a page turn from a bar tap or VoiceOver moves: the default slide, or none with Reduce Motion.
+    static func pageTurn(reduceMotion: Bool) -> Animation? { reduceMotion ? nil : .default }
+
     /// The biggest change for people, always signed, e.g. "+$22 vs May" or "-$4 vs May". Under
     /// a dollar it keeps the cents, so a small change never reads "+$0".
     static func changeText(_ cents: Int, before month: String) -> String {
@@ -285,7 +296,7 @@ struct SpendingView: View {
     @ScaledMetric(relativeTo: .caption) private var blockWidth: CGFloat = 80
     /// A block narrower than this shows only its name's first word.
     @ScaledMetric(relativeTo: .caption) private var shortName: CGFloat = 84
-    /// The reader's Reduce Motion setting: when on, a new category changes the chart without animating.
+    /// The reader's Reduce Motion setting: when on, a new category or page changes the chart without animating.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -337,8 +348,7 @@ struct SpendingView: View {
                     }
                 } else {
                     rows = []
-                    change = Self.biggestChange(now: Self.cents(totals, month: shownMonth), before: Self.cents(totals, month: before))
-                        .map { ($0.name, $0.cents, nil) }
+                    change = Self.categoryChange(totals, asOf: asOf, month: shownMonth).map { ($0.name, $0.cents, nil) }
                 }
             } catch {
                 print("Could not read spending:", error)
@@ -478,7 +488,7 @@ struct SpendingView: View {
             .onChange(of: tapped) {
                 guard let tapped else { return }
                 // Tapping the page's own month again goes back to today's month.
-                withAnimation { page = tapped == page ? thisMonth : tapped }
+                withAnimation(Self.pageTurn(reduceMotion: reduceMotion)) { page = tapped == page ? thisMonth : tapped }
                 self.tapped = nil
             }
             .frame(height: 175)
@@ -503,7 +513,7 @@ struct SpendingView: View {
         .accessibilityAdjustableAction { direction in
             guard let index = months.firstIndex(of: shownMonth) else { return }
             let next = direction == .increment ? index + 1 : index - 1
-            if months.indices.contains(next) { withAnimation { page = months[next] } }
+            if months.indices.contains(next) { withAnimation(Self.pageTurn(reduceMotion: reduceMotion)) { page = months[next] } }
         }
     }
 
