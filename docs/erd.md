@@ -148,7 +148,7 @@ erDiagram
 - **saved_answers** holds the person's replies to `ask_user`, one per `fact_key`, so a
   clarifying question is asked only once. Before asking, `ask_user` checks this table and
   then profile_corrections (a correction whose kind starts the key, e.g. `housing` for
-  `housing_type`, or whose id is the key). Nothing rebuilds the table; the Saved answers
+  `housing_type`, or whose id in key form, lowercased with `:` turned into `_`, is the key). Nothing rebuilds the table; the Saved answers
   screen changes or removes one answer, and the Accounts screen's "Reset saved questions"
   clears it.
 - **accounts.owner**, **transactions.familiar** and **transactions.category_override** are the

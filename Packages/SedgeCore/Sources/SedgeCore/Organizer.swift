@@ -94,9 +94,10 @@ public enum Organizer {
                     try db.execute(sql: "UPDATE transactions SET merchant_id = ? WHERE transaction_id = ?",
                                    arguments: [merchantID, line.id])
                 }
-                let startsWithRefund = { (line: Line) in line.raw.lowercased().hasPrefix("refund ") }
+                // Only money in can be a refund: a charge named "REFUND ..." is still a purchase and can recur.
+                let startsWithRefund = { (line: Line) in line.amount < 0 && line.raw.lowercased().hasPrefix("refund ") }
                 // Only posted charges count as paid, as in the profile: a pending charge may never post.
-                let purchases = merchantLines.filter { !startsWithRefund($0) && $0.amount > 0 && !$0.pending }
+                let purchases = merchantLines.filter { $0.amount > 0 && !$0.pending }
                 let storeName = { (line: Line) in words(clean(line.raw).name).joined(separator: " ") }
                 // The profile's tuition rule (see `Profile.infer`), checked here because the profile is built only
                 // after refunds are decided: a store that isn't housing where a name says tuition or bursar, or an
@@ -117,7 +118,7 @@ public enum Organizer {
                                 && sameStore(purchaseName, refundName))
                     }
                 }
-                // A name starting with "REFUND" is always a refund. Money back named with "REFUND" last is a refund
+                // Money back named with "REFUND" first is always a refund. Money back named with "REFUND" last is a refund
                 // only if it is no more than the purchases it names and no more than what is left at the store
                 // (everything paid on or before it less the refunds before it), so "STATE TAX REFUND", an
                 // "IRS TAX REFUND" larger than the tax paid, or a second $300 back on $500 paid, stays income.
