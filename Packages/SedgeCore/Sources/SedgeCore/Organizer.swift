@@ -58,6 +58,9 @@ public enum Organizer {
     /// Whole words in a statement name that say money is moving between accounts.
     static let transferWords: Set<String> = ["payment", "transfer", "xfer", "pmt", "pymt", "autopay"]
 
+    /// Apps that send money between people. Money back through one is never a store's credit.
+    static let peerToPeerNames: Set<String> = ["venmo", "zelle", "paypal", "cash app", "cashapp"]
+
     /// Rebuilds the graph from the saved transactions, replacing any earlier result.
     /// `useGraph: false` is the "no graph" ablation: each raw statement name is its own
     /// store, and nothing is linked as recurring or as a refund.
@@ -122,8 +125,20 @@ public enum Organizer {
                 // only if it is no more than the purchases it names and no more than what is left at the store
                 // (everything paid on or before it less the refunds before it), so "STATE TAX REFUND", an
                 // "IRS TAX REFUND" larger than the tax paid, or a second $300 back on $500 paid, stays income.
+                // A store return can also be named "<store> CREDIT" ("CEDAR HOME CREDIT"). "Credit" also means a payment
+                // or a transfer, so it counts only when posted, with a posted purchase it names in full of exactly the
+                // same amount on the same account: a card's "ONLINE PAYMENT CREDIT" (paid from checking) stays a payment.
+                // A name with a transfer word or a person-to-person app ("ONLINE TRANSFER CREDIT", "VENMO CREDIT") never
+                // counts, even after the same amount left under that name: that is money coming back, not a return.
+                let isStoreCredit = { (line: Line) -> Bool in
+                    // The raw name's words, padded with spaces so " cash app " matches whole words only.
+                    let rawWords = " " + line.raw.lowercased().split { !$0.isLetter }.joined(separator: " ") + " "
+                    return !line.pending && clean(line.raw).name.hasSuffix(" credit")
+                        && transferWords.union(peerToPeerNames).allSatisfy { !rawWords.contains(" \($0) ") }
+                        && paidBefore(line).contains { $0.account == line.account && abs($0.amount + line.amount) < 0.005 }
+                }
                 var refunds: [Line] = [], refundedSoFar = 0.0
-                for line in merchantLines where startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund
+                for line in merchantLines where startsWithRefund(line) || line.amount < 0 && (clean(line.raw).isRefund || isStoreCredit(line))
                     && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) + 0.005
                     && -line.amount <= purchases.filter { $0.date <= line.date }.map(\.amount).reduce(0, +) - refundedSoFar + 0.005 {
                     refunds.append(line)

@@ -327,6 +327,84 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(spent["total"] as? Double == 0 && spent["count"] as? Int == 4)
 }
 
+/// Money back named "<store> CREDIT", with a purchase of exactly that amount at that store on the same
+/// account, is a store return: it is a refund of that purchase and lowers the store's spending.
+@Test func storeCreditWithTheStoresNameIsARefund() throws {
+    let database = try housingData([("h1", "2026-04-10", "CEDAR HOME", 84.20), ("h2", "2026-05-02", "CEDAR HOME", 30),
+                                    ("c", "2026-05-12", "CEDAR HOME CREDIT", -84.20)])
+    #expect(try kindOf("c", database) == "refund")
+    let edge = try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT target FROM edges WHERE source = 'c' AND kind = 'refund_of'") }
+    #expect(edge == "h1")
+    let spent = try call("total_spent", firstHalf(), on: database)
+    #expect(spent["total"] as? Double == 30 && spent["count"] as? Int == 3)
+}
+
+/// A checking account and a card, with (id, account, date, name, amount) lines, organized.
+func checkingAndCard(_ lines: [(String, String, String, String, Double)]) throws -> SedgeDatabase {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [Account(account_id: "chk", name: "Checking", type: "depository", balances: Balances()),
+                   Account(account_id: "card", name: "Card", type: "credit", balances: Balances())],
+        transactions: lines.map { Transaction(transaction_id: $0.0, account_id: $0.1, date: $0.2, name: $0.3, amount: $0.4, pending: false) },
+        asOf: "2026-06-30")
+    try Organizer.organize(database)
+    return database
+}
+
+/// "Credit" without a matching purchase on the same account stays what it was: a card's "ONLINE PAYMENT CREDIT"
+/// is paid from checking, "VENMO CREDIT" matches no purchase's amount, a store credit on another account than the
+/// purchase isn't its return, and a credit larger than what is left to refund is income.
+@Test func creditWithoutAnExactPurchaseOnTheSameAccountIsNotARefund() throws {
+    let database = try checkingAndCard([
+        ("op", "chk", "2026-03-20", "ONLINE PAYMENT", 250), ("opc", "card", "2026-03-20", "ONLINE PAYMENT CREDIT", -250),
+        ("v1", "chk", "2026-03-01", "VENMO", 60), ("vc", "chk", "2026-03-05", "VENMO CREDIT", -40),
+        ("h1", "card", "2026-04-10", "CEDAR HOME", 84.20), ("hc", "chk", "2026-04-20", "CEDAR HOME CREDIT", -84.20),
+        ("l1", "chk", "2026-05-01", "LAKE OUTFITTERS", 50), ("lr", "chk", "2026-05-03", "LAKE OUTFITTERS REFUND", -50),
+        ("lc", "chk", "2026-05-05", "LAKE OUTFITTERS CREDIT", -50)])
+    #expect(try kindOf("op", database) == "card_payment" && kindOf("opc", database) == "card_payment")
+    #expect(try kindOf("vc", database) == "income")
+    #expect(try kindOf("hc", database) == "income")
+    #expect(try kindOf("lr", database) == "refund" && kindOf("lc", database) == "income")
+}
+
+/// Money moved to savings and later the same amount moved back is two transfers, even when the bank
+/// names the way back "<same name> CREDIT": it is not a store return.
+@Test func transferBackNamedCreditStaysATransfer() throws {
+    let database = try SedgeDatabase()
+    try database.save(
+        accounts: [Account(account_id: "chk", name: "Checking", type: "depository", balances: Balances()),
+                   Account(account_id: "sav", name: "Savings", type: "depository", balances: Balances())],
+        transactions: [("a1", "chk", "2026-06-01", "ONLINE TRANSFER DEBIT", 100.0), ("a2", "sav", "2026-06-01", "ONLINE TRANSFER CREDIT", -100),
+                       ("a3", "sav", "2026-06-20", "ONLINE TRANSFER DEBIT", 100), ("a4", "chk", "2026-06-20", "ONLINE TRANSFER CREDIT", -100)]
+            .map { Transaction(transaction_id: $0.0, account_id: $0.1, date: $0.2, name: $0.3, amount: $0.4, pending: false) },
+        asOf: "2026-06-30")
+    try Organizer.organize(database)
+    #expect(try kindOf("a3", database) == "transfer" && kindOf("a4", database) == "transfer")
+}
+
+/// A card's "ONLINE PAYMENT CREDIT" stays a card payment even when the card has an earlier charge of the
+/// same amount named "ONLINE PAYMENT" (a returned payment shows up that way on some cards).
+@Test func cardPaymentCreditStaysACardPaymentAfterAReturnedPayment() throws {
+    let database = try checkingAndCard([
+        ("q0", "card", "2026-03-01", "ONLINE PAYMENT", 250),
+        ("q1", "chk", "2026-03-20", "ONLINE PAYMENT", 250), ("q2", "card", "2026-03-20", "ONLINE PAYMENT CREDIT", -250)])
+    #expect(try kindOf("q1", database) == "card_payment" && kindOf("q2", database) == "card_payment")
+}
+
+/// Money back through a person-to-person app is never a store credit, even right after the same amount went out
+/// through it: "VENMO CREDIT" $60 after "VENMO" $60 on the same account stays income.
+@Test func venmoCreditAfterTheSameAmountStaysIncome() throws {
+    let database = try checkingAndCard([("v1", "chk", "2026-03-01", "VENMO", 60), ("v2", "chk", "2026-03-05", "VENMO CREDIT", -60)])
+    #expect(try kindOf("v1", database) == "spending" && kindOf("v2", database) == "income")
+}
+
+/// "PAYMENT CREDIT CARD" doesn't end in "CREDIT", so it is still the checking side of a card payment.
+@Test func paymentCreditCardIsStillACardPayment() throws {
+    let database = try checkingAndCard([("p", "chk", "2026-02-20", "PAYMENT CREDIT CARD", 127.89),
+                                        ("t", "card", "2026-02-20", "PAYMENT THANK YOU", -127.89)])
+    #expect(try kindOf("p", database) == "card_payment" && kindOf("t", database) == "card_payment")
+}
+
 /// One transaction's kind, as the organizer saved it.
 func kindOf(_ id: String, _ database: SedgeDatabase) throws -> String? {
     try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT kind FROM transactions WHERE transaction_id = ?", arguments: [id]) }
