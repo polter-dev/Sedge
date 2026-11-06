@@ -148,10 +148,12 @@ struct AccountCheckView: View {
                     .background(Color.account(account.kind), in: .rect(cornerRadius: 12))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(accountTitle(account.name, account.mask))
+                    // No nickname here: the Name row below already shows it.
+                    Text(ListedAccount.named(account.name, nickname: nil, institution: account.institution, mask: account.mask))
                         .font(.answer.weight(.semibold))
                         .foregroundStyle(Color.ink)
-                        .accessibilityLabel(accountTitle(account.name, account.mask, spoken: true))
+                        .accessibilityLabel(ListedAccount.named(account.name, nickname: nil, institution: account.institution,
+                                                                mask: account.mask, spoken: true))
                     if !detail.isEmpty {
                         Text(detail).font(.row).foregroundStyle(Color.muted)
                     }

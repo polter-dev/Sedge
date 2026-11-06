@@ -104,10 +104,14 @@ func finishConnecting(
     do {
         try await exchange(publicToken)
         try await sync(database)
-        try await database.dbQueue.write { db in
-            try db.execute(
-                sql: "INSERT INTO meta (key, value) VALUES ('institution_name', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                arguments: [institution])
+        // Link sends "" when it has no bank name; saving nothing keeps the account's own name.
+        let institution = institution.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !institution.isEmpty {
+            try await database.dbQueue.write { db in
+                try db.execute(
+                    sql: "INSERT INTO meta (key, value) VALUES ('institution_name', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    arguments: [institution])
+            }
         }
         return nil
     } catch {
