@@ -262,7 +262,8 @@ struct AccountsView: View {
                         }
                     }
                     .navigationTitle("Transactions")
-                    .navigationSubtitle(dataName)
+                    // The list's title is its month menu, so the screen's name moves under it.
+                    .navigationSubtitle(isBank && rows.isEmpty ? dataName : "Transactions · \(dataName)")
                 } label: {
                     Label("Transactions", systemImage: "list.bullet")
                 }

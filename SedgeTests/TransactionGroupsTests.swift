@@ -28,59 +28,85 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
 /// A week that crosses into July holds only June's days in June, and only July's in July.
 @Test func aWeekAcrossMonthsHoldsOnlyTheShownMonth() throws {
     let rows = [row("3", "2026-07-02", 5), row("2", "2026-06-30", 2.68), row("1", "2026-06-24", 3.72)]
-    let june = try #require(TransactionGroups.parts(rows, month: "2026-06").first)
-    #expect(june.part == .spending)
-    #expect(june.weeks.map(\.monday) == ["2026-06-29", "2026-06-22"])
-    #expect(june.weeks.first?.rows.map(\.id) == ["2"])
-    let july = try #require(TransactionGroups.parts(rows, month: "2026-07").first)
-    #expect(july.weeks.map(\.monday) == ["2026-06-29"])
-    #expect(july.weeks.first?.rows.map(\.id) == ["3"])
+    let june = TransactionGroups.weeks(rows, month: "2026-06")
+    #expect(june.map(\.monday) == ["2026-06-29", "2026-06-22"])
+    #expect(june.first?.rows.map(\.id) == ["2"])
+    let july = TransactionGroups.weeks(rows, month: "2026-07")
+    #expect(july.map(\.monday) == ["2026-06-29"])
+    #expect(july.first?.rows.map(\.id) == ["3"])
     #expect(TransactionGroups.months(rows) == ["2026-06", "2026-07"])
 }
 
-/// Income, Spending (with refunds) and Transfers (with card payments) go to their own parts, in that order.
-@Test func kindsGoToTheirParts() {
-    let rows = [row("1", "2026-06-01", -520, "income"), row("2", "2026-06-02", 10), row("3", "2026-06-03", -4, "refund"),
-                row("4", "2026-06-04", 150.30, "card_payment"), row("5", "2026-06-04", -150.30, "card_payment"),
-                row("6", "2026-06-05", 50, "transfer"), row("7", "2026-06-06", 1, nil)]
-    let parts = TransactionGroups.parts(rows, month: "2026-06")
-    #expect(parts.map(\.part) == [.income, .spending, .transfers])
-    #expect(parts.map { $0.rows.map(\.id) } == [["1"], ["2", "3", "7"], ["4", "5", "6"]])
-    #expect(parts.map(\.cents) == [-52000, 700, 5000])
+/// Income is money in; spending, less refunds, is money out (a row with no kind counts as
+/// spending); transfers and card payments are in neither, but stay in their week.
+@Test func inOutLeavesTransfersOut() throws {
+    let rows = [row("7", "2026-06-06", 1, nil), row("6", "2026-06-05", 50, "transfer"), row("5", "2026-06-04", -150.30, "card_payment"),
+                row("4", "2026-06-04", 150.30, "card_payment"), row("3", "2026-06-03", -4, "refund"), row("2", "2026-06-02", 10),
+                row("1", "2026-06-01", -520, "income")]
+    let money = InOut(rows)
+    #expect(money.moneyIn == 52000 && money.moneyOut == 700 && money.leftOver == 51300)
+    let week = try #require(TransactionGroups.weeks(rows, month: "2026-06").first { $0.monday == "2026-06-01" })
+    #expect(week.rows.map(\.id) == ["7", "6", "5", "4", "3", "2", "1"])
+    #expect(InOut(week.rows) == money)
 }
 
-/// For maya and daniel, every month's Income, Spending and Transfers totals equal the sum of
-/// their rows straight from the database, the week totals add up to them, and every row is listed once.
-@Test(arguments: ["maya", "daniel"]) func monthTotalsMatchTheirRows(persona: String) throws {
+/// For maya and daniel and every month: the in/out card and each week header's in and out equal
+/// the database's own sums of those rows (income in, spending and refunds out, transfers and card
+/// payments in neither), the weeks add up to the month, and every row is listed once, in its week.
+@Test(arguments: ["maya", "daniel"]) func monthAndWeekTotalsMatchTheirRows(persona: String) throws {
     let database = try inMemory(persona)
     let rows = try ListedTransaction.all(in: database)
-    // The database's own sums, in whole cents, by month and part.
+    // The database's own sums in whole cents, by month and Monday (worked out in SQL, not with the app's week math).
     let sums = try database.dbQueue.read { db in
         try Row.fetchAll(db, sql: """
             SELECT substr(date, 1, 7) AS month,
-                   CASE WHEN kind = 'income' THEN 'Income'
-                        WHEN kind IN ('transfer', 'card_payment') THEN 'Transfers'
-                        ELSE 'Spending' END AS part,
-                   SUM(CAST(ROUND(amount * 100) AS INTEGER)) AS cents, COUNT(*) AS count
+                   date(date, '-' || ((CAST(strftime('%w', date) AS INTEGER) + 6) % 7) || ' days') AS monday,
+                   -SUM(CASE WHEN kind = 'income' THEN CAST(ROUND(amount * 100) AS INTEGER) ELSE 0 END) AS moneyIn,
+                   SUM(CASE WHEN kind = 'income' OR kind IN ('transfer', 'card_payment') THEN 0
+                            ELSE CAST(ROUND(amount * 100) AS INTEGER) END) AS moneyOut,
+                   COUNT(*) AS count
             FROM transactions GROUP BY 1, 2
             """)
     }
-    var listed = 0
+    #expect(rows.count == sums.reduce(0) { $0 + ($1["count"] as Int) })
     let months = TransactionGroups.months(rows)
     #expect(months.count > 1)
+    var listed = 0
     for month in months {
-        let parts = TransactionGroups.parts(rows, month: month)
-        for part in parts {
-            let sum = try #require(sums.first { $0["month"] == month && $0["part"] == part.part.rawValue })
-            #expect(part.cents == sum["cents"], "\(persona) \(month) \(part.part)")
-            #expect(part.rows.count == sum["count"])
-            #expect(part.weeks.reduce(0) { $0 + $1.cents } == part.cents)
-            #expect(part.weeks.allSatisfy { week in week.rows.allSatisfy { TransactionGroups.monday(of: $0.date) == week.monday && $0.month == month } })
-            listed += part.weeks.reduce(0) { $0 + $1.rows.count }
+        let weeks = TransactionGroups.weeks(rows, month: month)
+        let monthSums = sums.filter { $0["month"] == month }
+        // The card, summed the way the screen sums it.
+        let card = InOut(rows.filter { $0.month == month })
+        #expect(card.moneyIn == monthSums.reduce(0) { $0 + ($1["moneyIn"] as Int) }, "\(persona) \(month) in")
+        #expect(card.moneyOut == monthSums.reduce(0) { $0 + ($1["moneyOut"] as Int) }, "\(persona) \(month) out")
+        #expect(weeks.map(\.monday) == monthSums.map { $0["monday"] as String }.sorted(by: >))
+        for week in weeks {
+            let sum = try #require(monthSums.first { $0["monday"] == week.monday })
+            let header = InOut(week.rows)
+            #expect(header.moneyIn == sum["moneyIn"], "\(persona) \(week.monday) in")
+            #expect(header.moneyOut == sum["moneyOut"], "\(persona) \(week.monday) out")
+            #expect(week.rows.count == sum["count"])
+            #expect(week.rows.allSatisfy { TransactionGroups.monday(of: $0.date) == week.monday && $0.month == month })
         }
-        #expect(parts.count == sums.filter { $0["month"] == month }.count)
+        // The weeks add up to the month.
+        #expect(weeks.reduce(0) { $0 + InOut($1.rows).moneyIn } == card.moneyIn)
+        #expect(weeks.reduce(0) { $0 + InOut($1.rows).moneyOut } == card.moneyOut)
+        listed += weeks.reduce(0) { $0 + $1.rows.count }
     }
     #expect(listed == rows.count)
+}
+
+/// Maya's June, the design's example: In +$1,040.00, Out $966.00, $74.00 left over, and the weeks
+/// newest first with $28.19, $24.23, +$520.00 and $118.21, $87.38, then +$520.00 and $707.99. Her
+/// Bean Street Coffee rows carry the coffee category, for their dot.
+@Test func mayasJuneMatchesTheDesign() throws {
+    let rows = try ListedTransaction.all(in: try inMemory("maya"))
+    let june = InOut(rows.filter { $0.month == "2026-06" })
+    #expect(june.moneyIn == 104000 && june.moneyOut == 96600 && june.leftOver == 7400)
+    let weeks = TransactionGroups.weeks(rows, month: "2026-06").map { InOut($0.rows) }
+    #expect(weeks.map(\.moneyIn) == [0, 0, 52000, 0, 52000])
+    #expect(weeks.map(\.moneyOut) == [2819, 2423, 11821, 8738, 70799])
+    #expect(rows.filter { $0.store == "Bean Street Coffee" && $0.kind == "spending" }.allSatisfy { $0.category == "coffee" })
 }
 
 /// Merchant history's card: this month's total, visit count and smallest-to-largest visit, from

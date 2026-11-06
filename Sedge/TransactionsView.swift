@@ -20,19 +20,24 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
     let amount: Double
     /// spending, income, transfer, card_payment or refund (set by the organizer).
     let kind: String?
+    /// The stored category ("phone_internet"), the person's answer first, as the Spending screen
+    /// counts it. Only `all` reads it; a query without the column leaves it nil.
+    var category: String? = nil
 
     var id: String { transaction_id }
     /// The amount in whole cents, Plaid's sign, so sums never pick up float noise.
     var cents: Int { Int((amount * 100).rounded()) }
-    /// "YYYY-MM", the month the stepper files it under.
+    /// "YYYY-MM", the month the list files it under.
     var month: String { String(date.prefix(7)) }
 
     /// Every transaction, or with `merchant` only that store's, newest first, the same order the tools use.
     static func all(in database: SedgeDatabase, merchant: String? = nil) throws -> [ListedTransaction] {
         try database.dbQueue.read { db in
             try ListedTransaction.fetchAll(db, sql: """
-                SELECT t.transaction_id, t.date, COALESCE(m.name, t.name) AS store, t.name, t.amount, t.kind
+                SELECT t.transaction_id, t.date, COALESCE(m.name, t.name) AS store, t.name, t.amount, t.kind,
+                       \(SpendingTotal.categoryOf) AS category
                 FROM transactions t LEFT JOIN entities m ON m.id = t.merchant_id
+                \(SpendingTotal.categoryJoins)
                 WHERE ? IS NULL OR t.merchant_id = ?
                 ORDER BY t.date DESC, t.transaction_id DESC
                 """, arguments: [merchant, merchant])
@@ -40,18 +45,33 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
     }
 }
 
-/// The three parts of a month's list, in the order they are shown.
-enum MoneyPart: String, CaseIterable {
-    case income = "Income", spending = "Spending", transfers = "Transfers"
+/// What a row counts as on the transactions list.
+enum MoneyPart {
+    case income, spending, transfers
 
     /// Transfers and card payments only move money between the person's own accounts, so they
-    /// go last and keep Income and Spending clean. Refunds stay with the spending they undo.
+    /// count as neither money in nor money out. Refunds count against the spending they undo.
     init(kind: String?) {
         switch kind {
         case "income": self = .income
         case "transfer", "card_payment": self = .transfers
         default: self = .spending
         }
+    }
+}
+
+/// Money in and money out of some rows, in whole cents, each summed from the rows themselves.
+struct InOut: Equatable {
+    /// Income, flipped from Plaid's sign so money that came in is above zero.
+    let moneyIn: Int
+    /// Spending less refunds. Transfers and card payments are in neither number.
+    let moneyOut: Int
+    /// What is left of the money in after the money out.
+    var leftOver: Int { moneyIn - moneyOut }
+
+    init(_ rows: [ListedTransaction]) {
+        moneyIn = -rows.filter { MoneyPart(kind: $0.kind) == .income }.reduce(0) { $0 + $1.cents }
+        moneyOut = rows.filter { MoneyPart(kind: $0.kind) == .spending }.reduce(0) { $0 + $1.cents }
     }
 }
 
@@ -63,16 +83,6 @@ struct WeekGroup: Identifiable {
     var id: String { monday }
     /// The week's total in whole cents, Plaid's sign.
     var cents: Int { rows.reduce(0) { $0 + $1.cents } }
-}
-
-/// One part of one month: its rows, their total, and the rows by week.
-struct MonthPart: Identifiable {
-    let part: MoneyPart
-    let rows: [ListedTransaction]
-    var id: MoneyPart { part }
-    /// The part's total in whole cents, Plaid's sign, summed from its own rows.
-    var cents: Int { rows.reduce(0) { $0 + $1.cents } }
-    var weeks: [WeekGroup] { TransactionGroups.weeks(rows) }
 }
 
 /// The plain grouping the transactions list and Merchant history use, kept out of the views so
@@ -106,12 +116,10 @@ enum TransactionGroups {
             .sorted { $0.monday > $1.monday }
     }
 
-    /// One month's Income, Spending and Transfers, skipping a part with no rows. Only the month's
-    /// own rows are used, so a week that crosses into the next month holds just this month's days.
-    static func parts(_ rows: [ListedTransaction], month: String) -> [MonthPart] {
-        let shown = rows.filter { $0.month == month }
-        return MoneyPart.allCases.map { part in MonthPart(part: part, rows: shown.filter { MoneyPart(kind: $0.kind) == part }) }
-            .filter { !$0.rows.isEmpty }
+    /// One month's rows of every kind by week, newest first. Only the month's own rows are used,
+    /// so a week that crosses into the next month holds just this month's days.
+    static func weeks(_ rows: [ListedTransaction], month: String) -> [WeekGroup] {
+        weeks(rows.filter { $0.month == month })
     }
 
     /// "Jun 15 – 21", or "Jun 29 – Jul 5" when the Sunday is in the next month.
@@ -131,16 +139,20 @@ func amountText(_ amount: Double) -> String {
 /// Whole cents written like `amountText`.
 func amountText(cents: Int) -> String { amountText(Double(cents) / 100) }
 
-/// The list of transactions from the chosen database, one month at a time: Income, Spending,
-/// then Transfers, each grouped by Monday-to-Sunday week. Tapping a row opens it.
+/// The list of transactions from the chosen database, one month at a time: the month's money in
+/// and out, then every row in one run of Monday-to-Sunday weeks. Tapping a row opens it.
 struct TransactionsView: View {
     let rows: [ListedTransaction]
     let database: SedgeDatabase
     /// The month shown, "YYYY-MM"; nil until the screen opens on the data's "today".
     @State private var month: String?
-    /// +1 when moving to a later month, -1 to an earlier one, so the slide follows the arrow.
+    /// +1 when moving to a later month, -1 to an earlier one, so the slide follows the change.
     @State private var direction = 1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// The 6 pt month dots and the 8 pt dots on the in/out card grow with the text.
+    @ScaledMetric(relativeTo: .caption2) private var pageDot: CGFloat = 6
+    @ScaledMetric(relativeTo: .caption) private var dot: CGFloat = 8
 
     private var months: [String] { TransactionGroups.months(rows) }
 
@@ -158,12 +170,16 @@ struct TransactionsView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if let month { stepper(month) }
+            if let month { pageDots(month) }
         }
         .background(Color.background)
-        // The design's centered title; a large title has no list to collapse into above the stepper.
         .navigationBarTitleDisplayMode(.inline)
-        // A sideways swipe changes month like the arrows; mostly-vertical drags are left to scrolling.
+        .toolbar {
+            if let month {
+                ToolbarItem(placement: .principal) { monthMenu(month) }
+            }
+        }
+        // A sideways swipe changes month; mostly-vertical drags are left to scrolling.
         .simultaneousGesture(DragGesture(minimumDistance: 30).onEnded { drag in
             let x = drag.translation.width
             guard abs(x) > 60, abs(x) > 2 * abs(drag.translation.height) else { return }
@@ -180,88 +196,178 @@ struct TransactionsView: View {
         }
     }
 
+    /// "June 2026".
+    private func monthName(_ month: String) -> String { "\(month)-01".displayDate(.dateTime.month(.wide).year()) }
+
+    /// Shows another month, sliding in from the side it is on.
+    private func show(_ newMonth: String) {
+        guard let month, newMonth != month else { return }
+        direction = newMonth > month ? 1 : -1
+        withAnimation(.easeInOut(duration: 0.25)) { self.month = newMonth }
+    }
+
     /// Moves `by` months through the months that have data, if there is one that way.
     private func step(_ by: Int) {
         guard let month, let index = months.firstIndex(of: month), months.indices.contains(index + by) else { return }
-        direction = by
-        withAnimation(.easeInOut(duration: 0.25)) { self.month = months[index + by] }
+        show(months[index + by])
     }
 
-    /// The ‹ June 2026 › bar with the month's money in and out.
-    private func stepper(_ month: String) -> some View {
-        let parts = TransactionGroups.parts(rows, month: month)
-        let total = { (part: MoneyPart) in parts.first { $0.part == part }?.cents ?? 0 }
-        let index = months.firstIndex(of: month) ?? 0
-        return HStack {
-            stepButton("Previous month", systemImage: "chevron.left", enabled: index > 0) { step(-1) }
-            Spacer(minLength: 8)
-            VStack(spacing: 0) {
-                Text("\(month)-01".displayDate(.dateTime.month(.wide).year()))
-                    .font(.callout.weight(.semibold))
-                    .accessibilityAddTraits(.isHeader)
-                // Plaid's sign is positive for money out, so income is flipped to show what came in.
-                Text("In \((Double(-total(.income)) / 100).formatted(.currency(code: "USD"))) · Out \((Double(total(.spending)) / 100).formatted(.currency(code: "USD")))")
-                    .font(.row)
-                    .foregroundStyle(Color.muted)
+    /// The title: the month as a menu of every month with data, newest first. The screen's name
+    /// is the nav bar's subtitle under it.
+    private func monthMenu(_ month: String) -> some View {
+        Menu {
+            Picker("Month", selection: Binding(get: { month }, set: show)) {
+                ForEach(months.reversed(), id: \.self) { Text(monthName($0)).tag($0) }
             }
-            .multilineTextAlignment(.center)
-            .accessibilityElement(children: .combine)
-            Spacer(minLength: 8)
-            stepButton("Next month", systemImage: "chevron.right", enabled: index < months.count - 1) { step(1) }
+        } label: {
+            HStack(spacing: 4) {
+                Text(monthName(month)).font(.callout.weight(.semibold)).foregroundStyle(Color.ink)
+                Image(systemName: "chevron.down").font(.caption.weight(.semibold)).foregroundStyle(Color.accent)
+            }
+            .padding(.leading, 12)
+            .padding(.trailing, 10)
+            .padding(.vertical, 4)
+            .background(Color.soft, in: .capsule)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        // The nav bar has a fixed height, so the title stops growing before it spills out.
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .accessibilityLabel("Month")
+        .accessibilityValue(monthName(month))
+    }
+
+    /// One dot per month with data, the shown month's dark. The menu says the same, so VoiceOver skips it.
+    private func pageDots(_ month: String) -> some View {
+        HStack(spacing: 6) {
+            ForEach(months, id: \.self) { Circle().fill($0 == month ? Color.accent : Color.line).frame(width: pageDot, height: pageDot) }
+        }
+        .padding(.top, 6)
+        .frame(maxWidth: .infinity)
         .background(Color.background)
+        .accessibilityHidden(true)
     }
 
-    /// One of the stepper's 44 × 44 pt arrows, faded when there is no month that way.
-    private func stepButton(_ label: String, systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.title3)
-                // The button stays 44 pt at every text size, so the arrow stops growing before it spills out.
-                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                .foregroundStyle(Color.accent)
-                .frame(width: 44, height: 44)
-                .background(Color.soft, in: .rect(cornerRadius: 10))
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.35)
-        .accessibilityLabel(label)
-    }
-
-    /// One month's parts, each a heading and its weeks.
+    /// The in/out card, then the month's weeks in one group, each week's header above its rows.
     private func list(_ month: String) -> some View {
         List {
-            ForEach(TransactionGroups.parts(rows, month: month)) { part in
-                Section {
-                    TotalLine(title: Text(part.part.rawValue).font(.title3.weight(.semibold)).foregroundStyle(Color.ink),
-                              total: amountText(cents: part.cents))
-                        .accessibilityAddTraits(.isHeader)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 0, trailing: 16))
-                }
-                ForEach(part.weeks) { week in
-                    Section {
-                        ForEach(week.rows) { row in
-                            NavigationLink {
-                                TransactionDetailView(database: database, id: row.id)
-                            } label: {
-                                TransactionRow(row: row, title: row.store, tag: true)
-                            }
+            Section { card(InOut(rows.filter { $0.month == month })) }
+                .listRowBackground(Color.group)
+            Section {
+                ForEach(TransactionGroups.weeks(rows, month: month)) { week in
+                    weekHeader(week)
+                        .listRowBackground(Color.soft)
+                        .listRowSeparator(.hidden)
+                    ForEach(week.rows) { row in
+                        NavigationLink {
+                            TransactionDetailView(database: database, id: row.id)
+                        } label: {
+                            WeekRow(row: row)
                         }
-                    } header: {
-                        TotalLine(title: Text(TransactionGroups.label(monday: week.monday)), total: amountText(cents: week.cents))
                     }
-                    .listRowBackground(Color.group)
                 }
             }
+            .listRowBackground(Color.group)
         }
-        .listSectionSpacing(.compact)
-        // The stepper already spaces the list from the title, so the list's own top gap goes.
-        .contentMargins(.top, 0, for: .scrollContent)
+        .listSectionSpacing(16)
+        // The month dots already space the list from the title, so the list's own top gap shrinks.
+        .contentMargins(.top, 10, for: .scrollContent)
         .themedBackground()
+    }
+
+    /// Money in and out side by side (stacked at the largest text sizes), a bar split by the two,
+    /// and what is left over.
+    private func card(_ money: InOut) -> some View {
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 8))
+        // The bar only splits money that came in and went out; a month of refunds draws no bar.
+        let shareIn = max(money.moneyIn, 0), shareOut = max(money.moneyOut, 0)
+        let dollars = { (cents: Int) in (Double(cents) / 100).formatted(.currency(code: "USD")) }
+        return VStack(alignment: .leading, spacing: 10) {
+            layout {
+                figure("In", amountText(cents: -money.moneyIn), color: .moneyBack)
+                Spacer(minLength: 0)
+                figure("Out", amountText(cents: money.moneyOut), color: .moneySpent)
+            }
+            if shareIn + shareOut > 0 {
+                GeometryReader { geometry in
+                    HStack(spacing: 2) {
+                        Capsule().fill(Color.moneyBack)
+                            .frame(width: max(geometry.size.width - 2, 0) * CGFloat(shareIn) / CGFloat(shareIn + shareOut))
+                        Capsule().fill(Color.moneySpent)
+                    }
+                }
+                .frame(height: 6)
+                .accessibilityHidden(true)
+            }
+            Text(money.leftOver >= 0 ? "\(dollars(money.leftOver)) left over" : "\(dollars(-money.leftOver)) more out than in")
+                .font(.note)
+                .foregroundStyle(Color.muted)
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// "● In +$1,040.00": a dot, a muted word and the figure in the dot's color.
+    private func figure(_ label: String, _ value: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: dot, height: dot)
+            Text(label).font(.row).foregroundStyle(Color.muted)
+            Text(value).font(.callout.weight(.semibold)).monospacedDigit().foregroundStyle(color)
+                // Each figure stays on one line next to the other.
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The week's range, then its money in (green, only when some came in) and money out (red).
+    private func weekHeader(_ week: WeekGroup) -> some View {
+        let money = InOut(week.rows)
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
+            Text(TransactionGroups.label(monday: week.monday)).foregroundStyle(Color.ink)
+            Spacer(minLength: 0)
+            HStack(spacing: 8) {
+                if money.moneyIn != 0 { Text(amountText(cents: -money.moneyIn)).foregroundStyle(Color.moneyBack) }
+                if money.moneyOut != 0 || money.moneyIn == 0 { Text(amountText(cents: money.moneyOut)).foregroundStyle(Color.moneySpent) }
+            }
+            .monospacedDigit()
+        }
+        .font(.row.weight(.medium))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// One row of the week list: a dot for what it is, the store, and the amount. Pay is green;
+/// transfers and card payments are dimmed and marked as not counted.
+private struct WeekRow: View {
+    let row: ListedTransaction
+    @ScaledMetric(relativeTo: .callout) private var dot: CGFloat = 8
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let part = MoneyPart(kind: row.kind)
+        // Side by side normally; stacked at the largest text sizes, so neither is squeezed.
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 8))
+        HStack(spacing: 12) {
+            Circle()
+                .fill(part == .income ? Color.moneyBack : part == .transfers ? Color.line : Color.category(SpendingView.title(row.category ?? "other")))
+                .frame(width: dot, height: dot)
+            layout {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(row.store).foregroundStyle(part == .transfers ? Color.muted : Color.ink)
+                    if part == .transfers {
+                        Text("Transfer · not counted").font(.note).foregroundStyle(Color.muted)
+                    }
+                }
+                Spacer(minLength: 0)
+                Text(amountText(row.amount))
+                    .fontWeight(part == .transfers ? .regular : .medium)
+                    .monospacedDigit()
+                    .foregroundStyle(part == .income ? Color.moneyBack : part == .transfers ? Color.muted : Color.ink)
+            }
+        }
+        .font(.callout)
+        // VoiceOver reads the whole row as one item: store, the transfer note, amount.
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -301,7 +407,7 @@ struct MerchantHistoryView: View {
                             NavigationLink {
                                 TransactionDetailView(database: database, id: row.id)
                             } label: {
-                                TransactionRow(row: row, title: row.date.displayDate(.dateTime.weekday(.abbreviated).month(.abbreviated).day()), tag: false)
+                                TransactionRow(row: row, title: row.date.displayDate(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
                             }
                         }
                     }
@@ -495,34 +601,10 @@ extension StoreSummary {
     }
 }
 
-/// A title with a total on the right, or the total under the title at the largest text sizes,
-/// so neither is squeezed. Used for part headings and week headers.
-private struct TotalLine: View {
-    let title: Text
-    let total: String
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    var body: some View {
-        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .lastTextBaseline))
-        layout {
-            title
-            Spacer(minLength: 8)
-            Text(total).monospacedDigit()
-        }
-        .font(.footnote)
-        .foregroundStyle(Color.muted)
-        // Section headers are shown as written, not in capitals.
-        .textCase(nil)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// One transaction: a title over the bank's statement name, and the amount with its kind tag.
+/// One Merchant history visit: its date over the bank's statement name, and the amount.
 private struct TransactionRow: View {
     let row: ListedTransaction
     let title: String
-    /// Whether to show the Income or Transfer tag; Merchant history is all one store, so it doesn't.
-    let tag: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -538,45 +620,22 @@ private struct TransactionRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
-            VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
-                Text(amountText(row.amount))
-                    .monospacedDigit()
-                if tag { kindTag(row.kind) }
-            }
+            Text(amountText(row.amount))
+                .monospacedDigit()
         }
-        // VoiceOver reads the whole row as one item: title, statement name, amount, tag.
+        // VoiceOver reads the whole row as one item: title, statement name, amount.
         .accessibilityElement(children: .combine)
-    }
-
-    /// A small tag for money that isn't everyday spending. The icon is drawn inside the text,
-    /// because a list lines up every Label's icon in one column, which left a wide gap here.
-    @ViewBuilder
-    private func kindTag(_ kind: String?) -> some View {
-        switch kind {
-        case "income":
-            Text("\(Image(systemName: "arrow.down.circle")) Income")
-                .font(.caption)
-                .foregroundStyle(.tint)
-                .accessibilityLabel("Income")
-        // A card payment is also money moving between the person's own accounts.
-        case "transfer", "card_payment":
-            Text("\(Image(systemName: "arrow.left.arrow.right")) Transfer")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .accessibilityLabel("Transfer")
-        default:
-            EmptyView()
-        }
     }
 }
 
 #Preview {
     NavigationStack {
         TransactionsView(rows: [
-            ListedTransaction(transaction_id: "1", date: "2026-06-28", store: "Netflix", name: "NETFLIX.COM 866-579-7172 CA", amount: 17.99, kind: "spending"),
+            ListedTransaction(transaction_id: "1", date: "2026-06-28", store: "Netflix", name: "NETFLIX.COM 866-579-7172 CA", amount: 17.99, kind: "spending", category: "subscriptions"),
             ListedTransaction(transaction_id: "2", date: "2026-06-26", store: "Acme Corp Payroll", name: "ACME CORP PAYROLL DIR DEP", amount: -2140.55, kind: "income"),
             ListedTransaction(transaction_id: "3", date: "2026-06-25", store: "Card Payment", name: "PAYMENT THANK YOU", amount: -450, kind: "card_payment"),
         ], database: try! SedgeDatabase())
         .navigationTitle("Transactions")
+        .navigationSubtitle("Transactions · Maya")
     }
 }
