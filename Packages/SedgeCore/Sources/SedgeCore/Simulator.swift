@@ -206,9 +206,13 @@ public enum Simulator {
                 // worked out here rather than taken from the organizer's next_expected_date, which is
                 // the latest charge plus a month.
                 let anchorDay = dueDay(charges)
+                // A monthly series on a fixed weekday (the 2nd Wednesday) is due on that weekday each month instead.
+                let onWeekday = cadence == "monthly" ? Organizer.weekdayOfMonth(try charges.map(date)) : nil
                 for k in 1... {
                     // Counted from the latest charge each time (not from the previous projected date).
+                    // The weekday's date in month k is the first match after the end of month k - 1.
                     var day = weeks[cadence].map { calendar.date(byAdding: .day, value: 7 * $0 * k, to: latest)! }
+                        ?? onWeekday.map { calendar.nextDate(after: monthDay(31, monthsAfter: k - 1, latest), matching: $0, matchingPolicy: .strict)! }
                         ?? monthDay(anchorDay, monthsAfter: k, latest)
                     if day > end { break }
                     if day <= start {

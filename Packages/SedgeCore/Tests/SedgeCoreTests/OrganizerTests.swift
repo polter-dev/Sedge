@@ -232,6 +232,41 @@ func inSeries(_ database: SedgeDatabase) throws -> Int {
     #expect(try seriesFound(database, "bills") == ["monthly 500 2026-07-07"])
 }
 
+// MARK: - Monthly on a fixed weekday
+
+/// Social Security on the 2nd Wednesday (days 14, 11, 11, 8, 13, 10) is next paid on the 2nd
+/// Wednesday of July and August, not on the 10th, and recurring_charges and simulate_balance agree.
+@Test func payOnTheSecondWednesdayStaysOnTheSecondWednesday() throws {
+    let pay = ["2026-01-14", "2026-02-11", "2026-03-11", "2026-04-08", "2026-05-13", "2026-06-10"]
+    let database = try seriesDatabase(asOf: "2026-06-30", paydays: pay, paycheck: 800)
+    #expect(try seriesFound(database, "income") == ["monthly 800 2026-07-08"])
+    #expect(paydays(try simulate(database, days: 60), from: 5000) == ["2026-07-08", "2026-08-12"])
+}
+
+/// Rent on the 10th keeps the 10th, though Feb 10 and Mar 10, 2026 are both the 2nd Tuesday.
+@Test func fixedDayBillKeepsItsDay() throws {
+    let database = try seriesDatabase(asOf: "2026-06-30", rent: (1...6).map { "2026-0\($0)-10" })
+    #expect(try seriesFound(database, "bills") == ["monthly 500 2026-07-10"])
+    let rent = try simulate(database, days: 60).filter { $0.bills.contains { $0.name.contains("Rent") } }.map(\.date)
+    #expect(rent == ["2026-07-10", "2026-08-10"])
+    #expect(Organizer.weekdayOfMonth(try ["2026-02-10", "2026-03-10"].map(Simulator.date)) == nil)
+}
+
+/// Wednesdays that are mostly the 2nd but once the 3rd (Apr 15) keep the old rule: a month after Jun 10.
+@Test func mixedWeekdayOrdinalsKeepTheDay() throws {
+    let pay = ["2026-01-14", "2026-02-11", "2026-03-11", "2026-04-15", "2026-05-13", "2026-06-10"]
+    let database = try seriesDatabase(asOf: "2026-06-30", paydays: pay, paycheck: 800)
+    #expect(try seriesFound(database, "income") == ["monthly 800 2026-07-10"])
+    #expect(paydays(try simulate(database, days: 60), from: 5000) == ["2026-07-10", "2026-08-10"])
+}
+
+/// Every date the 5th Wednesday of its month: not every month has one, so there is no weekday rule.
+@Test func fifthWeekdaysHaveNoWeekdayRule() throws {
+    #expect(Organizer.weekdayOfMonth(try ["2025-12-31", "2026-04-29", "2026-07-29"].map(Simulator.date)) == nil)
+    #expect(Organizer.weekdayOfMonth(try ["2026-04-08", "2026-05-13", "2026-06-10"].map(Simulator.date))
+            == DateComponents(weekday: 4, weekdayOrdinal: 2))
+}
+
 /// With unequal days (1000 on the 1st, 900 on the 16th) the amount recurring_charges gives is the
 /// next date's own day's, the one the simulator projects that day. Data ending on Jun 1 instead
 /// gives the 16th's next date at the 16th's amount.
