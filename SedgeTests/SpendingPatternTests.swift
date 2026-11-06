@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import GRDB
 import SedgeCore
 import SwiftUI
 import Testing
@@ -380,6 +381,36 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
             #expect(rows.reduce(0) { $0 + $1.cents } == part.cents, "\(persona) \(month) \(part.category)")
             // Oldest first, with the folded categories' transactions mixed in by date.
             #expect(rows.map(\.date) == rows.map(\.date).sorted(), "\(persona) \(month) \(part.category)")
+        }
+    }
+}
+
+/// For Maya and Daniel in May and June, the sheet Spending's "Other categories" block opens lists
+/// the block's cents over the block's days (the 1st through today's day), and as many transactions
+/// as SQLite counts in those categories and days. Maya's June: utilities, transport, dining,
+/// education, subscriptions and coffee, 10 transactions and $169.03.
+@Test(arguments: ["maya", "daniel"]) func otherCategoriesSheetMatchesItsBlock(persona: String) throws {
+    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: try #require(Int(asOf.suffix(2))))
+    for month in ["2026-05", "2026-06"] {
+        let block = try #require(SpendingView.categoryBlocks(totals, month: month).first { $0.name == SpendingView.otherCategories })
+        let folded = SpendingView.otherCategoryNames(totals, month: month)
+        let window = SpendingView.window(month, asOf: asOf)
+        let rows = try AllMonthsView.sheetRows(in: database, .init(category: block.name, folded: folded, month: month, through: window.through))
+        #expect(rows.reduce(0) { $0 + $1.cents } == Int((block.total * 100).rounded()), "\(persona) \(month)")
+        let count = try database.dbQueue.read { db in
+            try Int.fetchOne(db, sql: """
+                SELECT COUNT(*) FROM transactions t \(SpendingTotal.categoryJoins)
+                WHERE NOT t.pending AND t.kind IN ('spending', 'refund') AND t.date BETWEEN ? AND ?
+                  AND \(SpendingTotal.categoryOf) IN (\(folded.map { _ in "?" }.joined(separator: ",")))
+                """, arguments: StatementArguments([window.from, window.through] + folded))
+        }
+        #expect(rows.count == count, "\(persona) \(month)")
+        if persona == "maya" && month == "2026-06" {
+            #expect(Set(folded) == ["utilities", "transport", "dining", "education", "subscriptions", "coffee"])
+            #expect(rows.count == 10)
+            #expect(rows.reduce(0) { $0 + $1.cents } == 16_903)
         }
     }
 }

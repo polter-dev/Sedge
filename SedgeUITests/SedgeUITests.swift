@@ -1443,6 +1443,33 @@ final class SedgeUITests: XCTestCase {
         }
     }
 
+    /// Spending with "All": Maya's June "Other categories" block ($169.03: utilities, transport,
+    /// dining, education, subscriptions, coffee over June 1-30) opens its 10 transactions.
+    /// The screenshot is the sheet in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testSpendingAllOtherCategoriesOpensItsTransactions() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Trends"].tap()
+        let category = app.buttons["Category"]
+        XCTAssertTrue(category.waitForExistence(timeout: 10))
+        category.tap()
+        let all = app.buttons.matching(NSPredicate(format: "identifier == 'categoryCell' AND label == 'All'")).firstMatch
+        XCTAssertTrue(all.waitForExistence(timeout: 5))
+        all.tap()
+        XCTAssertTrue(app.staticTexts["by category"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        let block = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Other categories, $169'")).firstMatch
+        XCTAssertTrue(block.waitForExistence(timeout: 5), "no Other categories block")
+        XCTAssertTrue(app.buttons["Other categories, $169"].exists, "Other categories is not a button")
+        block.tap()
+        XCTAssertTrue(app.staticTexts["10 transactions"].waitForExistence(timeout: 5), "tapping Other categories opened nothing")
+        XCTAssertTrue(app.staticTexts["$169.03"].exists)
+        Thread.sleep(forTimeInterval: 0.5) // the sheet's slide
+        attachScreenshot(app, "spending-other-categories")
+    }
+
     /// The All months screen opens from Trends on June 2026, the newest month, with its list
     /// under the chart: Total, then each category, with Groceries and Dining folded into Other.
     /// Tapping Other opens both categories' June transactions with their exact total, and tapping

@@ -102,6 +102,8 @@ struct SpendingView: View {
     @State private var showingWorthALook = false
     /// True while the category sheet is open.
     @State private var showingCategories = false
+    /// The transactions the "Other categories" block opens; nil when that sheet is closed.
+    @State private var openedOther: AllMonthsView.Opened?
 
     /// One store in the mosaic, or "Other stores" for the rest.
     struct Store: Identifiable {
@@ -186,11 +188,22 @@ struct SpendingView: View {
     /// The "All" mosaic for one month: the biggest three categories and `otherCategories` for the
     /// rest added up in cents, or every category when there are four or fewer.
     static func categoryBlocks(_ totals: [SpendingTotal], month: String) -> [(name: String, total: Double)] {
-        let all = totals.filter { $0.month == month }.map { (name: $0.category, total: $0.total) }
-            .sorted { ($0.total, $1.name) > ($1.total, $0.name) }
+        let all = rankedCategories(totals, month: month)
         guard all.count > 4 else { return all }
         let rest = all.dropFirst(3).reduce(0) { $0 + Int(($1.total * 100).rounded()) }
         return Array(all.prefix(3)) + [(name: otherCategories, total: Double(rest) / 100)]
+    }
+
+    /// The categories `otherCategories` adds up in one month; none when there are four or fewer.
+    static func otherCategoryNames(_ totals: [SpendingTotal], month: String) -> [String] {
+        let all = rankedCategories(totals, month: month)
+        return all.count > 4 ? all.dropFirst(3).map(\.name) : []
+    }
+
+    /// One month's categories, most spent first (by name on a tie).
+    private static func rankedCategories(_ totals: [SpendingTotal], month: String) -> [(name: String, total: Double)] {
+        totals.filter { $0.month == month }.map { (name: $0.category, total: $0.total) }
+            .sorted { ($0.total, $1.name) > ($1.total, $0.name) }
     }
 
     /// Each store's spending in whole cents.
@@ -368,6 +381,7 @@ struct SpendingView: View {
         }
         // Closing the sheet counts again, since answers given in it take purchases off.
         .sheet(isPresented: $showingWorthALook, onDismiss: countWorthALook) { WorthALookView(database: database) }
+        .sheet(item: $openedOther) { MonthTransactions(database: database, opened: $0) }
         // A tapped store belongs to one category, so picking another clears it.
         .onChange(of: category) { selected = nil }
         // A double-tapped store's latest transaction, the same screen its row below opens.
@@ -864,7 +878,8 @@ struct SpendingView: View {
 
     /// One mosaic block: the biggest in the category node color, the second in this month's color,
     /// the rest in the store color. With a store, one tap selects it and shows its latest
-    /// transaction below, two open that transaction; with "All", a tap picks that category.
+    /// transaction below, two open that transaction; with "All", a tap picks that category, and
+    /// "Other categories" opens the transactions it adds up.
     @ViewBuilder
     private func block(_ item: (name: String, total: Double), index: Int, width: CGFloat?, height: CGFloat?) -> some View {
         let isAll = category == nil
@@ -886,16 +901,20 @@ struct SpendingView: View {
         }
         let label = "\(name), \(item.total.formatted(Self.dollars))"
         if isAll {
-            if item.name == Self.otherCategories {
-                // Several categories together have no single category to pick.
-                face.accessibilityElement(children: .ignore).accessibilityLabel(label)
-            } else {
-                Button { category = item.name } label: { face }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(label)
-                    .accessibilityHint("Shows this category")
-                    .accessibilityIdentifier("categoryBlock")
-            }
+            // Several categories together have no single category to pick, so Other lists their transactions.
+            let isOther = item.name == Self.otherCategories
+            Button {
+                if !isOther {
+                    category = item.name
+                } else if let asOf {
+                    openedOther = .init(category: item.name, folded: Self.otherCategoryNames(totals, month: shownMonth),
+                                        month: shownMonth, through: Self.window(shownMonth, asOf: asOf).through)
+                }
+            } label: { face }
+                .buttonStyle(.plain)
+                .accessibilityLabel(label)
+                .accessibilityHint(isOther ? "Shows its transactions" : "Shows this category")
+                .accessibilityIdentifier("categoryBlock")
         } else {
             let latest = Self.stores(rows).first { $0.name == item.name }?.rows.first?.id
             Button { selected = item.name } label: { face }

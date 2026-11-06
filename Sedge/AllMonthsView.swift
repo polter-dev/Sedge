@@ -48,6 +48,9 @@ struct AllMonthsView: View {
         let category: String
         let folded: [String]
         let month: String
+        /// The last day listed, "YYYY-MM-DD"; nil is the whole month. Spending's Other categories
+        /// block sets it, as its month only runs to today's day of the month.
+        var through: String?
         var id: Self { self }
     }
 
@@ -91,11 +94,11 @@ struct AllMonthsView: View {
     }
 
     /// The transactions a tapped row's sheet lists, oldest first: every one in the row's stored
-    /// categories that month, so Other's sheet adds up to Other's row.
+    /// categories that month (through `through`), so Other's sheet adds up to Other's row.
     static func sheetRows(in database: SedgeDatabase, _ opened: Opened) throws -> [ListedTransaction] {
         // The 31st covers every month, as a shorter month's dates all sort before it.
         try opened.folded.flatMap {
-            try ListedTransaction.spending(in: database, category: $0, from: opened.month + "-01", through: opened.month + "-31")
+            try ListedTransaction.spending(in: database, category: $0, from: opened.month + "-01", through: opened.through ?? opened.month + "-31")
         }
         .sorted { ($0.date, $0.id) < ($1.date, $1.id) }
     }
@@ -356,8 +359,9 @@ struct AllMonthsView: View {
 }
 
 /// The sheet a category row opens: that row's transactions in one month, oldest first,
-/// under their count and exact total, counted the same way as the row.
-private struct MonthTransactions: View {
+/// under their count and exact total, counted the same way as the row. Spending's Other
+/// categories block opens it too.
+struct MonthTransactions: View {
     let database: SedgeDatabase
     let opened: AllMonthsView.Opened
     @State private var rows: [ListedTransaction] = []
