@@ -273,19 +273,32 @@ struct AccountsView: View {
                 } label: {
                     Label("About you", systemImage: "person.text.rectangle")
                 }
-                if !accounts.isEmpty {
+            }
+            .listRowBackground(Color.group)
+            // Accounts sits in its own group, so its open questions stand apart from the screens above.
+            if !accounts.isEmpty {
+                Section {
                     let unanswered = accounts.count { $0.owner == nil }
                     NavigationLink {
-                        YourAccountsView(database: database)
-                            .navigationTitle("Your accounts")
+                        AccountsListView(database: database)
+                            .navigationTitle("Accounts")
                             .navigationSubtitle(dataName)
                     } label: {
                         LabeledContent {
-                            Text("\(accounts.count)").foregroundStyle(.secondary)
+                            if unanswered > 0 {
+                                // A filled count, the shape iOS uses for unread badges. Fixed at
+                                // 12 pt so it stays 22 pt round; the line under the title says it in words.
+                                Text("\(unanswered)")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.contrast)
+                                    .padding(.horizontal, 6)
+                                    .frame(minWidth: 22, minHeight: 22)
+                                    .background(Color.accent, in: .capsule)
+                            }
                         } label: {
                             Label {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Your accounts")
+                                    Text("Accounts")
                                     if unanswered > 0 {
                                         Text("\(unanswered) still to answer").font(.row).foregroundStyle(.secondary)
                                     }
@@ -295,11 +308,11 @@ struct AccountsView: View {
                             }
                         }
                     }
-                    .accessibilityLabel("Your accounts")
-                    .accessibilityValue(unanswered > 0 ? "\(accounts.count), \(unanswered) still to answer" : "\(accounts.count)")
+                    .accessibilityLabel("Accounts")
+                    .accessibilityValue(unanswered > 0 ? "\(unanswered) still to answer" : "")
                 }
+                .listRowBackground(Color.group)
             }
-            .listRowBackground(Color.group)
             Section {
                 NavigationLink {
                     SavedAnswersView(database: database)
