@@ -59,7 +59,8 @@ Launch arguments (Product > Scheme > Edit Scheme > Run > Arguments):
   - `-demoThinking YES` holds a question on the thinking row; `-demoTokenLimit YES` shows the limit message.
   - `-reduceMotion YES` makes Ask act as if Reduce Motion were on.
   - `-firstLaunch YES` forgets the chosen data, so the app opens on Welcome as on a fresh install.
-  - `-emptyBank YES` uses a separate, empty bank file, so choosing the bank shows its sign-in screen.
+  - `-emptyBank YES` uses a separate, empty bank file, so Welcome's "Connect with Plaid" opens its sign-in screen
+    right away; after choosing the bank in the data picker, the sign-in screen is under Accounts > Transactions.
   - `-clearOwnerAnswers YES` clears the "Is this account yours?" answers.
 
 Fresh install:

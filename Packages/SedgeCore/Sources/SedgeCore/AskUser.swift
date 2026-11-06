@@ -93,8 +93,8 @@ public enum AskUser {
     }
 
     /// A saved answer for `key`, or else the person's profile corrections that cover it: one
-    /// whose kind is the key or starts it ("housing" covers "housing_type"), or whose id is
-    /// the key. Corrections come back as their JSON values.
+    /// whose kind is the key or starts it ("housing" covers "housing_type"), or whose id in
+    /// key form (`factKey(id)`) is the key. Corrections come back as their JSON values.
     static func remembered(_ key: String, _ db: Database) throws -> String? {
         if let saved = try String.fetchOne(db, sql: "SELECT answer FROM saved_answers WHERE fact_key = ?", arguments: [key]) {
             return saved
