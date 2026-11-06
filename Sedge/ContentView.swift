@@ -141,6 +141,8 @@ struct MainView: View {
     let changeData: () -> Void
     /// The Ask box's text. It lives here so a typed question stays when the tab changes.
     @State private var question = ""
+    /// True while Ask shows an older chat: its title is the chat's, so Rename (which names the data) is left out.
+    @State private var chatReopened = false
     /// The person's own name for this data, kept in the app's settings (one per choice), never in a database.
     @AppStorage private var nickname: String
     /// True while the rename alert is showing; `draft` is what is typed in it.
@@ -180,10 +182,12 @@ struct MainView: View {
         TabView(selection: $tab) {
             Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
-                    AskView(database: database, question: $question) { tab = $0 }
+                    AskView(database: database, question: $question, reopened: $chatReopened) { tab = $0 }
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
-                        .toolbarTitleMenu { renameMenu }
+                        // Left out, chevron and all, while an older chat is shown. It hangs off a background
+                        // because an `if` around AskView itself would reset the chat on screen.
+                        .background { if !chatReopened { Color.clear.toolbarTitleMenu { renameMenu } } }
                 }
             }
             Tab("Trends", image: "tab-trends", value: .trends) {

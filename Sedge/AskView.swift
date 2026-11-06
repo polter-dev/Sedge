@@ -85,6 +85,8 @@ struct AskView: View {
     let database: SedgeDatabase
     /// The question box's text, owned by the tabs so Trends can type a question in for the person.
     @Binding var question: String
+    /// Tells the tabs whether an older chat is on screen, so its title doesn't offer the data's Rename menu.
+    @Binding var reopened: Bool
     /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
     @State private var session = ChatSession()
@@ -166,6 +168,7 @@ struct AskView: View {
             // into a chat that is gone.
             PreviousChatsView(database: database, open: openChat) { if $0 == session.chatID { newChat() } }
         }
+        .onChange(of: session.reopenedTitle) { reopened = $1 != nil }
         // A turn is saved once it settles: its answer came in, or the chat hit its limit. Watching
         // the status means whatever answers questions only has to report it.
         .onChange(of: session.status) { old, _ in
@@ -738,7 +741,7 @@ extension ChatTurn {
 
 #Preview {
     NavigationStack {
-        AskView(database: try! SedgeDatabase(), question: .constant(""))
+        AskView(database: try! SedgeDatabase(), question: .constant(""), reopened: .constant(false))
             .navigationBarTitleDisplayMode(.inline)
     }
 }
