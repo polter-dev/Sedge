@@ -111,8 +111,11 @@ struct TransactionDetailView: View {
     /// The person hid the "not a fraud determination" note. Saved in the app's settings, so it
     /// stays hidden on every transaction and for every dataset, until the Accounts tab shows it again.
     @AppStorage("hideSpendingNote") private var noteHidden = false
-    /// True for the 4 s the note's box says it was hidden, with Undo.
-    @State private var noteUndo = false
+    /// The note row's countdown after "Don’t show this again", 4 down to 0, run like the familiar
+    /// prompt's below; nil when the row isn't counting down.
+    @State private var noteCountdown: Int?
+    /// The part of the note row's track still full, 1 down to 0, set from `noteCountdown` like `remaining`.
+    @State private var noteRemaining = 1.0
     /// The familiar prompt's countdown, 4 down to 0, while the track shows under the buttons; nil hides it.
     @State private var countdown: Int?
     /// The part of the track still full, 1 down to 0. Each tick sets it from the number, so the
@@ -121,6 +124,7 @@ struct TransactionDetailView: View {
     /// True once the countdown has shown 0: the prompt is folded away until the screen is opened again.
     @State private var folded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         ScrollView {
@@ -135,12 +139,22 @@ struct TransactionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         // Runs on open, and again on coming back from Merchant history.
         .task { reload() }
-        // The note's Undo line stays 4 s, then the box collapses. Undo cancels this by
-        // changing `noteUndo`; a cancelled sleep fails, so nothing collapses after an Undo.
-        .task(id: noteUndo) {
-            guard noteUndo, (try? await Task.sleep(for: .seconds(4))) != nil else { return }
-            // With Reduce Motion the box is simply gone in the next frame, so nothing slides.
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { noteUndo = false }
+        // The note row's countdown, tick for tick the same as the familiar prompt's below, so the
+        // two look and behave alike (including the pause while Merchant history is open). At 0 the
+        // row leaves the list; the hidden setting was already saved on the tap.
+        .task(id: noteCountdown) {
+            guard let count = noteCountdown else { return }
+            if reduceMotion {
+                noteRemaining = Double(count) / 4
+            } else {
+                withAnimation(.linear(duration: 1)) { noteRemaining = Double(max(count - 1, 0)) / 4 }
+            }
+            guard (try? await Task.sleep(for: .seconds(count > 0 ? 1 : 0.3))) != nil else { return }
+            if count > 0 {
+                withAnimation(reduceMotion ? nil : .default) { noteCountdown = count - 1 }
+            } else {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { noteCountdown = nil }
+            }
         }
         // One tick a second: 4, 3, 2, 1, 0. Each tick changes `countdown`, which starts the next one;
         // Undo sets it to nil, which cancels the tick in progress.
@@ -214,9 +228,7 @@ struct TransactionDetailView: View {
                     ForEach(categories, id: \.self) { Text(SpendingView.title($0)) }
                 }
             } label: {
-                // The subtitle names Sedge's category, never Plaid's: the organizer doesn't read Plaid's.
-                listRow("Category", detail.category_override == nil ? "Sedge category · editable" : "Changed by you · editable",
-                        value: SpendingView.title(detail.category))
+                listRow("Category", nil, value: SpendingView.title(detail.category))
             }
             .accessibilityLabel("Category")
             .accessibilityValue(SpendingView.title(detail.category))
@@ -233,6 +245,11 @@ struct TransactionDetailView: View {
                 }
             }
 
+            // The note is about Sedge's context, so it shows only with it.
+            if context != nil, !noteHidden || noteCountdown != nil {
+                noteRow
+            }
+
             VStack(alignment: .leading, spacing: 2) {
                 Text("Bank description: \(detail.name)")
                 Text(choice == SedgeDatabase.bankChoice ? "Source: linked bank via Plaid" : "Source: sample data, \(choice.capitalized)’s file")
@@ -244,7 +261,7 @@ struct TransactionDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The comparison with the store's earlier visits, and the note that it's not a fraud check.
+    /// The comparison with the store's earlier visits.
     private func contextBlock(_ context: StoreContext) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Label {
@@ -266,56 +283,54 @@ struct TransactionDetailView: View {
                     .foregroundStyle(.secondary)
                     .padding(.top, 14)
             }
-            if !noteHidden || noteUndo {
-                spendingNote
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .padding(.leading, 12)
-                    .background(Color.soft, in: .rect(cornerRadius: 10))
-                    .padding(.top, 14)
-            }
         }
     }
 
-    /// The note with its 44 × 44 ×, or for 4 s after the × the line saying it's hidden, with Undo.
-    /// The text cross-fades inside the same box.
-    @ViewBuilder private var spendingNote: some View {
-        if noteHidden {
-            let text = Text("Spending note hidden on every transaction.")
-                .font(.row)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            let undo = undoButton { setNoteHidden(false) }
-            // At the largest text sizes Undo drops under the line instead of squeezing it.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 4) { text; undo }
-                VStack(alignment: .leading, spacing: 0) { text.padding(.top, 12); undo }
+    /// The spending note as a detail row with "Don’t show this again" where other rows show their
+    /// value. After the tap, for 4 s, the row says it's hidden and counts down with Undo, and its
+    /// bottom hairline becomes the familiar prompt's draining track.
+    private var noteRow: some View {
+        let lines = VStack(alignment: .leading, spacing: 2) {
+            Text(noteCountdown == nil ? "Spending note" : "Spending note hidden on every transaction")
+                .font(.subheadline)
+            Group {
+                if let noteCountdown {
+                    Text("Closing in \(noteCountdown)")
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: true))
+                } else {
+                    Text("This is a spending observation, not a fraud determination.")
+                }
             }
-            .padding(.trailing, 4)
-        } else {
-            HStack(spacing: 4) {
-                Text("This is a spending observation, not a fraud determination.")
-                    .font(.row)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 12)
-                Button("Dismiss", systemImage: "xmark") { setNoteHidden(true) }
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
+            .font(.note)
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // At the largest text sizes the button drops under the two lines instead of squeezing them.
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(spacing: 8))
+        return VStack(spacing: 0) {
+            layout {
+                lines
+                if noteCountdown == nil {
+                    Button("Don’t show this again", action: hideNote)
+                        .buttonStyle(.plain)
+                        .font(.link)
+                        .foregroundStyle(Color.accent)
+                        .frame(minHeight: 44)
+                        .contentShape(.rect)
+                } else {
+                    undoButton(undoHideNote).padding(.trailing, -8)
+                }
             }
+            .foregroundStyle(Color.ink, Color.muted)
+            .padding(.vertical, 12)
+            if noteCountdown == nil { rule } else { track(noteRemaining) }
         }
     }
 
     /// The 4 pt track that drains under the answer buttons, with "Saved. Closing in 3" and Undo.
     private func savedTrack(countdown: Int) -> some View {
-        // The accent part is squeezed from the right, so it shrinks toward the leading edge.
-        let track = Rectangle().fill(Color.accent)
-            .scaleEffect(x: remaining, anchor: .leading)
-            .background(Color.line)
-            .frame(height: 4)
-            .clipShape(.rect(cornerRadius: 2))
-            .accessibilityHidden(true)
         let text = Text("Saved. Closing in \(countdown)")
             .font(.row)
             .foregroundStyle(.secondary)
@@ -325,7 +340,7 @@ struct TransactionDetailView: View {
         // The design puts Undo's word flush with the right edge; its 44 pt target may reach past it.
         let undo = undoButton(undoFamiliar).padding(.trailing, -8)
         return VStack(spacing: 0) {
-            track
+            track(remaining)
             // At the largest text sizes Undo drops under the text instead of squeezing it.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 0) { text; undo }
@@ -333,6 +348,17 @@ struct TransactionDetailView: View {
             }
             .frame(minHeight: 44)
         }
+    }
+
+    /// The 4 pt track, `full` of it in the accent color. The accent part is squeezed from the right,
+    /// so it shrinks toward the leading edge.
+    private func track(_ full: Double) -> some View {
+        Rectangle().fill(Color.accent)
+            .scaleEffect(x: full, anchor: .leading)
+            .background(Color.line)
+            .frame(height: 4)
+            .clipShape(.rect(cornerRadius: 2))
+            .accessibilityHidden(true)
     }
 
     /// The design's text-only Undo, with a 44 pt target.
@@ -348,21 +374,30 @@ struct TransactionDetailView: View {
         .buttonStyle(.plain)
     }
 
-    /// Hides the note (its box shows the Undo line for 4 s) or, from Undo, shows it again.
-    private func setNoteHidden(_ hidden: Bool) {
-        withAnimation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25)) {
-            noteHidden = hidden
-            noteUndo = hidden
+    /// Saves the note as hidden at once, then counts down in its row like the familiar prompt.
+    private func hideNote() {
+        noteRemaining = 1
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) {
+            noteHidden = true
+            noteCountdown = 4
         }
     }
 
-    /// A row like the design's list buttons: a title and subtitle on the left, a value and › on the right.
-    private func listRow(_ title: String, _ subtitle: String, value: String) -> some View {
+    /// Undo in the note row: the note is shown again, here and on every transaction.
+    private func undoHideNote() {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) {
+            noteHidden = false
+            noteCountdown = nil
+        }
+    }
+
+    /// A row like the design's list buttons: a title and optional subtitle on the left, a value and › on the right.
+    private func listRow(_ title: String, _ subtitle: String?, value: String) -> some View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.subheadline)
-                    Text(subtitle).font(.note).foregroundStyle(.secondary)
+                    if let subtitle { Text(subtitle).font(.note).foregroundStyle(.secondary) }
                 }
                 Spacer(minLength: 8)
                 Text("\(value) \(Image(systemName: "chevron.right"))").font(.subheadline)
@@ -433,8 +468,9 @@ func accountTitle(_ name: String, _ mask: String?, spoken: Bool = false) -> Stri
     return spoken ? "\(name) ending in \(mask)" : "\(name) •• \(mask)"
 }
 
-/// One of the design's side-by-side answer buttons. The chosen answer is filled with the accent;
-/// with no answer yet, the first button is filled as the suggested one, as in the design.
+/// One of the design's side-by-side answer buttons, tinted with the Marsh greens: the chosen answer
+/// is filled with `nodeStore`, the other sits on `surface`, both labelled in `amountNow`. With no
+/// answer yet, the first button is filled as the suggested one, as in the design.
 struct AnswerButton: View {
     let title: String
     let chosen: Bool
@@ -451,12 +487,13 @@ struct AnswerButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.row)
-                // On the accent fill, the color made to sit on it.
-                .foregroundStyle(filled ? Color.contrast : Color.accent)
+                // Semibold on the filled one, so the choice isn't told by the soft tint alone.
+                .font(filled ? .row.weight(.semibold) : .row)
+                // amountNow reads at 4.5:1 or better on both fills, light and dark.
+                .foregroundStyle(Color.amountNow)
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .padding(.horizontal, 4)
-                .background(filled ? Color.accent : Color.surface, in: .rect(cornerRadius: 10))
+                .background(filled ? Color.nodeStore : Color.surface, in: .rect(cornerRadius: 10))
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)

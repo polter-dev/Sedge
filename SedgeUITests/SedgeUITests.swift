@@ -996,9 +996,10 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(checking.value as? String, "Later")
     }
 
-    /// The spending note's × hides it on every transaction, not just the one it was tapped on,
-    /// and the Accounts tab's "Show the spending note again" row brings it back. The note ends
-    /// shown, as it started. For dark screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    /// "Don’t show this again" in the spending note's row hides it on every transaction, not just
+    /// the one it was tapped on: the row counts down like the familiar prompt, then leaves the list.
+    /// The Accounts tab's "Show the spending note again" row brings it back. The note ends shown,
+    /// as it started. For dark screenshots, run it after `xcrun simctl ui <device> appearance dark`.
     @MainActor
     func testSpendingNoteHidesEverywhereAndComesBack() throws {
         let app = XCUIApplication()
@@ -1011,18 +1012,22 @@ final class SedgeUITests: XCTestCase {
 
         let corner = "Corner Cafe, CORNER CAFE, $10.40"
         let note = app.staticTexts["This is a spending observation, not a fraud determination."]
-        let undoLine = app.staticTexts["Spending note hidden on every transaction."]
+        let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
+        let closing = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
         openTransaction(app, corner)
         XCTAssertTrue(note.waitForExistence(timeout: 10))
-        attachScreenshot(app, "note-with-dismiss")
-        app.buttons["Dismiss"].tap()
-        XCTAssertTrue(undoLine.waitForExistence(timeout: 2))
+        attachScreenshot(app, "note-row")
+        app.buttons["Don’t show this again"].tap()
+        XCTAssertTrue(hiddenLine.waitForExistence(timeout: 2))
+        XCTAssertTrue(closing.exists)
+        XCTAssertTrue(app.buttons["Undo"].exists)
         XCTAssertFalse(note.exists)
-        attachScreenshot(app, "note-hidden-undo")
-        // The Undo line stays 4 s, then the box collapses.
-        XCTAssertTrue(undoLine.waitForNonExistence(timeout: 6))
+        attachScreenshot(app, "note-row-hidden-undo")
+        // The row counts down 4 s, then leaves the list.
+        XCTAssertTrue(hiddenLine.waitForNonExistence(timeout: 7))
+        XCTAssertFalse(closing.exists)
         XCTAssertFalse(note.exists)
-        attachScreenshot(app, "note-collapsed")
+        attachScreenshot(app, "note-row-gone")
 
         // Another purchase at the same store has Sedge's context too, and no note either.
         app.navigationBars.buttons.firstMatch.tap()
@@ -1031,6 +1036,7 @@ final class SedgeUITests: XCTestCase {
         other.tap()
         XCTAssertTrue(app.staticTexts["Sedge’s context"].waitForExistence(timeout: 10))
         XCTAssertFalse(note.exists)
+        XCTAssertFalse(app.buttons["Don’t show this again"].exists)
 
         // Back on the Accounts tab, the row shows the note again and then goes away.
         app.navigationBars.buttons.firstMatch.tap()
@@ -1043,6 +1049,56 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(showAgain.waitForNonExistence(timeout: 5))
         openTransaction(app, corner)
         XCTAssertTrue(note.waitForExistence(timeout: 10))
+    }
+
+    /// Undo in the spending note's row keeps the note: it is back in the row at once, stays after
+    /// the countdown would have ended, shows on another transaction, and the Accounts tab offers
+    /// nothing to bring back. Also checks the Category row has no subtext under it: it is shorter
+    /// than the Merchant history row, which keeps its "N transactions" line.
+    @MainActor
+    func testSpendingNoteUndoKeepsItShownEverywhere() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        let showAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch
+        // A run stopped halfway may have left the note hidden; start with it shown.
+        if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
+
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
+        let note = app.staticTexts["This is a spending observation, not a fraud determination."]
+        let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
+        openTransaction(app, corner)
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
+
+        // The Category row is one line tall; Merchant history keeps its count under the title.
+        let category = app.buttons["Category"]
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(category.exists && history.exists)
+        XCTAssertLessThan(category.frame.height, history.frame.height, "The Category row still has a line under its title")
+
+        app.buttons["Don’t show this again"].tap()
+        XCTAssertTrue(hiddenLine.waitForExistence(timeout: 2))
+        app.buttons["Undo"].tap()
+        XCTAssertTrue(note.waitForExistence(timeout: 2))
+        XCTAssertFalse(hiddenLine.exists)
+        // Past the 4 s the countdown would have run, the note is still there.
+        Thread.sleep(forTimeInterval: 5)
+        XCTAssertTrue(note.exists)
+        XCTAssertTrue(app.buttons["Don’t show this again"].exists)
+
+        // Another purchase at the same store shows it too.
+        app.navigationBars.buttons.firstMatch.tap()
+        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Corner Cafe, ' AND label != %@", corner)).firstMatch
+        for _ in 0..<10 where !(other.exists && other.isHittable) { app.swipeUp() }
+        other.tap()
+        XCTAssertTrue(note.waitForExistence(timeout: 10))
+
+        // Nothing to bring back on the Accounts tab.
+        app.navigationBars.buttons.firstMatch.tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["Saved answers"].waitForExistence(timeout: 5))
+        XCTAssertFalse(showAgain.exists)
     }
 
     /// "Does this look familiar?" saves at once and counts down with Undo. Undo before 0 leaves the
