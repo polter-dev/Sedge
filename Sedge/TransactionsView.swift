@@ -265,35 +265,48 @@ struct TransactionsView: View {
     }
 }
 
-/// Merchant history, opened from a transaction: a summary of the store's month, then the store's
-/// rows by Monday-to-Sunday week with each week's count and total. Every number comes from the
-/// store's own rows.
+/// Merchant history, opened from a transaction: this month's total at the store, the change from
+/// last month and a six-month chart, then the store's visits by month and Monday-to-Sunday week.
+/// The card, the chart and the list all use the store's own purchases, so they never disagree.
 struct MerchantHistoryView: View {
     let rows: [ListedTransaction]
     let database: SedgeDatabase
     /// The data's "today", "YYYY-MM-DD", read when the screen opens.
     @State private var asOf: String?
+    /// False until the chart first appears, so its bars grow from zero once.
+    @State private var grown = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The store's purchases. A store with none (a payroll, a transfer) lists all its rows instead.
+    /// Static so the Transaction screen's "Merchant history" row counts the same rows.
+    static func purchases(_ rows: [ListedTransaction]) -> [ListedTransaction] { rows.filter { $0.kind == "spending" } }
+    private var purchases: [ListedTransaction] { Self.purchases(rows) }
+    private var shown: [ListedTransaction] { purchases.isEmpty ? rows : purchases }
 
     var body: some View {
         List {
-            // A store with no purchases (only pay or transfers) has no visits to sum up.
+            // A store with no purchases has no visits to sum up.
             if let asOf, let summary = StoreSummary(rows, asOf: asOf) {
-                Section { card(summary, month: String(asOf.prefix(7))) }
-                    .listRowBackground(Color.soft)
+                Section { card(summary) }
+                    .listRowBackground(Color.group)
             }
-            ForEach(TransactionGroups.weeks(rows)) { week in
+            ForEach(TransactionGroups.monthWeeks(shown), id: \.month) { month, weeks in
                 Section {
-                    ForEach(week.rows) { row in
-                        NavigationLink {
-                            TransactionDetailView(database: database, id: row.id)
-                        } label: {
-                            TransactionRow(row: row, title: row.date.displayDate(.dateTime.weekday(.abbreviated).month(.abbreviated).day()), tag: false)
+                    ForEach(weeks) { week in
+                        weekHeader(week)
+                            .listRowBackground(Color.soft)
+                            .listRowSeparator(.hidden)
+                        ForEach(week.rows) { row in
+                            NavigationLink {
+                                TransactionDetailView(database: database, id: row.id)
+                            } label: {
+                                TransactionRow(row: row, title: row.date.displayDate(.dateTime.weekday(.abbreviated).month(.abbreviated).day()), tag: false)
+                            }
                         }
                     }
                 } header: {
-                    TotalLine(title: Text("\(TransactionGroups.label(monday: week.monday)) · \(count(week.rows.count))"),
-                              total: amountText(cents: week.cents))
+                    monthHeader(month, weeks: weeks)
                 }
                 .listRowBackground(Color.group)
             }
@@ -303,43 +316,138 @@ struct MerchantHistoryView: View {
         .task { asOf = try? database.asOf() }
     }
 
-    /// "1 visit", "2 visits". A store that also pays the person (Maya's café pays her wages) has
-    /// rows that aren't visits, so its weeks count transactions instead.
-    private func count(_ count: Int) -> String {
-        let word = rows.allSatisfy { $0.kind == "spending" } ? "visit" : "transaction"
+    /// "1 visit", "2 visits"; a store with no purchases counts transactions instead.
+    private func count(_ count: Int) -> String { Self.count(count, visits: !purchases.isEmpty) }
+    static func count(_ count: Int, visits: Bool) -> String {
+        let word = visits ? "visit" : "transaction"
         return count == 1 ? "1 \(word)" : "\(count) \(word)s"
     }
 
-    /// This month's total, visit count and usual visit, with the whole history's count under them.
-    private func card(_ summary: StoreSummary, month: String) -> some View {
+    /// "June", or "June 2025" outside the data's current year.
+    private func monthName(_ month: String) -> String {
+        let sameYear = asOf.map { $0.prefix(4) == month.prefix(4) } ?? true
+        return "\(month)-01".displayDate(sameYear ? .dateTime.month(.wide) : .dateTime.month(.wide).year())
+    }
+
+    /// "JUNE · 4 visits · $12.71".
+    private func monthHeader(_ month: String, weeks: [WeekGroup]) -> some View {
+        let rows = weeks.reduce(0) { $0 + $1.rows.count }
+        let cents = weeks.reduce(0) { $0 + $1.cents }
+        return Text("\(monthName(month).uppercased()) · \(count(rows)) · \(amountText(cents: cents))")
+            .font(.footnote)
+            .foregroundStyle(Color.muted)
+            // Shown as written: only the month is in capitals.
+            .textCase(nil)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// A week's range over its count, with the week's total on the right.
+    private func weekHeader(_ week: WeekGroup) -> some View {
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(TransactionGroups.label(monday: week.monday)).font(.row.weight(.medium)).foregroundStyle(Color.ink)
+                Text(count(week.rows.count)).font(.note).foregroundStyle(Color.muted)
+            }
+            Spacer(minLength: 0)
+            Text(amountText(cents: week.cents)).font(.row.weight(.medium)).monospacedDigit().foregroundStyle(Color.ink)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    /// This month's total with its change from last month, the six-month chart, and every visit's count and total.
+    private func card(_ summary: StoreSummary) -> some View {
         let stacked = dynamicTypeSize.isAccessibilitySize
-        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12)) : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+        let month = monthName(summary.bars[summary.bars.count - 1].month)
+        let lastMonth = monthName(summary.bars[summary.bars.count - 2].month)
+        let change = summary.change
+        let money = { (cents: Int) in (Double(cents) / 100).formatted(.currency(code: "USD")) }
         return VStack(alignment: .leading, spacing: 12) {
             layout {
-                stat(amountText(cents: summary.cents), "this month")
-                stat("\(summary.visits)", "\(summary.visits == 1 ? "visit" : "visits") in \("\(month)-01".displayDate(.dateTime.month(.wide)))")
-                stat(summary.range, "usual visit")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(money(summary.cents))
+                        .font(.bigValue)
+                        .foregroundStyle(Color.amountNow)
+                    Text(summary.visits == 0 ? "No visits in \(month)" : "\(count(summary.visits)) in \(month) · usually \(summary.range)")
+                        .font(.row)
+                        .foregroundStyle(Color.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
+                    // Green when less went to the store than last month, red when more.
+                    Text(change == 0 ? "Same" : "\(money(abs(change))) \(change < 0 ? "less" : "more")")
+                        .font(.row.weight(.medium))
+                        .foregroundStyle(change < 0 ? Color.moneyBack : change > 0 ? Color.moneySpent : Color.muted)
+                    Text("\(change == 0 ? "as" : "than") \(lastMonth)")
+                        .font(.note)
+                        .foregroundStyle(Color.muted)
+                }
+                .accessibilityElement(children: .combine)
             }
-            Text("\(summary.allVisits == 1 ? "1 visit" : "\(summary.allVisits) visits") since \(summary.first.displayDate(.dateTime.month(.wide).day())).")
-                .font(.row)
+            chart(summary)
+            Text("\(count(summary.allVisits)) since \(summary.first.displayDate(.dateTime.month(.abbreviated).day())) · \(money(summary.allCents)) in all")
+                .font(.note)
                 .foregroundStyle(Color.muted)
         }
         .padding(.vertical, 4)
     }
 
-    private func stat(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.callout.weight(.semibold)).foregroundStyle(Color.ink)
-            Text(label).font(.note).foregroundStyle(Color.muted)
+    /// One bar per month, the latest in `chartNow`, each with its total above and its letter below.
+    private func chart(_ summary: StoreSummary) -> some View {
+        // The tallest bar is 64 pt; `max(…, 1)` keeps six empty months from dividing by zero.
+        let top = CGFloat(max(summary.bars.map(\.cents).max() ?? 0, 1))
+        return HStack(alignment: .bottom, spacing: 0) {
+            ForEach(Array(summary.bars.enumerated()), id: \.element.month) { index, bar in
+                let now = index == summary.bars.count - 1
+                VStack(spacing: 4) {
+                    // At the largest text sizes the totals would overlap, so only the letters stay.
+                    if !dynamicTypeSize.isAccessibilitySize {
+                        Text(amountText(cents: bar.cents))
+                            .font(now ? .note.weight(.medium) : .note)
+                            .foregroundStyle(now ? Color.ink : Color.muted)
+                    }
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(now ? Color.chartNow : Color.chartPast)
+                        .frame(width: 40, height: grown ? 64 * CGFloat(bar.cents) / top : 0)
+                        // Bars grow from zero one after another; Reduce Motion shows them at full height.
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.35).delay(0.04 * Double(index)), value: grown)
+                    Text("\(bar.month)-01".displayDate(.dateTime.month(.narrow)))
+                        .font(.note)
+                        .foregroundStyle(Color.muted)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(monthName(bar.month)), \(amountText(cents: bar.cents))")
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("storeChart")
+        .onAppear { grown = true }
+    }
+}
+
+extension TransactionGroups {
+    /// Merchant history's list: the rows by month, newest month first, each month by week, newest
+    /// week first. A week that crosses months holds only that month's days, as on the transactions list.
+    static func monthWeeks(_ rows: [ListedTransaction]) -> [(month: String, weeks: [WeekGroup])] {
+        months(rows).reversed().map { month in (month, weeks(rows.filter { $0.month == month })) }
     }
 }
 
 /// The numbers on Merchant history's card, from the store's own purchases only: a visit is a row
 /// the organizer calls spending, so pay, refunds and transfers at the store aren't visits.
 struct StoreSummary: Equatable {
+    /// One month's purchases for the chart.
+    struct Bar: Equatable {
+        /// "YYYY-MM".
+        let month: String
+        /// The month's purchases in whole cents.
+        let cents: Int
+    }
+
     /// This month's purchases in whole cents.
     let cents: Int
     /// How many purchases are in this month.
@@ -348,15 +456,23 @@ struct StoreSummary: Equatable {
     let range: String
     /// Every purchase at the store, any month.
     let allVisits: Int
+    /// Every purchase at the store, any month, in whole cents.
+    let allCents: Int
     /// The first purchase's date, "YYYY-MM-DD".
     let first: String
+    /// The six months up to and including this month, oldest first; a month with no purchases is 0.
+    let bars: [Bar]
+
+    /// This month minus last month, in whole cents: below zero when less went to the store.
+    var change: Int { cents - bars[bars.count - 2].cents }
 }
 
 extension StoreSummary {
     /// `asOf` is the data's "today"; "this month" is its month. Nil when the store has no purchases.
     init?(_ rows: [ListedTransaction], asOf: String) {
-        let purchases = rows.filter { $0.kind == "spending" }
-        guard let first = purchases.map(\.date).min() else { return nil }
+        let purchases = MerchantHistoryView.purchases(rows)
+        guard let first = purchases.map(\.date).min(),
+              let year = Int(asOf.prefix(4)), let monthNumber = Int(asOf.dropFirst(5).prefix(2)) else { return nil }
         let month = purchases.filter { $0.month == asOf.prefix(7) }
         cents = month.reduce(0) { $0 + $1.cents }
         visits = month.count
@@ -368,7 +484,14 @@ extension StoreSummary {
             range = "–"
         }
         allVisits = purchases.count
+        allCents = purchases.reduce(0) { $0 + $1.cents }
         self.first = first
+        // Months counted from year 0, so stepping back across a year end is plain subtraction.
+        let now = year * 12 + monthNumber - 1
+        bars = (now - 5...now).map { index in
+            let key = String(format: "%04d-%02d", index / 12, index % 12 + 1)
+            return Bar(month: key, cents: purchases.filter { $0.month == key }.reduce(0) { $0 + $1.cents })
+        }
     }
 }
 
