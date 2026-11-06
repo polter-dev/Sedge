@@ -85,13 +85,70 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
 
 /// Merchant history's card: this month's total, visit count and smallest-to-largest visit, from
 /// the store's purchases only (the design's Bean Street Coffee example, plus the pay the café
-/// sends Maya, which is no visit), and the first purchase's date.
-@Test func storeSummaryUsesThisMonthsPurchases() {
+/// sends Maya, which is no visit), the first purchase's date, and six months of bars.
+@Test func storeSummaryUsesThisMonthsPurchases() throws {
     let rows = [row("8", "2026-06-30", 2.68), row("7", "2026-06-26", -520, "income"), row("6", "2026-06-22", 3.72),
                 row("5", "2026-06-15", 3.99), row("4", "2026-06-09", 2.32), row("3", "2026-05-28", 3.51),
                 row("2", "2026-05-04", 3.80), row("1", "2026-05-01", -520, "income")]
-    #expect(StoreSummary(rows, asOf: "2026-06-30") == StoreSummary(cents: 1271, visits: 4, range: "$2.32–$3.99", allVisits: 6, first: "2026-05-04"))
-    #expect(StoreSummary(rows, asOf: "2026-07-15") == StoreSummary(cents: 0, visits: 0, range: "–", allVisits: 6, first: "2026-05-04"))
+    let bars = zip(["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"], [0, 0, 0, 0, 731, 1271]).map { StoreSummary.Bar(month: $0, cents: $1) }
+    #expect(StoreSummary(rows, asOf: "2026-06-30") == StoreSummary(cents: 1271, visits: 4, range: "$2.32–$3.99", allVisits: 6, allCents: 2002,
+                                                                   first: "2026-05-04", bars: bars))
+    #expect(StoreSummary(rows, asOf: "2026-06-30")?.change == 540)
+    let july = try #require(StoreSummary(rows, asOf: "2026-07-15"))
+    #expect(july.cents == 0 && july.visits == 0 && july.range == "–" && july.change == -1271)
+    #expect(july.bars.map(\.month) == ["2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07"])
+    // The six months step back across a year end.
+    #expect(StoreSummary(rows, asOf: "2027-02-01")?.bars.map(\.month) == ["2026-09", "2026-10", "2026-11", "2026-12", "2027-01", "2027-02"])
     #expect(StoreSummary([row("1", "2026-06-01", 5)], asOf: "2026-06-30")?.range == "$5.00")
     #expect(StoreSummary([row("1", "2026-06-01", -520, "income")], asOf: "2026-06-30") == nil)
+}
+
+/// Maya's Bean Street Coffee, the design's example: $12.71 in June, $4.26 less than May, and the
+/// six bars $10.25, $10.66, $13.96, $12.02, $16.97 and $12.71 ($76.57 in all over 26 visits).
+/// Her pay from the café and its two refunds are left out.
+@Test func mayasBeanStreetMatchesTheDesign() throws {
+    let database = try inMemory("maya")
+    let id = try #require(try database.dbQueue.read { db in try String.fetchOne(db, sql: "SELECT id FROM entities WHERE name = 'Bean Street Coffee'") })
+    let asOf = try #require(try database.asOf())
+    let summary = try #require(StoreSummary(try ListedTransaction.all(in: database, merchant: id), asOf: asOf))
+    #expect(summary.cents == 1271)
+    #expect(summary.change == -426)
+    #expect(summary.bars.map(\.cents) == [1025, 1066, 1396, 1202, 1697, 1271])
+    #expect(summary.allCents == 7657 && summary.allVisits == 26)
+}
+
+/// For every store maya and daniel bought from: the big total is the store's purchases in the
+/// as-of month straight from the database, the change is this month minus last month, the six
+/// bars are each month's sum, and each month's week groups add up to that month, every purchase once.
+@Test(arguments: ["maya", "daniel"]) func merchantHistoryMatchesItsRows(persona: String) throws {
+    let database = try inMemory(persona)
+    let asOf = try #require(try database.asOf())
+    // The database's own purchase sums, in whole cents, by store and month.
+    let sums = try database.dbQueue.read { db in
+        try Row.fetchAll(db, sql: """
+            SELECT merchant_id, substr(date, 1, 7) AS month, SUM(CAST(ROUND(amount * 100) AS INTEGER)) AS cents
+            FROM transactions WHERE kind = 'spending' AND merchant_id IS NOT NULL GROUP BY 1, 2
+            """)
+    }
+    let sum = { (store: String, month: String) -> Int in sums.first { $0["merchant_id"] == store && $0["month"] == month }?["cents"] ?? 0 }
+    let stores = Set(sums.map { $0["merchant_id"] as String })
+    #expect(stores.count >= 2)
+    for store in stores {
+        let rows = try ListedTransaction.all(in: database, merchant: store)
+        let summary = try #require(StoreSummary(rows, asOf: asOf))
+        let months = summary.bars.map(\.month)
+        #expect(months.last == String(asOf.prefix(7)))
+        #expect(summary.cents == sum(store, String(asOf.prefix(7))), "\(persona) \(store)")
+        #expect(summary.change == sum(store, months[5]) - sum(store, months[4]))
+        #expect(summary.bars.map(\.cents) == months.map { sum(store, $0) })
+        let purchases = rows.filter { $0.kind == "spending" }
+        var listed = 0
+        for (month, weeks) in TransactionGroups.monthWeeks(purchases) {
+            #expect(weeks.reduce(0) { $0 + $1.cents } == sum(store, month), "\(persona) \(store) \(month)")
+            #expect(weeks.allSatisfy { week in week.rows.allSatisfy { TransactionGroups.monday(of: $0.date) == week.monday && $0.month == month } })
+            #expect(weeks.map(\.monday) == weeks.map(\.monday).sorted(by: >))
+            listed += weeks.reduce(0) { $0 + $1.rows.count }
+        }
+        #expect(listed == purchases.count)
+    }
 }
