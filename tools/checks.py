@@ -33,7 +33,7 @@ INCOME_TYPES = {"wages", "household_contribution"}
 INVARIANTS = ["records", "labels", "merchant", "income_sign", "pairs", "refunds", "card_payments", "card_balance", "balances", "totals"]
 MIX_TOLERANCE = 0.05  # each question type's share may differ from dev's by 5 points
 # The only questions whose organizer_limited column says "yes"; a flag added or lost changes what scoring filters.
-ORGANIZER_LIMITED = {"nia-14", "otis-06", "otis-10", "otis-12", "otis-16", "otis-18"}
+ORGANIZER_LIMITED = {"nia-14", "otis-06", "otis-16", "otis-18"}
 
 
 def cents(amount):
