@@ -23,8 +23,29 @@ struct ListedAccount: Decodable, Identifiable, FetchableRecord {
     let currency: String?
 
     var id: String { account_id }
-    /// The name the app shows: the person's own name, or the bank's.
-    var title: String { nickname ?? name }
+    /// How the app names an account: "<bank> ••<last 4>", the account's own name with its last
+    /// digits when the bank's name isn't known, or the name alone when there are no digits. The
+    /// person's own name for it (a nickname) takes the place of either name.
+    static func named(_ name: String, nickname: String?, institution: String?, mask: String?,
+                      spoken: Bool = false) -> String {
+        let base = nickname ?? (mask == nil ? nil : institution) ?? name
+        guard let mask else { return base }
+        return spoken ? "\(base) ending in \(mask)" : "\(base) ••\(mask)"
+    }
+
+    /// This account named by `named`. shortcut: no table stores the bank's name, so the account's
+    /// own name is used; pass the bank's name here once the bank file keeps it.
+    func displayName(spoken: Bool = false) -> String {
+        Self.named(name, nickname: nickname, institution: nil, mask: mask, spoken: spoken)
+    }
+
+    /// Saves an answer to "Is this account yours?": the name (blank clears it), and the owner
+    /// unless the answer is Decide later (nil). The account check and the Accounts screen share
+    /// it, so an answer saves the same values wherever it is given.
+    static func save(_ owner: Answers.Owner?, nickname: String, account id: String, in database: SedgeDatabase) throws {
+        try Answers.setNickname(nickname, account: id, in: database)
+        if let owner { try Answers.setOwner(owner, account: id, in: database) }
+    }
 
     /// The answer in plain words, shown next to the account.
     var ownerLabel: String {
@@ -54,7 +75,7 @@ struct AccountCheckView: View {
     let database: SedgeDatabase
     let account: ListedAccount
     /// Which account this is of the ones asked about after connecting, e.g. (1, 4); nil when
-    /// opened on its own from Your accounts.
+    /// opened on its own from Accounts.
     let step: (number: Int, of: Int)?
     /// The name being typed, starting from the saved one.
     @State private var nickname: String
@@ -112,7 +133,7 @@ struct AccountCheckView: View {
     /// The account in a card: a tile in its type's color, its name over where it came from and its
     /// balance, then the Name row.
     private var accountCard: some View {
-        // "Just added" only fits right after connecting; opened from Your accounts it isn't new.
+        // "Just added" only fits right after connecting; opened from Accounts it isn't new.
         let detail = [step == nil ? nil : "Just added from your bank",
                       account.balance.map { $0.formatted(.currency(code: account.currency ?? "USD")) }]
             .compactMap { $0 }.joined(separator: " · ")
@@ -166,8 +187,7 @@ struct AccountCheckView: View {
     /// Saves the name, and the owner unless the answer is Decide later (nil), then closes the screen.
     private func answer(_ owner: Answers.Owner?) {
         do {
-            try Answers.setNickname(nickname, account: account.account_id, in: database)
-            if let owner { try Answers.setOwner(owner, account: account.account_id, in: database) }
+            try ListedAccount.save(owner, nickname: nickname, account: account.account_id, in: database)
         } catch {
             print("Could not save the answer:", error)
         }
@@ -226,33 +246,73 @@ struct AccountAnswers: View {
     }
 }
 
-/// "Your accounts": every account with the person's answer, opened from the Accounts tab.
-/// Accounts not answered yet ("Later") come first, marked with a dot; tapping one opens its check.
-struct YourAccountsView: View {
+/// "Accounts", opened from the Accounts tab. Each account not answered yet ("Later") is asked
+/// about right here at the top, with the account check's answers; answering moves it down into
+/// Answered, where tapping an account opens its check to rename it or change the answer.
+struct AccountsListView: View {
     let database: SedgeDatabase
     @State private var accounts: [ListedAccount] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let toAnswer = accounts.filter { $0.owner == nil }
+        let answered = accounts.filter { $0.owner != nil }
         List {
-            Section {
-                ForEach(accounts.filter { $0.owner == nil } + accounts.filter { $0.owner != nil }) { account in
-                    NavigationLink {
-                        AccountCheckView(database: database, account: account)
-                    } label: {
-                        AccountRow(account: account)
+            if !toAnswer.isEmpty {
+                Section("To answer") {
+                    ForEach(toAnswer) { account in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Is this account yours?").font(.headline)
+                            Text(account.displayName())
+                                .font(.subheadline)
+                                .accessibilityLabel(account.displayName(spoken: true))
+                            AccountAnswers(owner: nil) { answer($0, for: account) }
+                                .padding(.top, 10)
+                        }
+                        .padding(.vertical, 5)
+                        // Every card has the same three buttons, so each card is one group named
+                        // for its account, and its answers are found inside it.
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel(account.displayName(spoken: true))
                     }
-                    .accessibilityLabel(accountTitle(account.title, account.mask, spoken: true))
-                    .accessibilityValue(account.ownerLabel)
                 }
-            } footer: {
-                Text("Accounts you said “Later” about sit at the top with a dot. Tap any account to name it or change who it belongs to.")
-                    .foregroundStyle(.secondary)
+                .listRowBackground(Color.group)
             }
-            .listRowBackground(Color.group)
+            if !answered.isEmpty {
+                Section("Answered") {
+                    ForEach(answered) { account in
+                        NavigationLink {
+                            AccountCheckView(database: database, account: account)
+                        } label: {
+                            AccountRow(account: account)
+                        }
+                        .accessibilityLabel(account.displayName(spoken: true))
+                        .accessibilityValue(account.ownerLabel)
+                    }
+                }
+                .listRowBackground(Color.group)
+            }
         }
         .themedBackground()
         // Runs again on coming back from a check, so a new name or answer shows.
         .task { reload() }
+    }
+
+    /// Saves what the account check saves when its name field is left as it was. Decide later
+    /// (nil) saves no owner, so the account stays at the top.
+    static func save(_ owner: Answers.Owner?, for account: ListedAccount, in database: SedgeDatabase) throws {
+        try ListedAccount.save(owner, nickname: account.nickname ?? "", account: account.account_id, in: database)
+    }
+
+    /// Saves the answer, then moves the account into Answered.
+    private func answer(_ owner: Answers.Owner?, for account: ListedAccount) {
+        do {
+            try Self.save(owner, for: account, in: database)
+        } catch {
+            print("Could not save the answer:", error)
+        }
+        // With Reduce Motion the account changes sections without sliding.
+        withAnimation(reduceMotion ? nil : .snappy) { reload() }
     }
 
     private func reload() {
@@ -264,27 +324,20 @@ struct YourAccountsView: View {
     }
 }
 
-/// One account on Your accounts: its name over the bank's name (or the question, while it is
-/// unanswered), and the answer as the value.
+/// One answered account on Accounts: its name over its type, and the answer as the value.
 private struct AccountRow: View {
     let account: ListedAccount
 
     var body: some View {
-        let unanswered = account.owner == nil
         LabeledContent {
-            Text(account.ownerLabel)
-                .foregroundStyle(unanswered ? Color.accent : Color.secondary)
+            Text(account.ownerLabel).foregroundStyle(.secondary)
         } label: {
-            HStack(spacing: 12) {
-                if unanswered {
-                    Circle().fill(Color.accent).frame(width: 8, height: 8)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(accountTitle(account.title, account.mask))
-                    Text(unanswered ? "Is this account yours?" : account.name)
-                        .font(.row)
-                        .foregroundStyle(.secondary)
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account.displayName())
+                // "credit card" becomes "Credit card", as the design writes it.
+                Text(account.kind.prefix(1).uppercased() + account.kind.dropFirst())
+                    .font(.row)
+                    .foregroundStyle(.secondary)
             }
         }
     }

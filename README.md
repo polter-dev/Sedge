@@ -48,7 +48,8 @@ The three tabs:
   - **Transactions**: one month at a time (arrows step between months), split into income, spending
     and transfers and grouped by week. Tap one for its details and the store's history.
   - **About you**: what Sedge learned (income, rent, accounts and more). Tap a tile to correct it.
-  - **Your accounts**: whether each account is yours or shared, and a name of your own for it.
+  - **Accounts**: whether each account is yours or shared, asked right on the screen for any not
+    answered yet, and a name of your own for it.
   - **Saved answers**: replies to quick questions and your corrections. Tap to change, swipe to remove.
 
 Launch arguments (Product > Scheme > Edit Scheme > Run > Arguments):
