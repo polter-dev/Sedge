@@ -5,6 +5,7 @@
 
 import Foundation
 import SedgeCore
+import SwiftUI
 import Testing
 @testable import Sedge
 
@@ -214,8 +215,7 @@ func biggestChangeMatchesAHandCount(persona: String, category: String?, name: St
         change = SpendingView.biggestChange(now: SpendingView.cents(june), before: SpendingView.cents(may))
     } else {
         let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: 30)
-        change = SpendingView.biggestChange(now: SpendingView.cents(totals, month: "2026-06"),
-                                            before: SpendingView.cents(totals, month: "2026-05"))
+        change = SpendingView.categoryChange(totals, asOf: asOf, month: "2026-06")
     }
     #expect(change?.name == name)
     #expect(change?.cents == cents)
@@ -232,6 +232,39 @@ func biggestChangeMatchesAHandCount(persona: String, category: String?, name: St
     // Under a dollar keeps the cents, so it never reads "+$0".
     #expect(SpendingView.changeText(40, before: "2026-05") == "+$0.40 vs May")
     #expect(SpendingView.changeText(-5, before: "2026-05") == "-$0.05 vs May")
+}
+
+/// On the oldest page (March), "All"'s biggest change skips travel, spent only in February and so
+/// not in the category sheet, and names the listed category that changed most instead.
+@Test func categoryChangeStaysOnListedCategories() {
+    let totals = [SpendingTotal(month: "2026-02", category: "travel", total: 900), SpendingTotal(month: "2026-02", category: "dining", total: 50),
+                  SpendingTotal(month: "2026-03", category: "dining", total: 80), SpendingTotal(month: "2026-06", category: "coffee", total: 5)]
+    // Without the rule, travel's -$900 would win.
+    #expect(SpendingView.biggestChange(now: SpendingView.cents(totals, month: "2026-03"), before: SpendingView.cents(totals, month: "2026-02"))?.name == "travel")
+    let change = SpendingView.categoryChange(totals, asOf: "2026-06-30", month: "2026-03")
+    #expect(change?.name == "dining" && change?.cents == 3000)
+    #expect(SpendingView.categoryOrder(totals, asOf: "2026-06-30", month: "2026-03").contains(change?.name ?? ""))
+}
+
+/// For Maya and Daniel, every page's "All" biggest change is the same as comparing every category,
+/// so leaving out unlisted categories changes none of their numbers.
+@Test(arguments: ["maya", "daniel"])
+func categoryChangeKeepsPersonaNumbers(persona: String) throws {
+    let database = try SedgeDatabase.open(persona)
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: 30)
+    for month in SpendingView.months(endingAt: asOf) {
+        let every = SpendingView.biggestChange(now: SpendingView.cents(totals, month: month),
+                                               before: SpendingView.cents(totals, month: SpendingView.monthBefore(month)))
+        let listed = SpendingView.categoryChange(totals, asOf: asOf, month: month)
+        #expect(listed?.name == every?.name && listed?.cents == every?.cents, "\(persona) \(month)")
+    }
+}
+
+/// A bar tap or VoiceOver page turn slides by default and jumps with Reduce Motion on.
+@Test func pageTurnRespectsReduceMotion() {
+    #expect(SpendingView.pageTurn(reduceMotion: true) == nil)
+    #expect(SpendingView.pageTurn(reduceMotion: false) == .default)
 }
 
 /// The card's low point is the one the Cash flow screen leads with: `CashFlow` loaded for 30 days
