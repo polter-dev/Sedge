@@ -122,8 +122,15 @@ public enum Organizer {
                 // only if it is no more than the purchases it names and no more than what is left at the store
                 // (everything paid on or before it less the refunds before it), so "STATE TAX REFUND", an
                 // "IRS TAX REFUND" larger than the tax paid, or a second $300 back on $500 paid, stays income.
+                // A store return can also be named "<store> CREDIT" ("CEDAR HOME CREDIT"). "Credit" also means a payment
+                // or a transfer, so it counts only when posted, with a posted purchase it names in full of exactly the
+                // same amount on the same account: a card's "ONLINE PAYMENT CREDIT" (paid from checking) stays a payment.
+                let isStoreCredit = { (line: Line) in
+                    !line.pending && clean(line.raw).name.hasSuffix(" credit")
+                        && paidBefore(line).contains { $0.account == line.account && abs($0.amount + line.amount) < 0.005 }
+                }
                 var refunds: [Line] = [], refundedSoFar = 0.0
-                for line in merchantLines where startsWithRefund(line) || line.amount < 0 && clean(line.raw).isRefund
+                for line in merchantLines where startsWithRefund(line) || line.amount < 0 && (clean(line.raw).isRefund || isStoreCredit(line))
                     && -line.amount <= paidBefore(line).map(\.amount).reduce(0, +) + 0.005
                     && -line.amount <= purchases.filter { $0.date <= line.date }.map(\.amount).reduce(0, +) - refundedSoFar + 0.005 {
                     refunds.append(line)
