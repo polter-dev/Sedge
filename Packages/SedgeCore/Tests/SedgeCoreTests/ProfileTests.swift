@@ -229,6 +229,21 @@ func tuitionWithRefund(useReconciliation: Bool = true) throws -> SedgeDatabase {
     #expect(kinds == ["irs2": "income", "u2": "income", "g3": "refund"])
 }
 
+/// "REFUND" first means a refund only for money in: three monthly $10 charges named "REFUND FEE SERVICE"
+/// are purchases that form a monthly series, and $10 back under the same name is a refund of the last one.
+@Test func chargeNamedRefundIsAPurchase() throws {
+    let database = try housingData([("f1", "2026-03-05", "REFUND FEE SERVICE", 10), ("f2", "2026-04-05", "REFUND FEE SERVICE", 10),
+                                    ("f3", "2026-05-05", "REFUND FEE SERVICE", 10), ("r1", "2026-05-20", "REFUND FEE SERVICE", -10)])
+    let edges = try database.dbQueue.read { db in
+        try Row.fetchAll(db, sql: "SELECT source, kind, target FROM edges WHERE kind IN ('recurring', 'refund_of') ORDER BY source")
+            .map { "\($0[0] as String) \($0[1] as String) \($0[2] as String)" }
+    }
+    #expect(edges == ["f1 recurring merchant:fee service", "f2 recurring merchant:fee service",
+                      "f3 recurring merchant:fee service", "r1 refund_of f3"])
+    let kinds = try database.dbQueue.read { db in try String.fetchAll(db, sql: "SELECT kind FROM transactions ORDER BY transaction_id") }
+    #expect(kinds == ["spending", "spending", "spending", "refund"])
+}
+
 /// Under the size rule only the $1,500 charge is tuition paid, so refunding the $40 charge too
 /// can't make refunded larger than paid. Every refund is still listed.
 @Test func tuitionRefundedIsCappedAtPaid() throws {
