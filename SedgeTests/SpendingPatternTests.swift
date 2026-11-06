@@ -313,6 +313,14 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
         #expect(parts.reduce(0) { $0 + $1.dollars } == AllMonthsView.rounded(total), "\(persona) \(month.label)")
         #expect(parts.map(\.cents) == parts.map(\.cents).sorted(by: >), "\(persona) \(month.label): not biggest first")
 
+        // Every category without a color of its own is in Other, and Other is their cents added up.
+        let byCategory = SpendingView.cents(totals, month: month.label)
+        let uncolored = byCategory.keys.filter { Color.categoryColors[SpendingView.title($0)] == nil }.sorted()
+        let other = parts.first { $0.category == "other" }
+        #expect(other?.folded ?? [] == uncolored, "\(persona) \(month.label)")
+        #expect(other?.cents == (uncolored.isEmpty ? nil : uncolored.reduce(0) { $0 + byCategory[$1]! }), "\(persona) \(month.label)")
+        #expect(parts.filter { $0.category != "other" }.allSatisfy { $0.folded == [$0.category] })
+
         // With money moved on, it is one more row and the rows still add up to Total.
         let moved = AllMonthsView.parts(withMoved, month: month.label)
         #expect(moved.filter { $0.category != SpendingTotal.movedCategory }.map(\.cents) == parts.map(\.cents))
@@ -345,26 +353,45 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
 }
 
 /// For Maya and Daniel, the sheet a category row opens lists transactions that add up to the
-/// row's cents in every month and category, money moved included. A transaction the person moved
-/// to another category is listed there and not under its store's category.
+/// row's cents in every month and category, Other and money moved included. A transaction the
+/// person moved out of Dining into Coffee is listed under Coffee and no longer under Other.
 @Test(arguments: ["maya", "daniel"]) func allMonthsSheetMatchesItsRow(persona: String) throws {
     let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
     let june = (from: "2026-06-01", through: "2026-06-31")
     let dining = try ListedTransaction.spending(in: database, category: "dining", from: june.from, through: june.through)
     let moved = try #require(dining.first)
-    try Answers.setCategory("groceries", transaction: moved.id, in: database)
-    let groceries = try ListedTransaction.spending(in: database, category: "groceries", from: june.from, through: june.through)
-    #expect(groceries.contains { $0.id == moved.id })
-    #expect(try !ListedTransaction.spending(in: database, category: "dining", from: june.from, through: june.through)
-        .contains { $0.id == moved.id })
-
+    try Answers.setCategory("coffee", transaction: moved.id, in: database)
     let totals = try SpendingTotal.all(in: database, includeMoved: true)
+    let juneParts = AllMonthsView.parts(totals, month: "2026-06")
+    func sheet(_ category: String) throws -> [ListedTransaction] {
+        let part = try #require(juneParts.first { $0.category == category })
+        return try AllMonthsView.sheetRows(in: database, .init(category: part.category, folded: part.folded, month: "2026-06"))
+    }
+    #expect(try sheet("coffee").contains { $0.id == moved.id })
+    #expect(try !sheet("other").contains { $0.id == moved.id })
+
     for month in Set(totals.map(\.month)) {
         for part in AllMonthsView.parts(totals, month: month) {
-            let rows = try ListedTransaction.spending(in: database, category: part.category, from: month + "-01", through: month + "-31")
+            let rows = try AllMonthsView.sheetRows(in: database, .init(category: part.category, folded: part.folded, month: month))
             #expect(rows.reduce(0) { $0 + $1.cents } == part.cents, "\(persona) \(month) \(part.category)")
+            // Oldest first, with the folded categories' transactions mixed in by date.
+            #expect(rows.map(\.date) == rows.map(\.date).sorted(), "\(persona) \(month) \(part.category)")
         }
     }
+}
+
+/// A month with only colored categories has no Other row, and money moved is never folded into
+/// Other even though it has no color of its own.
+@Test func allMonthsOtherRowOnlyForUncoloredCategories() {
+    let colored = [SpendingTotal(month: "2026-06", category: "housing", total: 650),
+                   SpendingTotal(month: "2026-06", category: SpendingTotal.movedCategory, total: 300)]
+    #expect(AllMonthsView.parts(colored, month: "2026-06").map(\.category) == ["housing", SpendingTotal.movedCategory])
+    let mixed = colored + [SpendingTotal(month: "2026-06", category: "groceries", total: 86.97),
+                           SpendingTotal(month: "2026-06", category: "dining", total: 19.51)]
+    let parts = AllMonthsView.parts(mixed, month: "2026-06")
+    #expect(parts.map(\.category) == ["housing", SpendingTotal.movedCategory, "other"])
+    #expect(parts.last?.folded == ["dining", "groceries"])
+    #expect(parts.last?.cents == 10_648)
 }
 
 /// Windows count back six months at a time from the newest month, across years, and the

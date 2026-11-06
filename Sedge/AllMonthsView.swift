@@ -33,18 +33,20 @@ struct AllMonthsView: View {
         var id: String { label }
     }
 
-    /// One row of the "By category" list: a stored category, its exact total in cents and the
-    /// whole dollars it shows.
+    /// One row of the "By category" list: a stored category (`other` for the Other row), the
+    /// stored categories it adds up, its exact total in cents and the whole dollars it shows.
     struct Part: Identifiable {
         let category: String
+        let folded: [String]
         let cents: Int
         let dollars: Int
         var id: String { category }
     }
 
-    /// A tapped category row: the category and month the sheet lists.
+    /// A tapped category row: the row's category, the stored categories and month the sheet lists.
     struct Opened: Identifiable, Hashable {
         let category: String
+        let folded: [String]
         let month: String
         var id: Self { self }
     }
@@ -63,11 +65,29 @@ struct AllMonthsView: View {
     }
 
     /// One month's categories, biggest first (by name on a tie), money moved included only when
-    /// it was loaded. Their whole dollars add up exactly to the month's total in whole dollars.
+    /// it was loaded. Every category without a color of its own is folded into one "Other" row,
+    /// since a list of gray rows can't be told apart; money moved stays its own row. Their whole
+    /// dollars add up exactly to the month's total in whole dollars.
     static func parts(_ totals: [SpendingTotal], month: String) -> [Part] {
-        let cents = SpendingView.cents(totals, month: month)
-            .sorted { ($0.value, SpendingView.title($1.key)) > ($1.value, SpendingView.title($0.key)) }
-        return zip(cents, wholeDollars(cents.map(\.value))).map { Part(category: $0.key, cents: $0.value, dollars: $1) }
+        let byCategory = SpendingView.cents(totals, month: month)
+        let rows = Dictionary(grouping: byCategory.keys) { category in
+            category == SpendingTotal.movedCategory || Color.categoryColors[SpendingView.title(category)] != nil ? category : "other"
+        }
+        .map { (category: $0.key, folded: $0.value.sorted(), cents: $0.value.reduce(0) { $0 + byCategory[$1, default: 0] }) }
+        .sorted { ($0.cents, SpendingView.title($1.category)) > ($1.cents, SpendingView.title($0.category)) }
+        return zip(rows, wholeDollars(rows.map(\.cents))).map {
+            Part(category: $0.category, folded: $0.folded, cents: $0.cents, dollars: $1)
+        }
+    }
+
+    /// The transactions a tapped row's sheet lists, oldest first: every one in the row's stored
+    /// categories that month, so Other's sheet adds up to Other's row.
+    static func sheetRows(in database: SedgeDatabase, _ opened: Opened) throws -> [ListedTransaction] {
+        // The 31st covers every month, as a shorter month's dates all sort before it.
+        try opened.folded.flatMap {
+            try ListedTransaction.spending(in: database, category: $0, from: opened.month + "-01", through: opened.month + "-31")
+        }
+        .sorted { ($0.date, $0.id) < ($1.date, $1.id) }
     }
 
     /// Cents rounded to the nearest whole dollar, 50 cents to the even dollar, as the bars' dollar
@@ -171,7 +191,7 @@ struct AllMonthsView: View {
                     .accessibilityValue(Double(Self.rounded(total)).formatted(Self.dollars))
                 ForEach(parts) { part in
                     let title = SpendingView.title(part.category)
-                    Button { opened = Opened(category: part.category, month: shown) } label: {
+                    Button { opened = Opened(category: part.category, folded: part.folded, month: shown) } label: {
                         // Scaled against Total, so even the biggest category's bar is shorter than Total's.
                         row(title, dollars: part.dollars, share: total > 0 ? Double(part.cents) / Double(total) : 0,
                             color: Color.category(title))
@@ -326,7 +346,7 @@ struct AllMonthsView: View {
     }
 }
 
-/// The sheet a category row opens: that category's transactions in one month, oldest first,
+/// The sheet a category row opens: that row's transactions in one month, oldest first,
 /// under their count and exact total, counted the same way as the row.
 private struct MonthTransactions: View {
     let database: SedgeDatabase
@@ -385,9 +405,7 @@ private struct MonthTransactions: View {
         .presentationBackground(Color.background)
         .task {
             do {
-                // The 31st covers every month, as a shorter month's dates all sort before it.
-                rows = try ListedTransaction.spending(in: database, category: opened.category, from: opened.month + "-01",
-                                                      through: opened.month + "-31").reversed()
+                rows = try AllMonthsView.sheetRows(in: database, opened)
             } catch {
                 print("Could not read transactions:", error)
             }

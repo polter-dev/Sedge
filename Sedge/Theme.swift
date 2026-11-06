@@ -26,22 +26,18 @@ import SwiftUI
 //
 // The category colors on All months, one color set each: `catHousing`, `catUtilities`,
 // `catPhoneInternet`, `catTransport`, `catSubscriptions`, `catEducation` and `catCoffee`.
-// `Color.category` picks one by name; categories without a hue of their own yet use `second`.
+// `Color.category` picks one by name; categories without a hue of their own use `second`,
+// and All months folds them into one "Other" row.
 
 extension Color {
-    /// A category's color in charts, by the name the screens show (e.g. "Phone internet").
-    static func category(_ title: String) -> Color {
-        switch title {
-        case "Housing": .catHousing
-        case "Utilities": .catUtilities
-        case "Phone internet": .catPhoneInternet
-        case "Transport": .catTransport
-        case "Subscriptions": .catSubscriptions
-        case "Education": .catEducation
-        case "Coffee": .catCoffee
-        default: .second
-        }
-    }
+    /// The categories with a hue of their own, by the name the screens show (e.g. "Phone internet").
+    static let categoryColors: [String: Color] = [
+        "Housing": .catHousing, "Utilities": .catUtilities, "Phone internet": .catPhoneInternet, "Transport": .catTransport,
+        "Subscriptions": .catSubscriptions, "Education": .catEducation, "Coffee": .catCoffee,
+    ]
+
+    /// A category's color in charts, by the name the screens show; `second` when it has no hue of its own.
+    static func category(_ title: String) -> Color { categoryColors[title] ?? .second }
 
     /// An account's color by its type (the bank's subtype, else its type): cards, savings, and
     /// every other account as checking. About you's tiles and the account check share it.
