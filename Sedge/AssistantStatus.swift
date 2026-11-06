@@ -26,8 +26,11 @@ enum AssistantStatus: Equatable {
     /// While it is set, the screen shows the "answers best in a new chat" banner.
     private(set) var reopenedTitle: String?
     private(set) var status = AssistantStatus.idle
-    /// The words next to the thinking row's sprout, picked when thinking starts.
+    /// The words next to the thinking row's sprout, picked when thinking starts and changed
+    /// every `phraseSeconds` while it lasts.
     private(set) var phrase = ""
+    /// Seconds each phrase shows before the next one pushes it out, as in the design.
+    static let phraseSeconds = 2.2
 
     /// The design's ten placeholder phrases for the thinking row.
     static let phrases = [
@@ -43,13 +46,24 @@ enum AssistantStatus: Equatable {
         "Nearly there…",
     ]
 
-    /// Shows a new status. Starting to think picks a new phrase, never the one shown last time;
-    /// it stays the same while the answer is worked out.
+    /// Shows a new status. Starting to think picks a new phrase, never the one shown last time.
     func report(_ new: AssistantStatus) {
-        if new == .thinking, status != .thinking {
-            phrase = Self.phrases.filter { $0 != phrase }.randomElement()!
-        }
+        if new == .thinking, status != .thinking { nextPhrase() }
         status = new
+    }
+
+    /// While thinking, moves to a new phrase every `phraseSeconds`, never the one just shown.
+    /// It returns once thinking ends, or when the calling task is cancelled because the thinking
+    /// row went away. Tests pass their own `sleep` so they can step through without waiting.
+    func cyclePhrases(sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) async {
+        while status == .thinking, (try? await sleep(.seconds(Self.phraseSeconds))) != nil, status == .thinking {
+            nextPhrase()
+        }
+    }
+
+    /// Picks one of the ten phrases at random, skipping the one showing now.
+    private func nextPhrase() {
+        phrase = Self.phrases.filter { $0 != phrase }.randomElement()!
     }
 
     /// "Start new session" and New chat: clears the conversation so the person can ask again.

@@ -41,7 +41,7 @@ private struct FakeStatusSource {
 }
 
 /// Each question gets a phrase from the design's ten, never the one shown for the last question,
-/// and the phrase stays put while the same answer is still being worked out.
+/// and reporting thinking again for the same answer doesn't pick another.
 @MainActor @Test func thinkingPhraseComesFromTheTenAndChangesPerQuestion() {
     #expect(ChatSession.phrases.count == 10)
     let session = ChatSession()
@@ -58,9 +58,46 @@ private struct FakeStatusSource {
     }
 }
 
-/// One breath of the thinking sprout, out and back, takes 1.2 seconds as in the design.
-@MainActor @Test func sproutBreathIsOnePointTwoSecondsRoundTrip() {
-    #expect(ThinkingRow.halfBreath * 2 == 1.2)
+/// While thinking, the phrase changes after every 2.2-second wait, never to the one just shown.
+/// It doesn't change while idle, and the cycling stops as soon as thinking ends or the row goes
+/// away. The waits are stepped by the test instead of really sleeping.
+@MainActor @Test func thinkingPhraseCyclesUntilThinkingEnds() async {
+    let session = ChatSession()
+    var waits = 0
+    await session.cyclePhrases { _ in waits += 1 }
+    #expect(waits == 0 && session.phrase == "") // idle: returns at once, nothing changes
+
+    session.report(.thinking)
+    var shown: [String] = []
+    await session.cyclePhrases { wait in
+        #expect(wait == .seconds(2.2))
+        shown.append(session.phrase)
+        if shown.count == 200 { session.report(.idle) } // thinking ends during this wait
+    }
+    #expect(shown.count == 200)
+    #expect(shown.allSatisfy(ChatSession.phrases.contains))
+    #expect(zip(shown, shown.dropFirst()).allSatisfy { $0 != $1 })
+    #expect(session.phrase == shown.last) // no change after thinking ended
+
+    // The row going away cancels the wait, which also stops the cycling without a change.
+    session.report(.thinking)
+    let before = session.phrase
+    await session.cyclePhrases { _ in throw CancellationError() }
+    #expect(session.phrase == before)
+}
+
+/// One sprout cycle takes 3.4 seconds: the ground draws first, then the stem, the right leaf and
+/// the left leaf; all four hold fully drawn, then erase in the same order and are gone by the end.
+@MainActor @Test func sproutDrawsPartByPartThenErases() {
+    #expect(ThinkingSprout.cycleSeconds == 3.4 && ThinkingRow.shimmerSeconds == 1.9)
+    let shown = { (t: Double) in ThinkingSprout.parts.map { $0.shown(at: t) } }
+    #expect(shown(0) == [0, 0, 0, 0])
+    #expect(shown(0.07)[0] == 0.5 && shown(0.07)[1...] == [0, 0, 0]) // ground halfway
+    let midRightLeaf = shown(0.42) // ground and stem done, right leaf halfway, left not started
+    #expect(midRightLeaf[0] == 1 && midRightLeaf[1] == 1 && abs(midRightLeaf[2] - 0.5) < 1e-9 && midRightLeaf[3] == 0)
+    #expect(shown(0.75) == [1, 1, 1, 1])
+    #expect(shown(0.85)[0] < shown(0.85)[3]) // the ground is half erased while the left leaf has barely started
+    #expect(shown(0.99) == [0, 0, 0, 0])
 }
 
 /// Opening an older chat shows its turns with the banner's title and keeps its id, so new
