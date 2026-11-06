@@ -115,8 +115,9 @@ struct TransactionDetailView: View {
     @State private var noteUndo = false
     /// The familiar prompt's countdown, 4 down to 0, while the track shows under the buttons; nil hides it.
     @State private var countdown: Int?
-    /// False while the track is full, true once it's set to drain: a 4 s linear animation empties it.
-    @State private var draining = false
+    /// The part of the track still full, 1 down to 0. Each tick sets it from the number, so the
+    /// track can't run ahead of the countdown, even after the countdown paused for Merchant history.
+    @State private var remaining = 1.0
     /// True once the countdown has shown 0: the prompt is folded away until the screen is opened again.
     @State private var folded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -145,10 +146,12 @@ struct TransactionDetailView: View {
         // Undo sets it to nil, which cancels the tick in progress.
         .task(id: countdown) {
             guard let count = countdown else { return }
-            // The track is drawn full by now; one 4 s animation drains it in step with the number.
+            // The track drains a quarter over this tick's second, ending where the next number starts.
             // With Reduce Motion it follows the number instead, a step a second.
-            if count == 4 && !reduceMotion {
-                withAnimation(.linear(duration: 4)) { draining = true }
+            if reduceMotion {
+                remaining = Double(count) / 4
+            } else {
+                withAnimation(.linear(duration: 1)) { remaining = Double(max(count - 1, 0)) / 4 }
             }
             // The countdown holds 0 for 0.3 s, so it's seen, before the prompt folds away.
             guard (try? await Task.sleep(for: .seconds(count > 0 ? 1 : 0.3))) != nil else { return }
@@ -303,8 +306,6 @@ struct TransactionDetailView: View {
 
     /// The 4 pt track that drains under the answer buttons, with "Saved. Closing in 3" and Undo.
     private func savedTrack(countdown: Int) -> some View {
-        // With Reduce Motion the track follows the number, a step a second, instead of sliding.
-        let remaining = reduceMotion ? Double(countdown) / 4 : (draining ? 0 : 1)
         // The accent part is squeezed from the right, so it shrinks toward the leading edge.
         let track = Rectangle().fill(Color.accent)
             .scaleEffect(x: remaining, anchor: .leading)
@@ -397,7 +398,7 @@ struct TransactionDetailView: View {
         // while it counts saves the new one and keeps the countdown going.
         guard detail?.familiar == answer.rawValue, countdown == nil else { return }
         // The track appears full; the countdown's first tick starts it draining.
-        draining = false
+        remaining = 1
         // With Reduce Motion the track just appears, without sliding the rest down.
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { countdown = 4 }
     }

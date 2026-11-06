@@ -1023,6 +1023,67 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(notSure.isSelected)
     }
 
+    /// The countdown pauses while Merchant history is open. Coming back, the track must still match
+    /// the number: at "Closing in 2" or more it's at least a quarter full, so its leading edge is
+    /// the accent color, not the empty track's color. At 1 an empty track is right, so a trip that
+    /// comes back that late (a busy machine) can't tell and is tried again. The answer is undone at the end.
+    @MainActor
+    func testFamiliarTrackKeepsStepAfterMerchantHistory() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        let corner = "Corner Cafe, CORNER CAFE, $10.40"
+        openTransaction(app, corner)
+        let yes = app.buttons["Yes"], notSure = app.buttons["Not sure"]
+        let countdown = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Saved. Closing in '")).firstMatch
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        for _ in 0..<3 {
+            XCTAssertTrue(yes.waitForExistence(timeout: 10))
+            XCTAssertTrue(history.exists)
+            // Leaves right after answering, so the count is still high when it comes back.
+            yes.tap()
+            history.tap()
+            // Stay away longer than the whole 4 s countdown.
+            Thread.sleep(forTimeInterval: 5)
+            app.navigationBars.buttons.firstMatch.tap()
+            XCTAssertTrue(countdown.waitForExistence(timeout: 2))
+            // The screenshot comes first, so the number read after it is never higher than the one it shows.
+            let shot = app.screenshot()
+            let label = countdown.label
+            guard label.hasSuffix(" 2") || label.hasSuffix(" 3") || label.hasSuffix(" 4") else {
+                // Too late to tell: let it fold, then open the transaction again and retry.
+                XCTAssertTrue(app.staticTexts["Does this look familiar?"].waitForNonExistence(timeout: 3))
+                app.navigationBars.buttons.firstMatch.tap()
+                app.buttons[corner].tap()
+                continue
+            }
+            // The track sits 4 pt tall just above the 44 pt line that holds the countdown text.
+            let left = yes.frame.minX, right = notSure.frame.maxX, y = countdown.frame.midY - 22 - 2
+            let near = pixel(shot.image, x: left + (right - left) * 0.05, y: y)
+            let far = pixel(shot.image, x: left + (right - left) * 0.98, y: y)
+            app.buttons["Undo"].tap()
+            XCTAssertNotEqual(near, far, "At '\(label)' the track's leading edge has the same color as its empty end")
+            return
+        }
+        // Clean up the saved answer before failing.
+        yes.tap()
+        app.buttons["Undo"].tap()
+        XCTFail("Never came back from Merchant history at 'Closing in 2' or more")
+    }
+
+    /// The RGBA bytes of one point of a screenshot, `x` and `y` in points.
+    private func pixel(_ image: UIImage, x: CGFloat, y: CGFloat) -> [UInt8] {
+        let cg = image.cgImage!
+        let px = Int(x * image.scale), py = Int(y * image.scale)
+        var out = [UInt8](repeating: 0, count: 4)
+        let ctx = CGContext(data: &out, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        // Draws the image shifted so the wanted pixel lands on the 1 x 1 canvas (Core Graphics counts y from the bottom).
+        ctx.draw(cg, in: CGRect(x: -px, y: py - cg.height + 1, width: cg.width, height: cg.height))
+        return out
+    }
+
     /// From the Accounts tab, opens the transaction whose row reads `label`. The list shows one
     /// month at a time and opens on the data's latest month, so this steps back a month at a time
     /// until the row turns up or there is no earlier month.
