@@ -138,7 +138,9 @@ To add a rule, add one line under its area in the same shape as the others: the 
 - A transaction the person moved to another category counts in that category instead of its store's, in the tools' category totals and the Spending and All months screens; totals by store and overall don't change, and the profile still reads the store's category. — `Tools.swift` `spendingFilter`; `Sedge/SpendingView.swift` `SpendingTotal.all`; `Profile.swift` `infer`
 - An account's owner (mine or shared) and a transaction's familiar answer (yes or not_sure) are only reported to the model; they don't change any total. — `Answers.swift`; `Tools.swift` `accountBalances`, `findTransactions`
 - An answer about a pending charge is lost when the charge posts under a new id. — `SedgeDatabase.swift` `save`
-- An account's nickname is the person's own name for it, shown by the app in place of the bank's name; a blank one (after trimming spaces) is no nickname, and the tools keep reporting the bank's name. — `Answers.swift` `setNickname`; `Sedge/AccountCheckView.swift` `ListedAccount.title`
+- An account's nickname is the person's own name for it, shown by the app in place of the bank's name; a blank one (after trimming spaces) is no nickname, and the tools keep reporting the bank's name. — `Answers.swift` `setNickname`; `Sedge/AccountCheckView.swift` `ListedAccount.named`
+- The Accounts screen names an account "<bank> ••<last digits>"; the bank's name isn't stored, so it uses the account's own name with the digits, the name alone when there are none, and a nickname in place of either name. — `Sedge/AccountCheckView.swift` `ListedAccount.named`, `ListedAccount.displayName`
+- On the Accounts screen an account with no owner answer is asked about at the top, saving exactly what the account check saves; Later saves nothing, so it stays there. — `Sedge/AccountCheckView.swift` `ListedAccount.save`, `AccountsListView.answer`
 
 ## Ask screen demo
 

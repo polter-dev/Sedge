@@ -896,59 +896,84 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch.waitForExistence(timeout: 10))
     }
 
-    /// Answering "Is this account yours?" from Your accounts shows the answer on that account,
-    /// and Later leaves it unanswered. Clears the answers at the end, so Maya's saved file ends as it was.
+
+    /// Opens the Accounts screen from the Accounts tab's row. The row and the tab share the name
+    /// "Accounts", so the row is looked for in the list.
+    private func openAccountsList(_ app: XCUIApplication) {
+        app.tabBars.buttons["Accounts"].tap()
+        app.collectionViews.buttons["Accounts"].tap()
+    }
+
+    /// Starting with both of Maya's accounts unanswered, the Accounts row says so, opens
+    /// "Accounts", and asks about each account right there. Shared moves Checking into Answered;
+    /// Decide later keeps Credit Card's question at the top. An answered account still opens its
+    /// check to change the answer. Clears the answers at the end, so Maya's saved file ends as it was.
     @MainActor
-    func testAccountQuickCheckShowsTheAnswer() throws {
+    func testAnsweringInPlaceMovesTheAccountToAnswered() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya"]
+        app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        app.buttons["Your accounts"].tap()
+        let row = app.collectionViews.buttons["Accounts"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertEqual(row.value as? String, "2 still to answer")
+        attachScreenshot(app, "accounts-tab")
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: 5))
 
-        // Shared, then Yes, mine, so each answer is seen to change what the account shows.
+        // Each question card is a group named for its account, holding the three answers.
+        let checkingCard = app.otherElements["Checking"]
+        let cardCard = app.otherElements["Credit Card"]
+        XCTAssertTrue(checkingCard.waitForExistence(timeout: 10))
+        XCTAssertTrue(cardCard.exists)
+        attachScreenshot(app, "accounts-to-answer")
+        checkingCard.buttons["Shared"].tap()
         let checking = app.buttons["Checking"]
-        XCTAssertTrue(checking.waitForExistence(timeout: 10))
-        checking.tap()
-        XCTAssertTrue(app.staticTexts["Is this account yours?"].waitForExistence(timeout: 5))
-        attachScreenshot(app, "account-quick-check")
-        app.buttons["Shared"].tap()
         XCTAssertTrue(checking.waitForExistence(timeout: 5))
         XCTAssertEqual(checking.value as? String, "Shared")
+        XCTAssertTrue(checkingCard.waitForNonExistence(timeout: 5))
+
+        cardCard.buttons["Decide later"].tap()
+        XCTAssertTrue(cardCard.exists)
+        XCTAssertFalse(app.buttons["Credit Card"].exists)
+        attachScreenshot(app, "accounts-answered")
+
+        // An answered account opens its check, and a new answer shows on its row.
         checking.tap()
+        XCTAssertTrue(app.staticTexts["Is this account yours?"].waitForExistence(timeout: 5))
         app.buttons["Yes, mine"].tap()
         XCTAssertTrue(checking.waitForExistence(timeout: 5))
         XCTAssertEqual(checking.value as? String, "Yours")
 
-        let card = app.buttons["Credit Card"]
-        card.tap()
-        app.buttons["Decide later"].tap()
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
-        XCTAssertEqual(card.value as? String, "Later")
-        attachScreenshot(app, "accounts-with-answers")
+        // Back on the tab, the row counts the one still to answer.
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertEqual(row.value as? String, "1 still to answer")
 
         // The app has no way to take an owner answer back, so a debug launch argument clears them.
         app.terminate()
         app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
         app.launch()
-        app.tabBars.buttons["Accounts"].tap()
-        app.buttons["Your accounts"].tap()
-        XCTAssertTrue(checking.waitForExistence(timeout: 10))
-        XCTAssertEqual(checking.value as? String, "Later")
+        openAccountsList(app)
+        XCTAssertTrue(checkingCard.waitForExistence(timeout: 10))
     }
 
-    /// A name typed in the account check shows on Your accounts in place of the bank's name, and
-    /// clearing the field brings the bank's name back, so Maya's saved file ends as it was.
+    /// A name typed in the account check shows on Accounts in place of the bank's name, and
+    /// clearing the field brings the bank's name back. Clears the answers at the end, so Maya's
+    /// saved file ends as it was.
     @MainActor
-    func testNamingAnAccountShowsTheNameOnYourAccounts() throws {
+    func testNamingAnAccountShowsTheNameOnAccounts() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya"]
+        app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
         app.launch()
-        app.tabBars.buttons["Accounts"].tap()
-        app.buttons["Your accounts"].tap()
+        openAccountsList(app)
 
+        // Only an answered account opens the check, so answer Checking first.
+        let checkingCard = app.otherElements["Checking"]
+        XCTAssertTrue(checkingCard.waitForExistence(timeout: 10))
+        checkingCard.buttons["Yes, mine"].tap()
         let checking = app.buttons["Checking"]
-        XCTAssertTrue(checking.waitForExistence(timeout: 10))
+        XCTAssertTrue(checking.waitForExistence(timeout: 5))
         checking.tap()
         let field = app.textFields["Account name"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -969,6 +994,10 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Decide later"].tap()
         XCTAssertTrue(checking.waitForExistence(timeout: 5))
         XCTAssertFalse(named.exists)
+
+        app.terminate()
+        app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
+        app.launch()
     }
 
     /// After a bank connection, each unanswered account is asked about once, one after another.
@@ -997,7 +1026,7 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// After connecting, each answer moves the count on ("Account 1 of 2", then "2 of 2") and saves
-    /// what Your accounts shows: Yes, mine as Yours, Shared as Shared, with the bank's names kept
+    /// what Accounts shows: Yes, mine as Yours, Shared as Shared, with the bank's names kept
     /// because no name was typed. Clears the answers at the end, so Maya's saved file ends as it was.
     @MainActor
     func testQuickCheckAfterConnectingCountsAndSavesEachAnswer() throws {
@@ -1018,8 +1047,7 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Shared"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["Account 2 of 2"].waitForNonExistence(timeout: 5))
 
-        app.tabBars.buttons["Accounts"].tap()
-        app.buttons["Your accounts"].tap()
+        openAccountsList(app)
         let checking = app.buttons["Checking"]
         XCTAssertTrue(checking.waitForExistence(timeout: 10))
         XCTAssertEqual(checking.value as? String, "Yours")
@@ -1028,10 +1056,9 @@ final class SedgeUITests: XCTestCase {
         app.terminate()
         app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
         app.launch()
-        app.tabBars.buttons["Accounts"].tap()
-        app.buttons["Your accounts"].tap()
-        XCTAssertTrue(checking.waitForExistence(timeout: 10))
-        XCTAssertEqual(checking.value as? String, "Later")
+        openAccountsList(app)
+        // Unanswered again, so Checking is back as a question at the top.
+        XCTAssertTrue(app.otherElements["Checking"].waitForExistence(timeout: 10))
     }
 
     /// "Don’t show this again" in the spending note's row hides it on every transaction, not just
