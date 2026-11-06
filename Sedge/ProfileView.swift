@@ -185,7 +185,7 @@ struct ProfileView: View {
                 Text("What's connected").font(.note).foregroundStyle(Color.muted)
             }
             grid(accounts, columns: oneColumn ? 1 : 2) { fact in
-                tile(fact, fill: Self.fill(account: fact), radius: 12) {
+                tile(fact, fill: .account(fact.value.type), radius: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         glyph(Self.symbol(fact), size: 16)
                         Text(fact.value.name).font(.row.weight(.semibold)).contentTransition(.opacity)
@@ -285,12 +285,6 @@ struct ProfileView: View {
         case "tuition": .tileTuition
         default: .group
         }
-    }
-
-    /// An account tile's color: cards, savings, and every other account as checking.
-    private static func fill(account fact: Profile.Fact) -> Color {
-        fact.value.type?.contains("credit") == true ? .accountCard
-            : fact.value.type == "savings" ? .accountSavings : .accountChecking
     }
 
     // MARK: - What the tiles say
