@@ -458,3 +458,67 @@ func spendingDatabase(_ purchases: [(String, Double)]) throws -> SedgeDatabase {
     #expect(first.contains("\"bills\":[\"Card A payment\",\"Card B payment\"]"))
     for _ in 1..<10 { #expect(try run() == first) }
 }
+
+// MARK: - Which bank account is projected
+
+/// A small business owner with two checking accounts, today Jan 31, 2026. Equipment Checking
+/// sorts first by name but sits at 440 with one charge; Operating Checking pays rent on the last
+/// day of each month and gets paid every 14 days, so it is the busier one.
+func twoCheckingDatabase() throws -> SedgeDatabase {
+    var count = 0
+    func charge(_ account: String, _ date: String, _ name: String, _ amount: Double) -> Transaction {
+        count += 1
+        return Transaction(transaction_id: "t\(count)", account_id: account, date: date, name: name, amount: amount, pending: false)
+    }
+    let transactions = ["2025-11-30", "2025-12-31", "2026-01-31"].map { charge("operating", $0, "OAKWOOD APARTMENTS RENT", 500) }
+        + ["2026-01-02", "2026-01-16", "2026-01-30"].map { charge("operating", $0, "ACME PAYROLL", -800) }
+        + [charge("equipment", "2026-01-12", "TOOL DEPOT", 60)]
+    let database = try SedgeDatabase()
+    try database.save(accounts: [Account(account_id: "equipment", name: "Equipment Checking", type: "depository", subtype: "checking",
+                                         balances: Balances(current: 440)),
+                                 Account(account_id: "operating", name: "Operating Checking", type: "depository", subtype: "checking",
+                                         balances: Balances(current: 2000))],
+                      transactions: transactions, asOf: "2026-01-31")
+    try Organizer.organize(database)
+    return database
+}
+
+@Test func simulateBalanceProjectsTheBusierCheckingAccount() throws {
+    let database = try twoCheckingDatabase()
+    let answer = try call("simulate_balance", ["days": 30], on: database)
+    #expect(answer["account"] as? String == "Operating Checking")
+    // Rent comes out of Operating Checking on Feb 28, so it is one of the projected bills.
+    #expect(rows(answer, "bill_days").contains { $0["bills"] as? [String] == ["Oakwood Apartments Rent"] && $0["date"] as? String == "2026-02-28" })
+    #expect(try database.dbQueue.read(Simulator.checkingAccount) == "operating")
+}
+
+/// Bank accounts of the given subtypes with a balance, plus a card, and one 5.00 posted charge
+/// on each account id in `posted` (an id listed twice gets two).
+func pickedAccount(_ accounts: [(id: String, name: String, subtype: String?)], posted: [String]) throws -> String? {
+    let banks = accounts.map {
+        Account(account_id: $0.id, name: $0.name, type: "depository", subtype: $0.subtype, balances: Balances(current: 100))
+    }
+    let charges = posted.enumerated().map {
+        Transaction(transaction_id: "t\($0.offset)", account_id: $0.element, date: "2026-01-10", name: "CORNER CAFE", amount: 5, pending: false)
+    }
+    // Pending charges don't count toward how busy an account is, so these three on "a" change nothing.
+    let pending = (1...3).map {
+        Transaction(transaction_id: "p\($0)", account_id: "a", date: "2026-01-31", name: "CORNER CAFE", amount: 5, pending: true)
+    }
+    let database = try SedgeDatabase()
+    try database.save(accounts: banks + [Account(account_id: "card", name: "Card", type: "credit", subtype: "credit card",
+                                                 balances: Balances(current: 0))],
+                      transactions: charges + pending, asOf: "2026-01-31")
+    return try database.dbQueue.read(Simulator.checkingAccount)
+}
+
+@Test func equallyBusyCheckingAccountsGoByName() throws {
+    #expect(try pickedAccount([("b", "Bills Checking", "checking"), ("a", "Alpha Checking", "checking")], posted: ["a", "b"]) == "a")
+}
+
+@Test func withoutCheckingTheBusiestBankAccountIsUsed() throws {
+    // "a" sorts first by name and the card is busiest overall, but "b" is the busiest bank account,
+    // even with no subtype at all.
+    #expect(try pickedAccount([("a", "Alpha Savings", "savings"), ("b", "Bravo Account", nil)],
+                              posted: ["a", "b", "b", "card", "card", "card"]) == "b")
+}

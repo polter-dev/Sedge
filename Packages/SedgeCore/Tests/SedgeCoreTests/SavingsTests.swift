@@ -93,7 +93,8 @@ func eachCutIsTheStoresAverageMonth(persona: String) throws {
 /// in those stretches, 3,500 to 5,000 the rest of the time. Purchases go on the card, so they don't
 /// move the checking balance. Coffee is bought every day; the gadget shop every day except the
 /// 10th to the 16th. `extra` adds more card purchases as (id, day, statement name, amount).
-private func madeUpPerson(extra: [(String, String, String, Double)] = []) throws -> [Savings.Cut] {
+/// `idleChecking` adds a second checking account that sorts first by name but has one charge.
+private func madeUpPerson(extra: [(String, String, String, Double)] = [], idleChecking: Bool = false) throws -> [Savings.Cut] {
     let database = try SedgeDatabase()
     var lines: [Transaction] = []
     func add(_ id: String, _ account: String, _ date: String, _ name: String, _ amount: Double) {
@@ -109,10 +110,14 @@ private func madeUpPerson(extra: [(String, String, String, Double)] = []) throws
         }
     }
     for (id, date, name, amount) in extra { add(id, "card", date, name, amount) }
-    try database.save(accounts: [Account(account_id: "chk", name: "Checking", type: "depository", subtype: "checking",
-                                         balances: Balances(current: 5000)),
-                                 Account(account_id: "card", name: "Card", type: "credit", balances: Balances(current: 0))],
-                      transactions: lines, asOf: "2026-06-30")
+    var accounts = [Account(account_id: "chk", name: "Checking", type: "depository", subtype: "checking", balances: Balances(current: 5000)),
+                    Account(account_id: "card", name: "Card", type: "credit", balances: Balances(current: 0))]
+    if idleChecking {
+        accounts.append(Account(account_id: "equipment", name: "An Equipment Checking", type: "depository", subtype: "checking",
+                                balances: Balances(current: 440)))
+        add("tools", "equipment", "2026-06-20", "TOOL DEPOT", 60)
+    }
+    try database.save(accounts: accounts, transactions: lines, asOf: "2026-06-30")
     try Organizer.organize(database)
     return try database.dbQueue.read { try Savings.ranked($0) }
 }
@@ -132,6 +137,12 @@ private func madeUpPerson(extra: [(String, String, String, Double)] = []) throws
         Savings.Cut(store: "Bean Coffee", category: "coffee", per_month: 60.67, value: 1,
                     evidence: "bought in 13 of 13 weeks; 100% of usual in each month's lowest-balance week"),
     ])
+}
+
+/// An idle second checking account that sorts first by name changes nothing: the tight days are
+/// read from the busier one, the account simulate_balance projects (#200).
+@Test func tightDaysUseTheBusierCheckingAccount() throws {
+    #expect(try madeUpPerson(idleChecking: true) == madeUpPerson())
 }
 
 /// Two subscriptions paid every month without a miss score the same, whatever day they bill on (review R2-1).

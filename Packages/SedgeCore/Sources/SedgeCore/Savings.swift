@@ -171,11 +171,9 @@ public enum Savings {
     /// transaction after it.
     private static func tightDays(_ db: Database, today: Date, days: Int, daysBack: (String) throws -> Int) throws -> Set<Int>? {
         // The same account simulate_balance and the cash-flow screen use.
-        guard let checking = try Row.fetchOne(db, sql: """
-            SELECT account_id, ROUND(json_extract(balances, '$.current') * 100) FROM accounts
-            WHERE type = 'depository' AND json_extract(balances, '$.current') IS NOT NULL
-            ORDER BY subtype = 'checking' DESC, name LIMIT 1
-            """) else { return nil }
+        guard let id = try Simulator.checkingAccount(db), let checking = try Row.fetchOne(db, sql: """
+            SELECT account_id, ROUND(json_extract(balances, '$.current') * 100) FROM accounts WHERE account_id = ?
+            """, arguments: [id]) else { return nil }
         // Cents that left (positive) or came into (negative) the account, per day back from today.
         var moved = Array(repeating: 0, count: days)
         for row in try Row.fetchAll(db, sql: "SELECT date, CAST(ROUND(amount * 100) AS INTEGER) FROM transactions WHERE account_id = ? AND NOT pending",
