@@ -830,7 +830,7 @@ final class SedgeUITests: XCTestCase {
 
         let card = app.buttons["Credit Card"]
         card.tap()
-        app.buttons["Later"].tap()
+        app.buttons["Decide later"].tap()
         XCTAssertTrue(card.waitForExistence(timeout: 5))
         XCTAssertEqual(card.value as? String, "Later")
         attachScreenshot(app, "accounts-with-answers")
@@ -863,7 +863,7 @@ final class SedgeUITests: XCTestCase {
         field.tap()
         field.typeText("Everyday")
         attachScreenshot(app, "account-check-named")
-        app.buttons["Later"].tap()
+        app.buttons["Decide later"].tap()
 
         let named = app.buttons["Everyday"]
         XCTAssertTrue(named.waitForExistence(timeout: 5))
@@ -874,14 +874,14 @@ final class SedgeUITests: XCTestCase {
         named.tap()
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         app.buttons["Clear name"].tap()
-        app.buttons["Later"].tap()
+        app.buttons["Decide later"].tap()
         XCTAssertTrue(checking.waitForExistence(timeout: 5))
         XCTAssertFalse(named.exists)
     }
 
     /// After a bank connection, each unanswered account is asked about once, one after another.
     /// The launch argument stands in for a finished Plaid sync, so no quickstart server is needed.
-    /// Later answers nothing, so Maya's saved file stays as it was.
+    /// Decide later answers nothing, so Maya's saved file stays as it was.
     @MainActor
     func testQuickCheckAfterConnectingAsksEachUnansweredAccountOnce() throws {
         let app = XCUIApplication()
@@ -893,7 +893,7 @@ final class SedgeUITests: XCTestCase {
         while question.waitForExistence(timeout: 5) {
             let name = app.staticTexts.matching(NSPredicate(format: "label IN %@", ["Checking", "Credit Card"])).firstMatch.label
             asked.append(name)
-            app.buttons["Later"].tap()
+            app.buttons["Decide later"].tap()
             // Wait for this sheet to go before looking for the next one.
             XCTAssertTrue(app.staticTexts[name].waitForNonExistence(timeout: 5))
             if asked.count > 2 { break }
@@ -902,6 +902,44 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(asked.isEmpty)
         XCTAssertEqual(asked.count, Set(asked).count, "An account was asked about twice")
         XCTAssertTrue(app.tabBars.buttons["Ask"].isHittable)
+    }
+
+    /// After connecting, each answer moves the count on ("Account 1 of 2", then "2 of 2") and saves
+    /// what Your accounts shows: Yes, mine as Yours, Shared as Shared, with the bank's names kept
+    /// because no name was typed. Clears the answers at the end, so Maya's saved file ends as it was.
+    @MainActor
+    func testQuickCheckAfterConnectingCountsAndSavesEachAnswer() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES", "-checkAccountsAfterConnecting", "YES"]
+        app.launch()
+
+        // Maya's accounts come in name order: Checking, then Credit Card.
+        XCTAssertTrue(app.descendants(matching: .any)["Account 1 of 2"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Checking"].exists)
+        attachScreenshot(app, "account-check-1-of-2")
+        app.buttons["Yes, mine"].tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["Account 2 of 2"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Credit Card"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["Account 1 of 2"].exists)
+        attachScreenshot(app, "account-check-2-of-2")
+        app.buttons["Shared"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["Account 2 of 2"].waitForNonExistence(timeout: 5))
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
+        let checking = app.buttons["Checking"]
+        XCTAssertTrue(checking.waitForExistence(timeout: 10))
+        XCTAssertEqual(checking.value as? String, "Yours")
+        XCTAssertEqual(app.buttons["Credit Card"].value as? String, "Shared")
+
+        app.terminate()
+        app.launchArguments = ["-persona", "maya", "-clearOwnerAnswers", "YES"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Your accounts"].tap()
+        XCTAssertTrue(checking.waitForExistence(timeout: 10))
+        XCTAssertEqual(checking.value as? String, "Later")
     }
 
     /// The spending note's × hides it on every transaction, not just the one it was tapped on,

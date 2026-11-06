@@ -42,6 +42,12 @@ extension Color {
         default: .second
         }
     }
+
+    /// An account's color by its type (the bank's subtype, else its type): cards, savings, and
+    /// every other account as checking. About you's tiles and the account check share it.
+    static func account(_ type: String?) -> Color {
+        type?.contains("credit") == true ? .accountCard : type == "savings" ? .accountSavings : .accountChecking
+    }
 }
 
 /// The design's type scale on the system font. Each size is the nearest Dynamic Type text
