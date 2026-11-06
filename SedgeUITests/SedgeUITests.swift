@@ -1198,8 +1198,9 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// The All months screen opens from Trends on June 2026, the newest month, with its list
-    /// under the chart: Total, then each category. Tapping Groceries opens its June transactions
-    /// with their exact total, and tapping March shows March's list. The money-moved switch adds
+    /// under the chart: Total, then each category, with Groceries and Dining folded into Other.
+    /// Tapping Other opens both categories' June transactions with their exact total, and tapping
+    /// March shows March's list. The money-moved switch adds
     /// a "Moved between accounts" row without changing the bars, and turning it off takes it away.
     /// The screenshots are the screen in light, or dark after `xcrun simctl ui <device> appearance dark`.
     /// Nothing is changed in Maya's saved file.
@@ -1233,14 +1234,20 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Later months"].isEnabled)
         attachScreenshot(app, "all-months")
 
-        // Tapping a category row opens its transactions for the month, adding up to the cent.
-        app.buttons["Groceries"].tap()
-        XCTAssertTrue(app.staticTexts["Groceries · June 2026"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["4 transactions"].exists)
-        XCTAssertTrue(app.staticTexts["$86.97"].exists)
+        // Groceries and Dining have no color of their own, so they are one Other row: $86.97 + $19.51.
+        XCTAssertFalse(app.buttons["Groceries"].exists)
+        XCTAssertFalse(app.buttons["Dining"].exists)
+        let other = app.buttons["Other"]
+        XCTAssertEqual(other.value as? String, "$106")
+
+        // Tapping Other opens both categories' transactions for the month, adding up to the cent.
+        other.tap()
+        XCTAssertTrue(app.staticTexts["Other · June 2026"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["6 transactions"].exists)
+        XCTAssertTrue(app.staticTexts["$106.48"].exists)
         attachScreenshot(app, "all-months-sheet")
         app.buttons["Done"].tap()
-        XCTAssertTrue(app.staticTexts["Groceries · June 2026"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Other · June 2026"].waitForNonExistence(timeout: 5))
 
         // Tapping March selects it: the list shows March, and the bar still reads as its total.
         let march = app.otherElements["March 2026"]
@@ -1267,9 +1274,9 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// Both Trends screens read the data again each time they show: moving Maya's Jun 18 Corner
-    /// Cafe charge ($10.40) out of Dining, with the app open and the category left alone,
-    /// lowers Dining on the All months screen and the June bar on the Spending screen. Moving it
-    /// back restores them, so Maya's saved file ends as it was.
+    /// Cafe charge ($10.40) out of Dining into Coffee, with the app open and the category left alone,
+    /// lowers Other (where Dining is folded) on the All months screen and the June bar on the
+    /// Spending screen. Moving it back restores them, so Maya's saved file ends as it was.
     @MainActor
     func testTrendsScreensReloadWhenShown() throws {
         let app = XCUIApplication()
@@ -1283,20 +1290,20 @@ final class SedgeUITests: XCTestCase {
         let june = app.otherElements["June"]
         let before = try dollars(june)
         app.buttons["All months & categories →"].tap()
-        let dining = app.buttons["Dining"]
-        let beforeAll = try dollars(dining)
+        let other = app.buttons["Other"]
+        let beforeAll = try dollars(other)
 
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["Transactions"].tap()
         let row = app.buttons["Corner Cafe, CORNER CAFE, $10.40"]
         for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
         row.tap()
-        try pickCategory(app, "Groceries")
+        try pickCategory(app, "Coffee")
 
         // The Trends tab comes back on All months, which was left open.
         app.tabBars.buttons["Trends"].tap()
-        let afterAll = try dollars(dining)
-        XCTAssertTrue((10...11).contains(beforeAll - afterAll), "All months Dining went from \(beforeAll) to \(afterAll)")
+        let afterAll = try dollars(other)
+        XCTAssertTrue((10...11).contains(beforeAll - afterAll), "All months Other went from \(beforeAll) to \(afterAll)")
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(chip.waitForExistence(timeout: 5))
         XCTAssertEqual(chip.value as? String, "Dining")
