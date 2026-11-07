@@ -11,11 +11,12 @@ import SwiftUI
 // app's AccentColor set (Xcode names it `Color.accent`), so it also colors every button and toggle.
 //
 // The Marsh chart colors work the same way, one color set each:
-// - `chartNow`: this month's bar, the second mosaic block and the cash-flow line. `chartPast`: the earlier months' bars.
-// - `chartPick`: an earlier month page's bar, the shown page's dot, the cash-flow low point and money moved on All months.
-// - `amountNow`: the big total above the chart.
-// - `nodeCategory` and `onNodeCategory`: the biggest mosaic block in Connected spending and the text on the two biggest.
-// - `nodeStore`: the other mosaic blocks. `graphLine`: the chart's zero line.
+// - `chartNow`: the shown month's bar on Spending. `chartPast`: the other months' bars, on Spending and All months.
+// - `chartLine`: the cash-flow line and its low point, on the Trends card and the Cash flow screen. Its plum
+//   hue sits apart from every category color and from `moneySpent`, so the line never reads as a category.
+// - `amountNow`, `nodeCategory`, `onNodeCategory`, `nodeStore`: no longer on Trends (the Spending mosaic
+//   takes the category colors); the screens below still use them.
+// - `graphLine`: the chart's zero line.
 // - `moneySpent` and `moneyBack`: Trends' biggest change when spending rose (red) or fell (green).
 // The Ask screen reuses them: `chartNow` for the breakdown bars and the "Sedge" label, `nodeStore`
 // for the bar tracks, and `nodeCategory` with `onNodeCategory` text for the first quick-check button.
@@ -26,15 +27,17 @@ import SwiftUI
 //
 // The category colors on All months, one color set each: `catHousing`, `catUtilities`,
 // `catPhoneInternet`, `catTransport`, `catSubscriptions`, `catEducation` and `catCoffee`.
-// Money moved between accounts borrows `chartPick`, so it never shares Other's gray. `Color.category` picks one by name; categories without a hue of their own use `second`,
-// and All months folds them into one "Other" row.
+// Money moved between accounts is `accent`, the near-black (light) or near-white (dark) of the buttons:
+// no hue, so no category can be mistaken for it, and far darker or lighter than Other's mid gray.
+// `Color.category` picks one by name; categories without a hue of their own use `second`,
+// and All months folds them into one "Other" row. The Spending mosaic tints its blocks with the same colors.
 
 extension Color {
     /// The categories with a hue of their own, by the name the screens show (e.g. "Phone internet").
     static let categoryColors: [String: Color] = [
         "Housing": .catHousing, "Utilities": .catUtilities, "Phone internet": .catPhoneInternet, "Transport": .catTransport,
         "Subscriptions": .catSubscriptions, "Education": .catEducation, "Coffee": .catCoffee,
-        "Moved between accounts": .chartPick,
+        "Moved between accounts": .accent,
     ]
 
     /// A category's color in charts, by the name the screens show; `second` when it has no hue of its own.

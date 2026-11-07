@@ -38,9 +38,10 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     func testAskSaysNotConnected() throws {
         let app = XCUIApplication()
-        // Reduce Motion keeps the sprout still. Its breathing never stops, and the test waits
-        // for the screen to settle after each tap, which would outlast the brief thinking row.
-        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        // Reduce Motion keeps the sprout still. It draws and erases on a loop, and the test waits
+        // for the screen to settle after each tap, which would outlast the thinking row.
+        // `-slowThinking` holds the row 6 s instead of 1.5 s, so a busy machine can't miss it.
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-slowThinking", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
@@ -48,8 +49,8 @@ final class SedgeUITests: XCTestCase {
         field.tap()
         field.typeText("How much did I spend at Netflix this year?")
         app.buttons["Send"].tap()
-        XCTAssertTrue(app.staticTexts["thinkingRow"].waitForExistence(timeout: 1), "No thinking row")
-        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["thinkingRow"].waitForExistence(timeout: 3), "No thinking row")
+        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 15))
         XCTAssertFalse(app.staticTexts["thinkingRow"].exists, "The thinking row stayed after the reply")
         XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
         attachScreenshot(app, "ask-not-connected")
@@ -808,6 +809,56 @@ final class SedgeUITests: XCTestCase {
         app.buttons["90 days"].tap()
         XCTAssertTrue(app.staticTexts["Projected Sep 28"].waitForExistence(timeout: 5))
         attachScreenshot(app, "cash-flow-90-days")
+    }
+
+    /// A finger held and slid along Maya's Cash flow chart shows the day under it and that day's
+    /// balance where the lowest point was, for 30, 60 and 90 days and with a purchase on; lifting
+    /// it brings the lowest point back. The mid-slide screenshots are light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testSlidingAlongTheCashFlowChartShowsTheDaysBalance() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Trends"].tap()
+        app.buttons["cashFlow"].tap()
+        let chart = app.descendants(matching: .any)["cashFlowChart"]
+        XCTAssertTrue(chart.waitForExistence(timeout: 10))
+        let readout = app.descendants(matching: .any)["readout"]
+        let lowest = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Lowest projected balance'")).firstMatch
+
+        func slide(_ name: String, expectsPlan: Bool) throws {
+            XCTAssertTrue(lowest.waitForExistence(timeout: 5), name)
+            XCTAssertFalse(readout.exists, name)
+            let start = chart.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
+            let end = chart.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5))
+            // A gesture call returns only after the finger lifts, but it runs the main queue while
+            // it waits, so this block reads the screen during the hold, with the finger still down.
+            var label: String?
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                label = readout.exists ? readout.label : nil
+                self.attachScreenshot(app, "cash-flow-sliding-\(name)")
+            }
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 4)
+            // E.g. "Jul 21, $1,846.12" or, with a purchase on, "Jul 21, $1,446.12, Current plan, $1,846.12".
+            let shown = try XCTUnwrap(label, "No readout while sliding, \(name)")
+            XCTAssertNotNil(shown.range(of: #"^[A-Z][a-z]{2} \d{1,2}, -?\$[\d,]+\.\d\d"#, options: .regularExpression), "\(name): \(shown)")
+            XCTAssertEqual(shown.contains("Current plan, $"), expectsPlan, "\(name): \(shown)")
+            XCTAssertTrue(lowest.waitForExistence(timeout: 5), "Lowest point didn't come back, \(name)")
+            XCTAssertFalse(readout.exists, "Readout stayed after lifting, \(name)")
+        }
+
+        for days in [30, 60, 90] {
+            app.buttons["\(days) days"].tap()
+            try slide("\(days)-days", expectsPlan: false)
+        }
+        let field = app.textFields["Extra purchase in dollars"]
+        field.tap()
+        field.typeText("400")
+        app.buttons["Add purchase"].tap()
+        XCTAssertTrue(app.switches["purchase"].waitForExistence(timeout: 5))
+        app.scrollViews.firstMatch.swipeDown()
+        try slide("with-changes", expectsPlan: true)
     }
 
     /// The purchase entry and the bill amount are laid out by hand (no Form rows), so each

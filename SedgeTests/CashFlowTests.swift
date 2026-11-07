@@ -34,6 +34,32 @@ func inMemory(_ persona: String) throws -> SedgeDatabase {
     }
 }
 
+/// The balance the chart shows under a finger is the simulator's balance for that day, on the
+/// first, a middle and the last day of 30, 60 and 90 days, for both lines when a purchase is on.
+@Test(arguments: ["maya", "daniel"]) func readoutIsTheSimulatorsBalance(persona: String) throws {
+    let database = try inMemory(persona)
+    for days in [30, 60, 90] {
+        let plan = try #require(try CashFlow.load(database, days: days))
+        let simulated = try database.dbQueue.read { try Simulator.simulate($0, days: days) }
+        let picks = [0, days / 2, days - 1]
+        for index in picks {
+            let day = simulated[index]
+            #expect(plan.balance(on: day.date, in: plan.shown) == day.balances[plan.account], "\(persona) \(days) \(day.date)")
+        }
+        // A $500 purchase mid-way: the shown line is the simulator's with it, the dashed plan the one without.
+        let middle = simulated[days / 2].date
+        let changed = try #require(try CashFlow.load(database, days: days, purchases: [(500, middle)]))
+        let withPurchase = try database.dbQueue.read {
+            try Simulator.simulate($0, days: days, purchases: [.init(amount: 500, date: middle, account: plan.account)])
+        }
+        for index in picks {
+            let date = simulated[index].date
+            #expect(changed.balance(on: date, in: changed.shown) == withPurchase[index].balances[plan.account], "\(persona) \(days) \(date)")
+            #expect(changed.balance(on: date, in: changed.without) == simulated[index].balances[plan.account], "\(persona) \(days) \(date)")
+        }
+    }
+}
+
 /// Maya pays Netflix and rent from checking, so cancelling Netflix from tomorrow adds back every
 /// Netflix charge in the projection, and rent +$200 from tomorrow takes $200 per rent charge.
 @Test func scenariosMoveTheEndBalanceByTheirCharges() throws {
