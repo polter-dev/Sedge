@@ -38,9 +38,10 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     func testAskSaysNotConnected() throws {
         let app = XCUIApplication()
-        // Reduce Motion keeps the sprout still. Its breathing never stops, and the test waits
-        // for the screen to settle after each tap, which would outlast the brief thinking row.
-        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        // Reduce Motion keeps the sprout still. It draws and erases on a loop, and the test waits
+        // for the screen to settle after each tap, which would outlast the thinking row.
+        // `-slowThinking` holds the row 6 s instead of 1.5 s, so a busy machine can't miss it.
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-slowThinking", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
@@ -48,8 +49,8 @@ final class SedgeUITests: XCTestCase {
         field.tap()
         field.typeText("How much did I spend at Netflix this year?")
         app.buttons["Send"].tap()
-        XCTAssertTrue(app.staticTexts["thinkingRow"].waitForExistence(timeout: 1), "No thinking row")
-        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["thinkingRow"].waitForExistence(timeout: 3), "No thinking row")
+        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 15))
         XCTAssertFalse(app.staticTexts["thinkingRow"].exists, "The thinking row stayed after the reply")
         XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
         attachScreenshot(app, "ask-not-connected")

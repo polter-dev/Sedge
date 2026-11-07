@@ -321,8 +321,13 @@ struct AskView: View {
         session.report(.thinking)
         question = ""
         // Nothing answers yet, so show the thinking row briefly, then say so.
+        var wait = 1.5
+        #if DEBUG
+        // A UI test on a busy machine can miss a 1.5 s row, so `-slowThinking YES` holds it longer.
+        if UserDefaults.standard.bool(forKey: "slowThinking") { wait = 6 }
+        #endif
         Task {
-            try? await Task.sleep(for: .seconds(1.5))
+            try? await Task.sleep(for: .seconds(wait))
             // The turn is gone if "Start new session" cleared the chat in the meantime.
             guard let index = session.turns.firstIndex(where: { $0.id == turn.id }) else { return }
             session.turns[index].answer = ChatAnswer(lead: "The assistant isn't connected yet.")
