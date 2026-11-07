@@ -35,6 +35,13 @@ struct ThinkingSprout: View {
             }
             return t < off.lowerBound ? eased(over: on) : 1 - eased(over: off)
         }
+
+        /// How opaque the stroke is at `t`: fully while it draws and holds, then fading with what
+        /// is left of it while it erases, so it never ends as a solid round-cap dot.
+        func opacity(at t: Double) -> Double {
+            let shown = shown(at: t)
+            return t < off.lowerBound ? (shown > 0 ? 1 : 0) : shown
+        }
     }
 
     /// The design's key frames, as fractions of the 3.4-second cycle.
@@ -58,8 +65,7 @@ struct ThinkingSprout: View {
                     part.path
                         .trim(from: part.fromEnd ? 1 - shown : 0, to: part.fromEnd ? 1 : shown)
                         .stroke(Color.accent, style: StrokeStyle(lineWidth: 1.33333, lineCap: .round, lineJoin: .round))
-                        // Hides the round cap's dot a stroke of no length could leave.
-                        .opacity(shown > 0 ? 1 : 0)
+                        .opacity(part.opacity(at: t))
                 }
             }
         }

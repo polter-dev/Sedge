@@ -101,6 +101,29 @@ private struct FakeStatusSource {
     #expect(shown(0.99) == [0, 0, 0, 0])
 }
 
+/// While a part erases, its stroke fades with it: partly see-through, and fainter as the erase goes on.
+@MainActor @Test func sproutPartFadesAsItErases() {
+    for part in ThinkingSprout.parts {
+        let width = part.off.upperBound - part.off.lowerBound
+        let early = part.opacity(at: part.off.lowerBound + width * 0.25)
+        let late = part.opacity(at: part.off.lowerBound + width * 0.75)
+        #expect(0 < late && late < early && early < 1)
+        #expect(part.opacity(at: 0.75) == 1) // fully opaque in the hold
+    }
+}
+
+/// `-reduceMotion YES` turns on Ask's Reduce Motion rule, which Previous chats uses to fade its
+/// panel in place of sliding it.
+@MainActor @Test func reduceMotionFlagCountsAsReduceMotion() {
+    // The launch-argument domain lives only in memory, so this never reaches the app's saved settings.
+    let saved = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    defer { UserDefaults.standard.setVolatileDomain(saved, forName: UserDefaults.argumentDomain) }
+    UserDefaults.standard.setVolatileDomain(["reduceMotion": false], forName: UserDefaults.argumentDomain)
+    #expect(!AskView.reducesMotion(system: false) && AskView.reducesMotion(system: true))
+    UserDefaults.standard.setVolatileDomain(["reduceMotion": true], forName: UserDefaults.argumentDomain)
+    #expect(AskView.reducesMotion(system: false))
+}
+
 /// Opening an older chat shows its turns with the banner's title and keeps its id, so new
 /// questions are added to it; a new chat clears all three.
 @MainActor @Test func openingAnOlderChatAndStartingANewOne() {

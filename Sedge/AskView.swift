@@ -104,13 +104,16 @@ struct AskView: View {
     /// One question at a time: sending waits until the last answer is in.
     private var canSend: Bool { !blank && session.status == .idle }
 
-    /// The person's Reduce Motion setting. Debug builds launched with `-reduceMotion YES` act as
-    /// if it were on, because a UI test can't switch the setting itself.
-    private var reduceMotion: Bool {
+    private var reduceMotion: Bool { Self.reducesMotion(system: systemReduceMotion) }
+
+    /// The person's Reduce Motion setting (`system`). Debug builds launched with
+    /// `-reduceMotion YES` act as if it were on, because a UI test can't switch the setting itself.
+    /// Previous chats uses it too, so both screens follow the same rule.
+    static func reducesMotion(system: Bool) -> Bool {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "reduceMotion") { return true }
         #endif
-        return systemReduceMotion
+        return system
     }
 
     var body: some View {
