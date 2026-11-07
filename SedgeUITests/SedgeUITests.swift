@@ -52,8 +52,6 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["thinkingRow"].exists, "The thinking row stayed after the reply")
         XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
-        // Without the sample, nothing on screen is demo content.
-        XCTAssertTrue(app.staticTexts["Local analysis"].exists)
         attachScreenshot(app, "ask-not-connected")
     }
 
@@ -102,7 +100,6 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "No empty screen")
         XCTAssertFalse(app.staticTexts["This chat is full"].exists)
         XCTAssertTrue(field.isEnabled)
-        XCTAssertTrue(app.staticTexts["Local analysis"].exists)
     }
 
     /// A question is saved as a chat: New chat clears the screen and the Previous chats panel
@@ -229,6 +226,59 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "ask-typing")
     }
 
+    /// No "Local analysis" line under the question box, and with the keyboard up a short drag on
+    /// the chat puts it away, without the finger having to reach the keyboard.
+    @MainActor
+    func testAskDragOnChatDismissesTheKeyboard() throws {
+        let app = XCUIApplication()
+        // The sample conversation is taller than the screen, so there is something to drag.
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["Food & dining"].waitForExistence(timeout: 10), "No sample chat")
+        let localLine = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Local analysis'"))
+        XCTAssertEqual(localLine.count, 0, "The Local analysis line is back")
+
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        // A simulator that has seen a hardware keyboard keeps its keyboard just below the screen,
+        // still in the element tree, so "up" means on screen, not merely present.
+        let screen = app.windows.firstMatch.frame
+        let keyboardUp = NSPredicate { _, _ in
+            let keyboard = app.keyboards.firstMatch
+            return keyboard.exists && keyboard.frame.intersects(screen)
+        }
+        let shown = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: keyboardUp, object: nil)], timeout: 5)
+        try XCTSkipIf(shown != .completed, "This simulator keeps its keyboard minimized; erase it to run this test")
+        // From 30 % to 45 % of the screen: well above the keyboard's top edge.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)))
+        let down = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSCompoundPredicate(notPredicateWithSubpredicate: keyboardUp), object: nil)], timeout: 3)
+        XCTAssertEqual(down, .completed, "The keyboard stayed up after dragging the chat")
+    }
+
+    /// A chat grown past the screen with the keyboard up: the newest reply stays above the box.
+    @MainActor
+    func testAskNewestTurnStaysAboveTheKeyboard() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        for i in 1...9 {
+            field.typeText("Question number \(i)")
+            app.buttons["Send"].tap()
+            let replies = app.staticTexts.matching(identifier: "The assistant isn't connected yet.")
+            wait(for: [expectation(for: NSPredicate(format: "count == \(i)"), evaluatedWith: replies)], timeout: 8)
+            Thread.sleep(forTimeInterval: 0.6)
+            let last = replies.element(boundBy: i - 1)
+            XCTAssertLessThanOrEqual(last.frame.maxY, field.frame.minY, "reply \(i) hidden behind the box")
+        }
+    }
+
     /// With Reduce Motion on, the example question stays on the first one.
     @MainActor
     func testAskExampleStaysWithReduceMotion() throws {
@@ -260,7 +310,6 @@ final class SedgeUITests: XCTestCase {
         let answer = app.staticTexts.containing(NSPredicate(format: "label ENDSWITH 'accounts for most of the difference.'")).firstMatch
         XCTAssertTrue(answer.exists, "No answer")
         XCTAssertTrue(app.staticTexts["A quick check"].exists, "No quick check")
-        XCTAssertTrue(app.staticTexts["Local analysis · demo state"].exists)
         attachScreenshot(app, "ask-sample")
         // The quick check's buttons sit below the fold on a phone, so scroll to show them too.
         app.scrollViews.firstMatch.swipeUp()
