@@ -118,6 +118,10 @@ struct SpendingView: View {
     /// The name of the "All" mosaic's block that adds up the smaller categories.
     static let otherCategories = "Other categories"
 
+    /// A mosaic block's color: with "All" its own category's, the same as on All months (Other
+    /// categories in `second`); with one category picked, every store block takes that category's.
+    static func blockColor(_ name: String, category: String?) -> Color { AllMonthsView.color(category ?? name) }
+
     /// The four months the bars cover (or `count` months), oldest first, as "YYYY-MM": `asOf`'s
     /// month and the ones before it. `asOf` may be "YYYY-MM-DD" or "YYYY-MM".
     static func months(endingAt asOf: String, count: Int = 4) -> [String] {
@@ -431,16 +435,16 @@ struct SpendingView: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: category)
     }
 
-    /// One month's page: its total and the four bars, with its own bar marked. An earlier month's
-    /// bar is filled in the tapped-month color with a ring and its amount above it; today's month
-    /// keeps its own color. Either way its axis label is bold.
+    /// One month's page: its total and the four bars, with its own bar marked in `chartNow` and
+    /// the others in the lighter `chartPast`. An earlier month's bar also gets a ring and its amount
+    /// above it. Either way its axis label is bold.
     private func monthPage(_ month: String, bars: [(month: String, total: Double)], top: Double) -> some View {
         let total = bars.first { $0.month == month }?.total ?? 0
         let isEarlier = month != thisMonth
         return VStack(alignment: .leading, spacing: 8) {
             Text(total, format: Self.dollars)
                 .font(.bigValue)
-                .foregroundStyle(Color.amountNow)
+                .foregroundStyle(Color.ink)
                 // The total rolls digit by digit to the new category's amount.
                 .contentTransition(.numericText(value: total))
                 .accessibilityIdentifier("total")
@@ -448,7 +452,7 @@ struct SpendingView: View {
                 ForEach(bars, id: \.month) { bar in
                     BarMark(x: .value("Month", bar.month), y: .value("Spent", bar.total), width: .ratio(0.55))
                         .cornerRadius(5)
-                        .foregroundStyle(bar.month == month && isEarlier ? Color.chartPick : bar.month == thisMonth ? Color.chartNow : Color.chartPast)
+                        .foregroundStyle(bar.month == month ? Color.chartNow : Color.chartPast)
                         .accessibilityLabel((bar.month + "-01").displayDate(.dateTime.month(.wide)))
                         .accessibilityValue(bar.total.formatted(Self.dollars))
                         // Lets a test find the page's bar, which is otherwise marked by color, ring and bold label.
@@ -513,14 +517,14 @@ struct SpendingView: View {
         }
     }
 
-    /// One dot per page; the page on screen in the tapped-month color. VoiceOver reads it as the
+    /// One dot per page; the page on screen in ink. VoiceOver reads it as the
     /// month and swipes up or down to turn the page, since the pages themselves are swiped sideways.
     private func dots(_ months: [String]) -> some View {
         HStack(spacing: 6) {
             ForEach(months, id: \.self) { month in
                 let isShown = month == shownMonth
                 Circle()
-                    .fill(isShown ? Color.chartPick : Color.line)
+                    .fill(isShown ? Color.ink : Color.line)
                     .frame(width: isShown ? dotSize + 1 : dotSize, height: isShown ? dotSize + 1 : dotSize)
             }
         }
@@ -584,13 +588,13 @@ struct SpendingView: View {
             Chart {
                 ForEach(cashFlow.shown, id: \.date) { day in
                     LineMark(x: .value("Day", day.date), y: .value("Balance", cashFlow.balance(day)))
-                        .foregroundStyle(Color.chartNow)
+                        .foregroundStyle(Color.chartLine)
                         .lineStyle(StrokeStyle(lineWidth: 2, lineJoin: .round))
                 }
                 if let low {
                     PointMark(x: .value("Day", low.date), y: .value("Balance", low.balance))
                         .symbol {
-                            Circle().fill(Color.chartPick).stroke(Color.group, lineWidth: 1.5).frame(width: 9, height: 9)
+                            Circle().fill(Color.chartLine).stroke(Color.group, lineWidth: 1.5).frame(width: 9, height: 9)
                         }
                 }
             }
@@ -831,7 +835,7 @@ struct SpendingView: View {
                 if dynamicTypeSize.isAccessibilitySize {
                     // At the largest text sizes the blocks stack full width, so every name fits whole.
                     VStack(spacing: 4) {
-                        ForEach(Array(blocks.enumerated()), id: \.element.name) { block($1, index: $0, width: nil, height: nil) }
+                        ForEach(blocks, id: \.name) { block($0, width: nil, height: nil) }
                     }
                 } else {
                     mosaic(blocks)
@@ -855,17 +859,17 @@ struct SpendingView: View {
             let right = max(0, min(max(share[1], needed), width - 4 - blockWidth))
             let columns = blocks.count > 1 ? [width - 4 - right, right] : [width]
             HStack(spacing: 4) {
-                block(blocks[0], index: 0, width: columns[0], height: geometry.size.height)
+                block(blocks[0], width: columns[0], height: geometry.size.height)
                 if blocks.count > 1 {
                     let heights = rest.isEmpty ? [geometry.size.height]
                         : Self.split([amounts[1], amounts.dropFirst(2).reduce(0, +)], length: geometry.size.height, gap: 4, minimum: blockHeight)
                     VStack(spacing: 4) {
-                        block(blocks[1], index: 1, width: columns[1], height: heights[0])
+                        block(blocks[1], width: columns[1], height: heights[0])
                         if !rest.isEmpty {
                             let widths = Self.split(rest.map(\.total), length: columns[1], gap: 4, minimum: blockWidth)
                             HStack(spacing: 4) {
                                 ForEach(Array(rest.enumerated()), id: \.element.name) { index, item in
-                                    block(item, index: index + 2, width: widths[index], height: heights[1])
+                                    block(item, width: widths[index], height: heights[1])
                                 }
                             }
                         }
@@ -876,12 +880,11 @@ struct SpendingView: View {
         .frame(height: mosaicHeight)
     }
 
-    /// One mosaic block: the biggest in the category node color, the second in this month's color,
-    /// the rest in the store color. With a store, one tap selects it and shows its latest
-    /// transaction below, two open that transaction; with "All", a tap picks that category, and
-    /// "Other categories" opens the transactions it adds up.
+    /// One mosaic block, tinted with `blockColor` so the text stays ink on every block. With a
+    /// store, one tap selects it and shows its latest transaction below, two open that transaction;
+    /// with "All", a tap picks that category, and "Other categories" opens the transactions it adds up.
     @ViewBuilder
-    private func block(_ item: (name: String, total: Double), index: Int, width: CGFloat?, height: CGFloat?) -> some View {
+    private func block(_ item: (name: String, total: Double), width: CGFloat?, height: CGFloat?) -> some View {
         let isAll = category == nil
         let name = isAll ? Self.title(item.name) : item.name
         let face = VStack(alignment: .leading, spacing: 2) {
@@ -890,12 +893,13 @@ struct SpendingView: View {
             Text(item.total, format: Self.dollars).font(.row)
         }
         .lineLimit(width == nil ? nil : 1)
-        .foregroundStyle(index < 2 ? Color.onNodeCategory : Color.ink)
+        .foregroundStyle(Color.ink)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         // A given size is exact; without one the block is full width and as tall as its text.
         .frame(minWidth: width, maxWidth: width ?? .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
-        .background(index == 0 ? Color.nodeCategory : index == 1 ? Color.chartNow : Color.nodeStore, in: .rect(cornerRadius: 10))
+        // A light tint of the category color: the hue matches All months without a wall of strong color.
+        .background(Self.blockColor(item.name, category: category).opacity(0.22), in: .rect(cornerRadius: 10))
         .overlay {
             if !isAll && selected == item.name { RoundedRectangle(cornerRadius: 10).stroke(Color.ink, lineWidth: 1.5) }
         }
