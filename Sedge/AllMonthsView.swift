@@ -197,7 +197,7 @@ struct AllMonthsView: View {
                     .frame(minHeight: 52)
                     .background(Color.group, in: .rect(cornerRadius: 12))
                     .padding(.top, 8)
-                row("Total", dollars: Self.rounded(total), share: 1, color: .accent, bold: true)
+                row("Total", dollars: Self.rounded(total), share: 1, color: .chartPast, bold: true)
                     .padding(.top, 12)
                     .padding(.bottom, 6)
                     .accessibilityElement(children: .ignore)
@@ -270,7 +270,7 @@ struct AllMonthsView: View {
     }
 
     /// The month bars of one window. The shown month is split into its list's rows, in their
-    /// colors, with a bold label; the other months are the accent.
+    /// colors, with a bold label; the other months are the lighter `chartPast`, as is the list's Total.
     private func chart(_ months: [Bar], _ window: [String], shown: String, parts: [Part]) -> some View {
         Chart {
             ForEach(window, id: \.self) { month in
@@ -290,7 +290,7 @@ struct AllMonthsView: View {
                 } else {
                     BarMark(x: .value("Month", month), y: .value("Spent", total), width: .ratio(0.55))
                         .cornerRadius(5)
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.chartPast)
                         .accessibilityLabel(Self.monthName(month))
                         .accessibilityValue(total.formatted(Self.dollars))
                 }

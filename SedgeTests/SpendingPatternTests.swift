@@ -166,6 +166,26 @@ func allBarsAndMosaicsAddUp(persona: String) throws {
     }
 }
 
+/// Every block of the Spending "All" mosaic is its category's All months color, Other categories
+/// in `second`, in each of Maya's and Daniel's four months; money moved's color is no category's.
+@Test(arguments: ["maya", "daniel"])
+func allMosaicBlocksUseTheCategoryColors(persona: String) throws {
+    let database = try inMemory(persona)
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: try #require(Int(asOf.suffix(2))))
+    for month in SpendingView.months(endingAt: asOf) {
+        let blocks = SpendingView.categoryBlocks(totals, month: month)
+        #expect(!blocks.isEmpty, "\(persona) \(month)")
+        for block in blocks {
+            let expected = block.name == SpendingView.otherCategories ? Color.second : Color.category(SpendingView.title(block.name))
+            #expect(SpendingView.blockColor(block.name, category: nil) == expected, "\(persona) \(month) \(block.name)")
+        }
+    }
+    let moved = Color.category(SpendingView.title(SpendingTotal.movedCategory))
+    let categories = Color.categoryColors.filter { $0.key != "Moved between accounts" }.values
+    #expect(!categories.contains(moved) && moved != .second)
+}
+
 /// The biggest change from May to June (both over the 1st to the 30th), counted by hand from the
 /// transactions: by store within a category, and by category with "All" (nil).
 /// Maya's Corner Cafe: $10.40 + $9.11 in June against $9.29 + $8.81 in May, +$1.41. Her Bean
@@ -457,7 +477,7 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
             #expect(segments.filter { $0.color == .second }.map(\.category) == (parts.contains { $0.category == "other" } ? ["other"] : []), "\(label)")
             let moved = segments.filter { $0.category == SpendingTotal.movedCategory }
             #expect(moved.count == (includeMoved ? 1 : 0), "\(label)")
-            #expect(moved.allSatisfy { $0.color == .chartPick && $0.cents > 0 }, "\(label)")
+            #expect(moved.allSatisfy { $0.color == .accent && $0.cents > 0 }, "\(label)")
         }
     }
 }

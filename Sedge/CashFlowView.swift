@@ -60,6 +60,11 @@ struct CashFlow {
 
     func balance(_ day: Simulator.Day) -> Double { day.balances[account] ?? 0 }
 
+    /// The balance on one "YYYY-MM-DD" day of a line, e.g. the day a finger is on; nil when the line lacks it.
+    func balance(on date: String, in days: [Simulator.Day]) -> Double? {
+        days.first { $0.date == date }.map(balance)
+    }
+
     /// The lowest balance and its first day.
     func lowest(_ days: [Simulator.Day]) -> (date: String, balance: Double)? {
         days.map { (date: $0.date, balance: balance($0)) }.min { $0.balance < $1.balance }
@@ -116,6 +121,8 @@ struct CashFlowView: View {
     @State private var saving: Double?
 
     @State private var showingIncluded = false
+    /// The day under the finger while it is on the chart; nil once it lifts.
+    @State private var picked: String?
 
     /// A projected day for people, e.g. "Jul 1". The next 90 days need no year.
     private static func day(_ date: String) -> String {
@@ -220,25 +227,39 @@ struct CashFlowView: View {
         loaded = true
     }
 
-    /// "Lowest projected balance", its amount, and its day with the reason beside it.
+    /// "Lowest projected balance", its amount, and its day with the reason beside it. While a
+    /// finger is on the chart, the touched day and its balance take its place, with the current
+    /// plan's balance beside it when changes are on.
+    @ViewBuilder
     private func lowestPoint(_ result: CashFlow) -> some View {
+        if let picked, let balance = result.balance(on: picked, in: result.shown) {
+            let plan = result.with == nil ? nil : result.balance(on: picked, in: result.without)
+            headline(Self.day(picked), balance, plan.map { ["Current plan", Self.money($0)] } ?? [])
+                .accessibilityIdentifier("readout")
+        } else {
+            let lowest = result.lowest(result.shown)
+            headline("Lowest projected balance", lowest?.balance, [lowest.map { Self.day($0.date) }, result.lowReason].compactMap { $0 })
+        }
+    }
+
+    /// A small title over a big amount, with up to two muted lines beside the amount.
+    private func headline(_ title: String, _ amount: Double?, _ details: [String]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Lowest projected balance")
+            Text(title)
                 .font(.row)
                 .foregroundStyle(Color.muted)
-            if let lowest = result.lowest(result.shown) {
+            if let amount {
                 // Stacked at the largest text sizes, so the amount keeps the full width.
                 let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading))
                     : AnyLayout(HStackLayout(alignment: .top))
                 layout {
-                    Text(Self.money(lowest.balance))
+                    Text(Self.money(amount))
                         .font(.bigValue)
                         .monospacedDigit()
-                        .foregroundStyle(lowest.balance < 0 ? Color.red : Color.ink)
+                        .foregroundStyle(amount < 0 ? Color.red : Color.ink)
                     Spacer(minLength: 8)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(Self.day(lowest.date))
-                        if let reason = result.lowReason { Text(reason) }
+                        ForEach(details, id: \.self) { Text($0) }
                     }
                     .font(.row)
                     .foregroundStyle(Color.muted)
@@ -260,7 +281,7 @@ struct CashFlowView: View {
                 AreaMark(x: .value("Day", low.date),
                          yStart: .value("Low", result.balance(low)),
                          yEnd: .value("High", result.balance(high)))
-                    .foregroundStyle(Color.accent.opacity(0.09))
+                    .foregroundStyle(Color.chartLine.opacity(0.12))
             }
             // The current plan stays as a dashed line behind the changes, so the difference shows.
             if result.with != nil {
@@ -272,14 +293,28 @@ struct CashFlowView: View {
             }
             ForEach(shown, id: \.date) { day in
                 LineMark(x: .value("Day", day.date), y: .value("Balance", result.balance(day)), series: .value("Line", "Shown"))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.chartLine)
                     .lineStyle(StrokeStyle(lineWidth: 2.5, lineJoin: .round))
             }
             if let lowest {
                 PointMark(x: .value("Day", lowest.date), y: .value("Balance", lowest.balance))
-                    .foregroundStyle(Color.accent)
+                    .symbol { Circle().fill(Color.chartLine).stroke(Color.background, lineWidth: 1.5).frame(width: 10, height: 10) }
+            }
+            // The finger's day: a thin rule with a dot on each line; the amounts show above the chart.
+            if let picked, let balance = result.balance(on: picked, in: shown) {
+                RuleMark(x: .value("Day", picked))
+                    .foregroundStyle(Color.muted)
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                if result.with != nil, let plan = result.balance(on: picked, in: result.without) {
+                    PointMark(x: .value("Day", picked), y: .value("Balance", plan))
+                        .foregroundStyle(Color.second)
+                }
+                PointMark(x: .value("Day", picked), y: .value("Balance", balance))
+                    .foregroundStyle(Color.chartLine)
             }
         }
+        // Touching and sliding along the chart picks the day under the finger; lifting clears it.
+        .chartXSelection(value: $picked)
         // Zero stays on the axis, so a dip toward it reads as one.
         .chartYScale(domain: .automatic(includesZero: true))
         .chartXAxis {
@@ -296,9 +331,32 @@ struct CashFlowView: View {
                 AxisValueLabel(format: .currency(code: "USD").notation(.compactName)).foregroundStyle(Color.muted)
             }
         }
-        // One sentence for VoiceOver instead of every point.
+        // One sentence for VoiceOver instead of every point, with the audio graph for each day's balance.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(chartSummary(result, lowest))
+        .accessibilityChartDescriptor(AudioGraph(result: result))
+        .accessibilityIdentifier("cashFlowChart")
+    }
+
+    /// The chart's audio graph: VoiceOver can play each line and read every day's balance.
+    private struct AudioGraph: AXChartDescriptorRepresentable {
+        let result: CashFlow
+
+        func makeChartDescriptor() -> AXChartDescriptor {
+            let lines = result.with.map { [("With changes", $0), ("Current plan", result.without)] } ?? [("Current plan", result.without)]
+            let balances = lines.flatMap { $0.1.map(result.balance) }
+            return AXChartDescriptor(
+                title: "\(result.accountName) balance forecast", summary: nil,
+                xAxis: AXCategoricalDataAxisDescriptor(title: "Day", categoryOrder: result.without.map { CashFlowView.day($0.date) }),
+                yAxis: AXNumericDataAxisDescriptor(title: "Balance", range: (balances.min() ?? 0)...(balances.max() ?? 0),
+                                                   gridlinePositions: []) { CashFlowView.money($0) },
+                additionalAxes: [],
+                series: lines.map { name, days in
+                    AXDataSeriesDescriptor(name: name, isContinuous: true, dataPoints: days.map {
+                        AXDataPoint(x: CashFlowView.day($0.date), y: result.balance($0))
+                    })
+                })
+        }
     }
 
     /// E.g. "Checking balance forecast, July 1 to July 30, with changes. Lowest $1,234.00 on July 15."
@@ -327,7 +385,7 @@ struct CashFlowView: View {
     private func swatch(_ title: String, dashed: Bool) -> some View {
         HStack(spacing: 5) {
             Path { $0.move(to: CGPoint(x: 0, y: 1)); $0.addLine(to: CGPoint(x: 16, y: 1)) }
-                .stroke(dashed ? Color.second : Color.accent, style: StrokeStyle(lineWidth: 2, dash: dashed ? [4, 3] : []))
+                .stroke(dashed ? Color.second : Color.chartLine, style: StrokeStyle(lineWidth: 2, dash: dashed ? [4, 3] : []))
                 .frame(width: 16, height: 2)
             Text(title)
         }
