@@ -51,6 +51,9 @@ struct AllMonthsView: View {
         /// The last day listed, "YYYY-MM-DD"; nil is the whole month. Spending's Other categories
         /// block sets it, as its month only runs to today's day of the month.
         var through: String?
+        /// The days listed, e.g. "May 1 – 30, 2026", when they're only part of a past month; the
+        /// sheet's title shows them in place of the month name.
+        var period: String?
         var id: Self { self }
     }
 
@@ -378,7 +381,7 @@ struct MonthTransactions: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 line {
-                    Text("\(SpendingView.title(opened.category)) · \((opened.month + "-01").displayDate(.dateTime.month(.wide).year()))")
+                    Text("\(SpendingView.title(opened.category)) · \(opened.period ?? (opened.month + "-01").displayDate(.dateTime.month(.wide).year()))")
                         .font(.title3.bold())
                         .foregroundStyle(Color.ink)
                     Spacer(minLength: 8)

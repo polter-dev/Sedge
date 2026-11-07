@@ -435,6 +435,18 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     }
 }
 
+/// The Other sheet's title names its days only when they cut a past month short: Maya's May
+/// (as of June 30) lists May 1 – 30, while June (today's month), April (30 days) and February
+/// (whose window runs past its end) are whole and keep the month's name.
+@Test func otherSheetPeriodOnlyForCutShortPastMonths() throws {
+    let asOf = try #require(try inMemory("maya").asOf())
+    #expect(SpendingView.period("2026-05", asOf: asOf) == "May 1\u{2009}–\u{2009}30, 2026")
+    #expect(SpendingView.period("2026-06", asOf: asOf) == nil)
+    #expect(SpendingView.period("2026-04", asOf: asOf) == nil)
+    #expect(SpendingView.period("2026-02", asOf: asOf) == nil)
+    #expect(SpendingView.period("2026-05", asOf: "2026-06-15") == "May 1\u{2009}–\u{2009}15, 2026")
+}
+
 /// A month with only colored categories has no Other row, and money moved is never folded into
 /// Other even though it has no color of its own.
 @Test func allMonthsOtherRowOnlyForUncoloredCategories() {

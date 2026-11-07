@@ -164,6 +164,19 @@ struct SpendingView: View {
         (month + "-01", month + "-" + asOf.suffix(2))
     }
 
+    /// The days `window` lists, written as Trends writes a span, e.g. "May 1 – 30, 2026"; nil for
+    /// today's month or a window that covers the whole month, whose sheets keep the month's name.
+    static func period(_ month: String, asOf: String) -> String? {
+        let day = Date.ISO8601FormatStyle().year().month().day()
+        // A day past the month's end rolls into the next month ("2026-04-31" reads as May 1), so the
+        // window is the whole month exactly when the day after its last day isn't in the month.
+        guard month != asOf.prefix(7), let start = try? Date(month + "-01", strategy: day),
+              let last = try? Date(window(month, asOf: asOf).through, strategy: day),
+              (last + 86_400).formatted(day).hasPrefix(month) else { return nil }
+        // The dates are midnight UTC, so they're shown in UTC too, as `AllMonthsView.span` does.
+        return (start..<last).formatted(Date.IntervalFormatStyle(timeZone: .gmt).month(.abbreviated).day().year())
+    }
+
     /// The month before `month`, "YYYY-MM".
     static func monthBefore(_ month: String) -> String { months(endingAt: month + "-01")[2] }
 
@@ -912,7 +925,8 @@ struct SpendingView: View {
                     category = item.name
                 } else if let asOf {
                     openedOther = .init(category: item.name, folded: Self.otherCategoryNames(totals, month: shownMonth),
-                                        month: shownMonth, through: Self.window(shownMonth, asOf: asOf).through)
+                                        month: shownMonth, through: Self.window(shownMonth, asOf: asOf).through,
+                                        period: Self.period(shownMonth, asOf: asOf))
                 }
             } label: { face }
                 .buttonStyle(.plain)
