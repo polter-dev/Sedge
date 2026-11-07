@@ -12,7 +12,7 @@ import SwiftUI
 //
 // The Marsh chart colors work the same way, one color set each:
 // - `chartNow`: this month's bar, the second mosaic block and the cash-flow line. `chartPast`: the earlier months' bars.
-// - `chartPick`: an earlier month page's bar, the shown page's dot and the cash-flow low point.
+// - `chartPick`: an earlier month page's bar, the shown page's dot, the cash-flow low point and money moved on All months.
 // - `amountNow`: the big total above the chart.
 // - `nodeCategory` and `onNodeCategory`: the biggest mosaic block in Connected spending and the text on the two biggest.
 // - `nodeStore`: the other mosaic blocks. `graphLine`: the chart's zero line.
@@ -26,7 +26,7 @@ import SwiftUI
 //
 // The category colors on All months, one color set each: `catHousing`, `catUtilities`,
 // `catPhoneInternet`, `catTransport`, `catSubscriptions`, `catEducation` and `catCoffee`.
-// `Color.category` picks one by name; categories without a hue of their own use `second`,
+// Money moved between accounts borrows `chartPick`, so it never shares Other's gray. `Color.category` picks one by name; categories without a hue of their own use `second`,
 // and All months folds them into one "Other" row.
 
 extension Color {
@@ -34,6 +34,7 @@ extension Color {
     static let categoryColors: [String: Color] = [
         "Housing": .catHousing, "Utilities": .catUtilities, "Phone internet": .catPhoneInternet, "Transport": .catTransport,
         "Subscriptions": .catSubscriptions, "Education": .catEducation, "Coffee": .catCoffee,
+        "Moved between accounts": .chartPick,
     ]
 
     /// A category's color in charts, by the name the screens show; `second` when it has no hue of its own.

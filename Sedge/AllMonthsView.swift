@@ -10,7 +10,7 @@ import SwiftUI
 /// Every month's spending, with the selected month split into its categories under the chart.
 /// It opens on the newest month; tapping another month selects it, and tapping a category row
 /// opens that category's transactions for the month. A switch adds money moved between the
-/// person's own accounts as its own row. Opened from the Spending screen.
+/// person's own accounts as its own row and part of each bar. Opened from the Spending screen.
 struct AllMonthsView: View {
     let database: SedgeDatabase
     /// Off by default: moving money to savings or paying a card isn't spending, and the
@@ -48,6 +48,9 @@ struct AllMonthsView: View {
         let category: String
         let folded: [String]
         let month: String
+        /// The last day listed, "YYYY-MM-DD"; nil is the whole month. Spending's Other categories
+        /// block sets it, as its month only runs to today's day of the month.
+        var through: String?
         var id: Self { self }
     }
 
@@ -58,20 +61,20 @@ struct AllMonthsView: View {
         }
     }
 
-    /// Each month's spending over all categories, oldest first. Money moved is left out: it's
-    /// not spending, and a second bar per month would be read by VoiceOver as one unnamed pair.
+    /// Each month's total over every category loaded, oldest first: money moved is in it only
+    /// when the switch loaded it, so the selected month's bar is always its list's Total.
     static func byMonth(_ totals: [SpendingTotal]) -> [Bar] {
-        bars(totals.filter { $0.category != SpendingTotal.movedCategory }, by: \.month).sorted { $0.label < $1.label }
+        bars(totals, by: \.month).sorted { $0.label < $1.label }
     }
 
     /// One month's categories, biggest first (by name on a tie), money moved included only when
     /// it was loaded. Every category without a color of its own is folded into one "Other" row,
-    /// since a list of gray rows can't be told apart; money moved stays its own row. Their whole
-    /// dollars add up exactly to the month's total in whole dollars.
+    /// since a list of gray rows can't be told apart; money moved has a color of its own, so it
+    /// stays its own row. Their whole dollars add up exactly to the month's total in whole dollars.
     static func parts(_ totals: [SpendingTotal], month: String) -> [Part] {
         let byCategory = SpendingView.cents(totals, month: month)
         let rows = Dictionary(grouping: byCategory.keys) { category in
-            category == SpendingTotal.movedCategory || Color.categoryColors[SpendingView.title(category)] != nil ? category : "other"
+            Color.categoryColors[SpendingView.title(category)] != nil ? category : "other"
         }
         .map { (category: $0.key, folded: $0.value.sorted(), cents: $0.value.reduce(0) { $0 + byCategory[$1, default: 0] }) }
         .sorted { ($0.cents, SpendingView.title($1.category)) > ($1.cents, SpendingView.title($0.category)) }
@@ -80,12 +83,22 @@ struct AllMonthsView: View {
         }
     }
 
+    /// A row's color, in the list and in the selected month's bar; Other's is `second`.
+    static func color(_ category: String) -> Color { Color.category(SpendingView.title(category)) }
+
+    /// The selected month's bar, bottom to top: one segment per list row with the row's cents and
+    /// color, so the bar splits exactly as the list does. Reversed so the biggest row sits on top,
+    /// as it leads the list.
+    static func segments(_ parts: [Part]) -> [(category: String, cents: Int, color: Color)] {
+        parts.reversed().map { ($0.category, $0.cents, color($0.category)) }
+    }
+
     /// The transactions a tapped row's sheet lists, oldest first: every one in the row's stored
-    /// categories that month, so Other's sheet adds up to Other's row.
+    /// categories that month (through `through`), so Other's sheet adds up to Other's row.
     static func sheetRows(in database: SedgeDatabase, _ opened: Opened) throws -> [ListedTransaction] {
         // The 31st covers every month, as a shorter month's dates all sort before it.
         try opened.folded.flatMap {
-            try ListedTransaction.spending(in: database, category: $0, from: opened.month + "-01", through: opened.month + "-31")
+            try ListedTransaction.spending(in: database, category: $0, from: opened.month + "-01", through: opened.through ?? opened.month + "-31")
         }
         .sorted { ($0.date, $0.id) < ($1.date, $1.id) }
     }
@@ -147,7 +160,8 @@ struct AllMonthsView: View {
     var body: some View {
         let months = Self.byMonth(totals)
         let windows = Self.windows(months.map(\.label))
-        let window = windows.indices.contains(page) ? windows[page] : []
+        // The oldest window when the switch takes away a month that held only money moved.
+        let window = windows.indices.contains(page) ? windows[page] : windows.last ?? []
         let shown = selectedMonth ?? window.last ?? ""
         let parts = Self.parts(totals, month: shown)
         let total = parts.reduce(0) { $0 + $1.cents }
@@ -194,7 +208,7 @@ struct AllMonthsView: View {
                     Button { opened = Opened(category: part.category, folded: part.folded, month: shown) } label: {
                         // Scaled against Total, so even the biggest category's bar is shorter than Total's.
                         row(title, dollars: part.dollars, share: total > 0 ? Double(part.cents) / Double(total) : 0,
-                            color: Color.category(title))
+                            color: Self.color(part.category))
                             // The design draws 34 pt rows; the whole 44 pt row takes the tap.
                             .frame(minHeight: 44)
                             .contentShape(.rect)
@@ -255,18 +269,16 @@ struct AllMonthsView: View {
         }
     }
 
-    /// The month bars of one window. The shown month is split into its categories' colors with a
-    /// bold label; the other months are the accent.
+    /// The month bars of one window. The shown month is split into its list's rows, in their
+    /// colors, with a bold label; the other months are the accent.
     private func chart(_ months: [Bar], _ window: [String], shown: String, parts: [Part]) -> some View {
         Chart {
             ForEach(window, id: \.self) { month in
                 let total = months.first { $0.label == month }?.total ?? 0
                 if month == shown {
-                    // Money moved is left out, as it is from every bar. Reversed so the biggest
-                    // category sits on top, as it leads the list.
-                    ForEach(parts.filter { $0.category != SpendingTotal.movedCategory }.reversed()) { part in
-                        BarMark(x: .value("Month", month), y: .value("Spent", Double(part.cents) / 100), width: .ratio(0.55))
-                            .foregroundStyle(Color.category(SpendingView.title(part.category)))
+                    ForEach(Self.segments(parts), id: \.category) { segment in
+                        BarMark(x: .value("Month", month), y: .value("Spent", Double(segment.cents) / 100), width: .ratio(0.55))
+                            .foregroundStyle(segment.color)
                             // VoiceOver reads the categories in the list; a stack would be read as "2026-03, total".
                             .accessibilityHidden(true)
                     }
@@ -347,8 +359,9 @@ struct AllMonthsView: View {
 }
 
 /// The sheet a category row opens: that row's transactions in one month, oldest first,
-/// under their count and exact total, counted the same way as the row.
-private struct MonthTransactions: View {
+/// under their count and exact total, counted the same way as the row. Spending's Other
+/// categories block opens it too.
+struct MonthTransactions: View {
     let database: SedgeDatabase
     let opened: AllMonthsView.Opened
     @State private var rows: [ListedTransaction] = []

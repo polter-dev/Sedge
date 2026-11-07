@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import GRDB
 import SedgeCore
 import SwiftUI
 import Testing
@@ -236,7 +237,7 @@ func categoryChangeKeepsPersonaNumbers(persona: String) throws {
     }
 }
 
-/// A bar tap or VoiceOver page turn slides by default and jumps with Reduce Motion on.
+/// A VoiceOver page turn slides by default and jumps with Reduce Motion on.
 @Test func pageTurnRespectsReduceMotion() {
     #expect(SpendingView.pageTurn(reduceMotion: true) == nil)
     #expect(SpendingView.pageTurn(reduceMotion: false) == .default)
@@ -294,8 +295,8 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
 /// For Maya and Daniel, every month's list on All months adds up: Total is that month's bar (as
 /// Trends adds categories, in cents) and `total_spent` over the whole month to the cent, the
 /// categories come biggest first and their whole dollars add up exactly to Total's, with money
-/// moved too, which stays out of the bars. The six-month windows cover every month from the
-/// oldest to the newest once.
+/// moved too, which then is in the bars as well. The six-month windows cover every month from
+/// the oldest to the newest once.
 @Test(arguments: ["maya", "daniel"]) func allMonthsListAddsUpToTotal(persona: String) throws {
     let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
     let totals = try SpendingTotal.all(in: database, includeMoved: false)
@@ -303,7 +304,11 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     #expect(withMoved.contains { $0.category == SpendingTotal.movedCategory })
     let months = AllMonthsView.byMonth(totals)
     #expect(months.count == 6)
-    #expect(AllMonthsView.byMonth(withMoved).map(\.total) == months.map(\.total))
+    // With money moved on, each bar grows by exactly that month's money moved.
+    let movedCents = Dictionary(withMoved.filter { $0.category == SpendingTotal.movedCategory }
+        .map { ($0.month, Int(($0.total * 100).rounded())) }, uniquingKeysWith: +)
+    #expect(AllMonthsView.byMonth(withMoved).map { Int(($0.total * 100).rounded()) }
+            == months.map { Int(($0.total * 100).rounded()) + movedCents[$0.label, default: 0] })
     for month in months {
         let parts = AllMonthsView.parts(totals, month: month.label)
         let total = parts.reduce(0) { $0 + $1.cents }
@@ -380,6 +385,36 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     }
 }
 
+/// For Maya and Daniel in May and June, the sheet Spending's "Other categories" block opens lists
+/// the block's cents over the block's days (the 1st through today's day), and as many transactions
+/// as SQLite counts in those categories and days. Maya's June: utilities, transport, dining,
+/// education, subscriptions and coffee, 10 transactions and $169.03.
+@Test(arguments: ["maya", "daniel"]) func otherCategoriesSheetMatchesItsBlock(persona: String) throws {
+    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: try #require(Int(asOf.suffix(2))))
+    for month in ["2026-05", "2026-06"] {
+        let block = try #require(SpendingView.categoryBlocks(totals, month: month).first { $0.name == SpendingView.otherCategories })
+        let folded = SpendingView.otherCategoryNames(totals, month: month)
+        let window = SpendingView.window(month, asOf: asOf)
+        let rows = try AllMonthsView.sheetRows(in: database, .init(category: block.name, folded: folded, month: month, through: window.through))
+        #expect(rows.reduce(0) { $0 + $1.cents } == Int((block.total * 100).rounded()), "\(persona) \(month)")
+        let count = try database.dbQueue.read { db in
+            try Int.fetchOne(db, sql: """
+                SELECT COUNT(*) FROM transactions t \(SpendingTotal.categoryJoins)
+                WHERE NOT t.pending AND t.kind IN ('spending', 'refund') AND t.date BETWEEN ? AND ?
+                  AND \(SpendingTotal.categoryOf) IN (\(folded.map { _ in "?" }.joined(separator: ",")))
+                """, arguments: StatementArguments([window.from, window.through] + folded))
+        }
+        #expect(rows.count == count, "\(persona) \(month)")
+        if persona == "maya" && month == "2026-06" {
+            #expect(Set(folded) == ["utilities", "transport", "dining", "education", "subscriptions", "coffee"])
+            #expect(rows.count == 10)
+            #expect(rows.reduce(0) { $0 + $1.cents } == 16_903)
+        }
+    }
+}
+
 /// A month with only colored categories has no Other row, and money moved is never folded into
 /// Other even though it has no color of its own.
 @Test func allMonthsOtherRowOnlyForUncoloredCategories() {
@@ -392,6 +427,39 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     #expect(parts.map(\.category) == ["housing", SpendingTotal.movedCategory, "other"])
     #expect(parts.last?.folded == ["dining", "groceries"])
     #expect(parts.last?.cents == 10_648)
+}
+
+/// The selected month's bar on All months is drawn from the list's own numbers: for Maya and
+/// Daniel, in June and April, with money moved off and on, each segment has its row's cents,
+/// share and color, the segments add up to the month's bar and to Total, and money moved is a
+/// segment only when the switch is on, in a color of its own rather than Other's gray.
+@Test(arguments: ["maya", "daniel"]) func allMonthsBarSegmentsMatchTheList(persona: String) throws {
+    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
+    for includeMoved in [false, true] {
+        let totals = try SpendingTotal.all(in: database, includeMoved: includeMoved)
+        for month in ["2026-06", "2026-04"] {
+            let label = "\(persona) \(month) moved \(includeMoved)"
+            let parts = AllMonthsView.parts(totals, month: month)
+            let segments = AllMonthsView.segments(parts)
+            let total = parts.reduce(0) { $0 + $1.cents }
+            let bar = try #require(AllMonthsView.byMonth(totals).first { $0.label == month })
+            #expect(segments.reduce(0) { $0 + $1.cents } == total, "\(label)")
+            #expect(Int((bar.total * 100).rounded()) == total, "\(label): bar \(bar.total), Total \(total)")
+            // Bottom to top is the list read upward, row for row.
+            #expect(segments.count == parts.count, "\(label)")
+            for (segment, part) in zip(segments, parts.reversed()) {
+                #expect(segment.category == part.category, "\(label)")
+                // Its height over the bar's (in dollars, as the chart draws them) is the row's share of Total.
+                #expect(abs(Double(segment.cents) / 100 / bar.total - Double(part.cents) / Double(total)) < 1e-12, "\(label) \(part.category)")
+                #expect(segment.color == Color.category(SpendingView.title(part.category)), "\(label) \(part.category)")
+            }
+            // Only Other is gray, so no two rows share `second`.
+            #expect(segments.filter { $0.color == .second }.map(\.category) == (parts.contains { $0.category == "other" } ? ["other"] : []), "\(label)")
+            let moved = segments.filter { $0.category == SpendingTotal.movedCategory }
+            #expect(moved.count == (includeMoved ? 1 : 0), "\(label)")
+            #expect(moved.allSatisfy { $0.color == .chartPick && $0.cents > 0 }, "\(label)")
+        }
+    }
 }
 
 /// Windows count back six months at a time from the newest month, across years, and the

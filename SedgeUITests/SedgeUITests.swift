@@ -645,6 +645,45 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["total"].label, "$20")
     }
 
+    /// On Maya's Spending screen a tap picks a month and a swipe pages. From June, tapping April's
+    /// bar shows April (Dining, counted by hand: $11.95 + $11.03 = $22.98), and tapping it again
+    /// keeps April instead of going back to June. A swipe left then pages on to May ($18.10).
+    /// Ways to save is gone; All months is still there.
+    @MainActor
+    func testTappingAMonthPicksItAndSwipingPages() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let shown = app.otherElements["shownMonth"]
+        XCTAssertTrue(shown.waitForExistence(timeout: 10))
+        XCTAssertEqual(shown.label, "June")
+        XCTAssertTrue(app.buttons["All months & categories →"].exists)
+        XCTAssertFalse(app.buttons["Ways to save →"].exists)
+        XCTAssertFalse(app.staticTexts["Ways to save →"].exists)
+
+        let april = app.otherElements["April"]
+        april.tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · April"].waitForExistence(timeout: 5))
+        XCTAssertEqual(shown.label, "April")
+        XCTAssertEqual(shown.value as? String, "$23")
+        XCTAssertEqual(app.staticTexts["total"].label, "$23")
+        XCTAssertEqual(app.otherElements["Month"].value as? String, "April")
+        attachScreenshot(app, "month-tapped")
+
+        // The picked month tapped again stays picked.
+        april.tap()
+        XCTAssertFalse(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 2))
+        XCTAssertEqual(shown.label, "April")
+
+        app.scrollViews["months"].swipeLeft()
+        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
+        XCTAssertEqual(shown.label, "May")
+        XCTAssertEqual(app.staticTexts["total"].label, "$18")
+        XCTAssertEqual(app.otherElements["Month"].value as? String, "May")
+    }
+
     /// "All" on Maya's Spending screen adds up every category: June 1–30 is $966, counted by hand
     /// from her transactions. The mosaic shows categories, the biggest change is by category
     /// (groceries fell $28.26 from May), and tapping a category's block picks that category.
@@ -1404,11 +1443,38 @@ final class SedgeUITests: XCTestCase {
         }
     }
 
+    /// Spending with "All": Maya's June "Other categories" block ($169.03: utilities, transport,
+    /// dining, education, subscriptions, coffee over June 1-30) opens its 10 transactions.
+    /// The screenshot is the sheet in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testSpendingAllOtherCategoriesOpensItsTransactions() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Trends"].tap()
+        let category = app.buttons["Category"]
+        XCTAssertTrue(category.waitForExistence(timeout: 10))
+        category.tap()
+        let all = app.buttons.matching(NSPredicate(format: "identifier == 'categoryCell' AND label == 'All'")).firstMatch
+        XCTAssertTrue(all.waitForExistence(timeout: 5))
+        all.tap()
+        XCTAssertTrue(app.staticTexts["by category"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        let block = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Other categories, $169'")).firstMatch
+        XCTAssertTrue(block.waitForExistence(timeout: 5), "no Other categories block")
+        XCTAssertTrue(app.buttons["Other categories, $169"].exists, "Other categories is not a button")
+        block.tap()
+        XCTAssertTrue(app.staticTexts["10 transactions"].waitForExistence(timeout: 5), "tapping Other categories opened nothing")
+        XCTAssertTrue(app.staticTexts["$169.03"].exists)
+        Thread.sleep(forTimeInterval: 0.5) // the sheet's slide
+        attachScreenshot(app, "spending-other-categories")
+    }
+
     /// The All months screen opens from Trends on June 2026, the newest month, with its list
     /// under the chart: Total, then each category, with Groceries and Dining folded into Other.
     /// Tapping Other opens both categories' June transactions with their exact total, and tapping
-    /// March shows March's list. The money-moved switch adds
-    /// a "Moved between accounts" row without changing the bars, and turning it off takes it away.
+    /// March shows March's list, whose Other opens March's. The money-moved switch adds a "Moved
+    /// between accounts" row and grows every bar by it, and turning it off takes both away.
     /// The screenshots are the screen in light, or dark after `xcrun simctl ui <device> appearance dark`.
     /// Nothing is changed in Maya's saved file.
     @MainActor
@@ -1466,18 +1532,35 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(total.value as? String, marchTotal)
         attachScreenshot(app, "all-months-march")
 
+        // In a tapped month Other opens too: Value Mart $19.25 + $23.77 + $20.28 + $21.80 + $19.63
+        // and Corner Cafe $8.16 + $10.51, counted by hand, are 7 transactions and $123.40.
+        XCTAssertEqual(other.value as? String, "$123")
+        other.tap()
+        XCTAssertTrue(app.staticTexts["Other · March 2026"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["7 transactions"].exists)
+        XCTAssertTrue(app.staticTexts["$123.40"].exists)
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.staticTexts["Other · March 2026"].waitForNonExistence(timeout: 5))
+
+        let marchDollars = try dollars(march)
         let toggle = app.switches["Include money moved between my accounts"]
         // The inner switch, so the tap lands on the control and not on its label.
         toggle.switches.firstMatch.tap()
         XCTAssertTrue(moved.waitForExistence(timeout: 5))
-        // Money moved is its own row, so the bars stay the same.
-        XCTAssertEqual(june.value as? String, before)
-        XCTAssertEqual(march.value as? String, marchTotal)
+        // Money moved is in every bar now, so March's bar grows by March's $122.62 card payment
+        // and still reads as Total.
+        let grown = NSPredicate(format: "value != %@", marchTotal ?? "")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: grown, object: march)], timeout: 5), .completed)
+        XCTAssertTrue((122...123).contains(try dollars(march) - marchDollars), "March went from \(marchDollars) to \(march.value ?? "")")
+        XCTAssertEqual(total.value as? String, march.value as? String)
+        XCTAssertNotEqual(june.value as? String, before)
         attachScreenshot(app, "all-months-with-money-moved")
 
         toggle.switches.firstMatch.tap()
         XCTAssertTrue(moved.waitForNonExistence(timeout: 5))
         XCTAssertEqual(total.value as? String, marchTotal)
+        XCTAssertEqual(march.value as? String, marchTotal)
+        XCTAssertEqual(june.value as? String, before)
     }
 
     /// Both Trends screens read the data again each time they show: moving Maya's Jun 18 Corner
@@ -1561,52 +1644,6 @@ final class SedgeUITests: XCTestCase {
         }
         XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))
         attachScreenshot(app, "spending-groceries")
-    }
-
-    /// Ways to save opens from Spending; a $200 goal lists Daniel's cuts ranked least valued first
-    /// (the same list `savingsListsForAHandCheck` prints), and the goal row is a 44 pt target that
-    /// focuses from near its top. The screenshot is light, or dark after
-    /// `xcrun simctl ui <device> appearance dark`.
-    @MainActor
-    func testWaysToSaveRanksCutsForAGoal() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-persona", "daniel"]
-        app.launch()
-
-        app.tabBars.buttons["Trends"].tap()
-        let link = app.buttons["Ways to save →"]
-        XCTAssertTrue(link.waitForExistence(timeout: 10))
-        // A row placed at a fractional y reads back as 43.99999…, so allow for rounding.
-        XCTAssertGreaterThanOrEqual(link.frame.height, 44 - 0.001)
-        link.tap()
-
-        let field = app.textFields["Monthly goal in dollars"]
-        XCTAssertTrue(field.waitForExistence(timeout: 10))
-        XCTAssertGreaterThanOrEqual(field.frame.height, 44)
-        // 6 pt below the top of the row: inside the 44 pt target, outside the text line.
-        field.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: field.frame.width / 2, dy: 6)).tap()
-        let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
-        XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 3), .completed)
-        field.typeText("200")
-
-        // Each rank in turn, scrolling to it: the list only builds the rows in view, and at the
-        // largest text sizes it starts below the fold.
-        let cuts = app.descendants(matching: .any).matching(identifier: "cut")
-        // Netflix is a monthly charge, so its evidence says the low weeks don't judge it (review R2-1).
-        let expected = ["1. Netflix, $16.74 a month. Subscriptions; bought in 5 of 25 weeks; once a month at most, so not judged on lowest-balance weeks.",
-                        "2. Homegoods, $47.29 a month. Shopping; bought in 8 of 25 weeks; 100% of usual",
-                        "3. Amazon, $70.60 a month.", "4. Bean Street Coffee, $10.21 a month.", "5. Corner Cafe, $180.01 a month."]
-        for start in expected {
-            let cut = cuts.matching(NSPredicate(format: "label BEGINSWITH %@", start)).firstMatch
-            for _ in 0..<6 where !cut.waitForExistence(timeout: 2) { app.swipeUp() }
-            XCTAssertTrue(cut.exists, "No row starting: \(start)")
-        }
-        let summary = app.staticTexts["savings-summary"]
-        for _ in 0..<6 where !summary.exists { app.swipeUp() }
-        XCTAssertTrue(summary.label.hasPrefix("Together $324.85 a month, enough"), summary.label)
-        XCTAssertFalse(cuts.matching(NSPredicate(format: "label BEGINSWITH '6. '")).firstMatch.exists)
-        for _ in 0..<6 { app.swipeDown() }
-        attachScreenshot(app, "ways-to-save")
     }
 
     /// A chart bar's value, such as "$1,234", in whole dollars.
