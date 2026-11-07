@@ -32,7 +32,7 @@ The three tabs:
   - The empty screen rotates through example questions.
   - Each question is saved with the data. **Previous chats** (clock icon, top left) lists them, opens
     one or deletes it; **New chat** (top right) starts over.
-  - When a chat gets too long, it ends with "This chat has reached its limit." and a **Start new
+  - When a chat gets too long, it ends with a "This chat is full" card and a **Start new
     session** button. Nothing reaches the limit yet, so use `-demoTokenLimit YES` (below) to see it.
 - **Trends**: the **Spending** screen.
   - Swipe the chart sideways to page through the last four months, or tap a month's bar to pick it,
@@ -58,10 +58,12 @@ Launch arguments (Product > Scheme > Edit Scheme > Run > Arguments):
 - Debug builds only, mostly for UI tests and screenshots:
   - `-sampleChat YES` shows a sample conversation on Ask, with numbers worked out from the data.
   - `-demoThinking YES` holds a question on the thinking row; `-demoTokenLimit YES` shows the limit message.
+  - `-slowThinking YES` keeps the thinking row for 6 seconds instead of 1.5 before the reply.
   - `-reduceMotion YES` makes Ask act as if Reduce Motion were on.
   - `-firstLaunch YES` forgets the chosen data, so the app opens on Welcome as on a fresh install.
-  - `-emptyBank YES` uses a separate, empty bank file, so Welcome's "Connect with Plaid" opens its sign-in screen
-    right away; after choosing the bank in the data picker, the sign-in screen is under Accounts > Transactions.
+  - `-emptyBank YES` uses a separate, empty bank file that never syncs, so the bank shows its sign-in screen
+    whatever this phone synced before; after choosing the bank in the data picker, the sign-in screen is under
+    Accounts > Transactions.
   - `-clearOwnerAnswers YES` clears the "Is this account yours?" answers.
 
 Fresh install:

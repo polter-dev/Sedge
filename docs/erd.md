@@ -96,7 +96,7 @@ erDiagram
     chats {
         integer id PK "auto-incremented"
         text title "not null, the first question, shortened"
-        datetime created "not null, clock time, a Previous chats label only"
+        datetime created "not null, clock time the chat started, stored but not shown"
         datetime updated "not null, clock time of the last saved turn, a label and the list's order"
     }
 
@@ -168,8 +168,9 @@ erDiagram
   chats and reopened for display. A turn is saved once its answer is in (or the chat hit its
   limit); continuing an older chat adds turns to it. They live in the open dataset's file, so
   each persona and the bank file keep their own chats, and reloading the data or organizing
-  again leaves them alone. Their times come from the clock and are labels only: no data logic
-  reads them, and nothing hands saved turns to whatever answers questions.
+  again leaves them alone. Their times come from the clock and no data logic reads them: `updated`
+  labels and orders the list, and `created` is stored but not shown. Nothing hands saved turns to
+  whatever answers questions.
 
 ## Database files
 
