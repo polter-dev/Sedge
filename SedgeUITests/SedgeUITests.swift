@@ -1639,8 +1639,24 @@ final class SedgeUITests: XCTestCase {
         block.tap()
         XCTAssertTrue(app.staticTexts["10 transactions"].waitForExistence(timeout: 5), "tapping Other categories opened nothing")
         XCTAssertTrue(app.staticTexts["$169.03"].exists)
+        // Today's month keeps the month's name.
+        XCTAssertTrue(app.staticTexts["Other categories · June 2026"].exists)
         Thread.sleep(forTimeInterval: 0.5) // the sheet's slide
         attachScreenshot(app, "spending-other-categories")
+
+        // May only runs to the 30th, the same day as today, and its sheet's title says so.
+        app.buttons["Done"].tap()
+        app.swipeDown()
+        let may = app.otherElements["May"]
+        XCTAssertTrue(may.waitForExistence(timeout: 5))
+        may.tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        let mayBlock = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Other categories, '")).firstMatch
+        XCTAssertTrue(mayBlock.waitForExistence(timeout: 5), "no Other categories block in May")
+        mayBlock.tap()
+        XCTAssertTrue(app.staticTexts["Other categories · May 1\u{2009}–\u{2009}30, 2026"].waitForExistence(timeout: 5),
+                      "May's sheet doesn't name its days")
     }
 
     /// The All months screen opens from Trends on June 2026, the newest month, with its list
