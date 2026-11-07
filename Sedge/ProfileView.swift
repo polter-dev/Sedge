@@ -165,7 +165,8 @@ struct ProfileView: View {
             badge(Self.symbol(fact), size: 36, glyph: 21)
             VStack(alignment: .leading, spacing: 1) {
                 label(fact.kind)
-                if let figure = Self.figure(fact) { amount(figure, font: .tileValue) }
+                // Two lines, so "a month" still reads beside the chip at the larger text sizes.
+                if let figure = Self.figure(fact) { amount(figure, font: .tileValue, lines: 2) }
             }
             if !oneColumn { Spacer(minLength: 0) }
             chip(Self.chip(fact, next: next))
@@ -223,12 +224,12 @@ struct ProfileView: View {
             .foregroundStyle(Color.muted)
     }
 
-    /// A tile's big figure. It shrinks rather than wraps, so a long amount stays on one line.
-    private func amount(_ text: String, font: Font) -> some View {
+    /// A tile's big figure, on at most `lines` lines (one unless asked); past that it shrinks rather than wraps.
+    private func amount(_ text: String, font: Font, lines: Int = 1) -> some View {
         Text(text)
             .font(font)
             .foregroundStyle(Color.ink)
-            .lineLimit(1)
+            .lineLimit(lines)
             .minimumScaleFactor(0.7)
             .contentTransition(.opacity)
     }

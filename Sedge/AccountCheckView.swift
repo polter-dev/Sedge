@@ -81,9 +81,12 @@ struct AccountCheckView: View {
     let step: (number: Int, of: Int)?
     /// The name being typed, starting from the saved one.
     @State private var nickname: String
+    /// True while the name field is being typed in.
+    @FocusState private var naming: Bool
     @Environment(\.dismiss) private var dismiss
     /// The tile grows with the text size, up to 56 pt.
     @ScaledMetric(relativeTo: .headline) private var tileSize = 44.0
+    @Environment(\.dynamicTypeSize) private var textSize
 
     init(database: SedgeDatabase, account: ListedAccount, step: (number: Int, of: Int)? = nil) {
         self.database = database
@@ -93,15 +96,20 @@ struct AccountCheckView: View {
     }
 
     var body: some View {
-        ScrollView {
+        // At the largest text sizes the count goes under the dots, and the Name label over its field.
+        let stacked = textSize.isAccessibilitySize
+        let row = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6)) : AnyLayout(HStackLayout(spacing: 6))
+        return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if let step {
                     // One dot per account asked about after connecting, the current one in the accent.
-                    HStack(spacing: 6) {
-                        ForEach(1...step.of, id: \.self) { number in
-                            Circle().fill(number == step.number ? Color.accent : Color.line).frame(width: 8, height: 8)
+                    row {
+                        HStack(spacing: 6) {
+                            ForEach(1...step.of, id: \.self) { number in
+                                Circle().fill(number == step.number ? Color.accent : Color.line).frame(width: 8, height: 8)
+                            }
                         }
-                        Spacer(minLength: 8)
+                        if !stacked { Spacer(minLength: 8) }
                         Text("Account \(step.number) of \(step.of)")
                             .font(.row.weight(.medium))
                             .foregroundStyle(Color.muted)
@@ -114,7 +122,7 @@ struct AccountCheckView: View {
                 Text("Is this account yours?")
                     .font(.title.bold())
                     .accessibilityAddTraits(.isHeader)
-                accountCard
+                accountCard(stacked: stacked)
                     .padding(.top, 14)
                 AccountAnswers(owner: account.owner, answer: answer)
                     .padding(.top, 18)
@@ -134,7 +142,7 @@ struct AccountCheckView: View {
 
     /// The account in a card: a tile in its type's color, its name over where it came from and its
     /// balance, then the Name row.
-    private var accountCard: some View {
+    private func accountCard(stacked: Bool) -> some View {
         // "Just added" only fits right after connecting; opened from Accounts it isn't new.
         let detail = [step == nil ? nil : "Just added from your bank",
                       account.balance.map { $0.formatted(.currency(code: account.currency ?? "USD")) }]
@@ -163,26 +171,42 @@ struct AccountCheckView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             Rectangle().fill(Color.line).frame(height: 1).padding(.leading, 16)
-            HStack(spacing: 12) {
+            (stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 12))) {
                 Text("Name").font(.answer).foregroundStyle(Color.ink)
                     .accessibilityHidden(true)
-                // The prompt is the bank's name, drawn gray until the person types.
-                TextField("Account name", text: $nickname, prompt: Text(account.name).foregroundStyle(Color.muted))
+                HStack(spacing: 12) {
+                    // The prompt is the bank's name, drawn gray until the person types. A field's own
+                    // prompt stays on one line, so stacked it is drawn as wrapping text behind the
+                    // field instead, and a long name reads whole rather than shrinking or being cut off.
+                    ZStack(alignment: .topLeading) {
+                        if stacked && nickname.isEmpty {
+                            Text(account.name).foregroundStyle(Color.muted).accessibilityHidden(true)
+                        }
+                        TextField("Account name", text: $nickname,
+                                  // Stacked, the field's own prompt is kept but clear, so VoiceOver still reads it.
+                                  prompt: Text(account.name).foregroundStyle(stacked ? Color.clear : Color.muted))
+                            .foregroundStyle(Color.ink)
+                            // A prompt replaces the title for VoiceOver, so name the field explicitly.
+                            .accessibilityLabel("Account name")
+                            .focused($naming)
+                    }
                     .font(.answer)
-                    .foregroundStyle(Color.ink)
-                    // A prompt replaces the title for VoiceOver, so name the field explicitly.
-                    .accessibilityLabel("Account name")
-                if !nickname.isEmpty {
-                    Button("Clear name", systemImage: "xmark.circle") { nickname = "" }
-                        .labelStyle(.iconOnly)
-                        .font(.title3)
-                        .foregroundStyle(Color.accent)
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
+                    // The field is one line tall, so a tap on any line of the wrapped prompt starts typing too.
+                    .contentShape(.rect)
+                    .onTapGesture { naming = true }
+                    if !nickname.isEmpty {
+                        Button("Clear name", systemImage: "xmark.circle") { nickname = "" }
+                            .labelStyle(.iconOnly)
+                            .font(.title3)
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 44, height: 44)
+                            .contentShape(.rect)
+                    }
                 }
             }
             .padding(.leading, 16)
             .padding(.trailing, nickname.isEmpty ? 16 : 4)
+            .padding(.vertical, stacked ? 10 : 0)
             .frame(minHeight: 44)
         }
         .background(Color.group, in: .rect(cornerRadius: 12))

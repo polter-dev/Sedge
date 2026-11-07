@@ -28,8 +28,11 @@ struct PreviousChatsView: View {
     /// The chat the confirmation dialog asks about.
     @State private var confirming: Chats.Chat?
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// Ask's rule, so `-reduceMotion YES` fades the panel in UI tests as the setting does.
+    private var reduceMotion: Bool { AskView.reducesMotion(system: systemReduceMotion) }
 
     /// The chats last used in one month, under a label such as "JUNE".
     struct Month {
