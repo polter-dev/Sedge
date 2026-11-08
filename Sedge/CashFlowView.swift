@@ -176,9 +176,6 @@ struct CashFlowView: View {
                         // Axis labels past this size overlap; VoiceOver reads the summary instead.
                         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     legend(result)
-                    Text("Shading shows the range between your busiest and quietest recent four weeks of spending.")
-                        .font(.row)
-                        .foregroundStyle(Color.muted)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -391,7 +388,7 @@ struct CashFlowView: View {
         }
     }
 
-    /// The scenario panel: a switch for each scenario, the projected end balance, and what's included.
+    /// The scenario panel: a switch for each scenario and the projected end balance.
     private func scenarios(_ result: CashFlow) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
@@ -433,15 +430,6 @@ struct CashFlowView: View {
                 .font(.subheadline)
                 .foregroundStyle(Color.ink)
             }
-            Button {
-                showingIncluded = true
-            } label: {
-                // A 44 pt tall target, though only the words show.
-                Text("What’s included? →")
-                    .font(.link)
-                    .frame(minHeight: 44)
-                    .contentShape(.rect)
-            }
         }
         .padding(.horizontal, 17)
         .padding(.top, 24)
@@ -468,7 +456,7 @@ struct CashFlowView: View {
                 // A dollar sign in front, so a typed "1500" still reads as money.
                 Text("$").foregroundStyle(Color.muted).accessibilityHidden(true)
                 // Outside a Form nothing makes these rows 44 pt tall, so each target sets it.
-                TextField("Extra purchase in dollars", text: $amountText)
+                TextField("Amount", text: $amountText)
                     .keyboardType(.decimalPad)
                     .focused($amountFocused)
                     .frame(minHeight: 44)
@@ -505,7 +493,7 @@ struct CashFlowView: View {
     private func billChange(_ result: CashFlow) -> some View {
         let by = Self.dollars(billText)
         let detail = by.map { "\(billName) \($0 < 0 ? "−" : "+")\(Self.money(abs($0))) · from \(Self.day(billFrom))" }
-            ?? "Pick a bill and an amount"
+            ?? "None chosen"
         return VStack(alignment: .leading, spacing: 0) {
             row(isOn: $billOn, "Change a bill", detail)
                 .accessibilityIdentifier("bill")
@@ -518,7 +506,7 @@ struct CashFlowView: View {
                         .labelsHidden()
                     }
                     // Numbers and punctuation, since a smaller bill needs a minus sign the number pad lacks.
-                    TextField("Change per bill in dollars, e.g. 200 or -50", text: $billText)
+                    TextField("Change per charge", text: $billText)
                         .keyboardType(.numbersAndPunctuation)
                         .focused($billFocused)
                         .frame(minHeight: 44)
@@ -559,7 +547,7 @@ struct CashFlowView: View {
         }
     }
 
-    /// What the projection counts, opened from the info button and "What's included?".
+    /// What the projection counts, opened from the info button.
     private var included: some View {
         NavigationStack {
             List {

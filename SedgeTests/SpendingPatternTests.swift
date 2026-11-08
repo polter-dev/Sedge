@@ -289,6 +289,26 @@ func cashFlowCardLowPointMatchesTheScreen(persona: String) throws {
     #expect(SpendingView.lowPointLine(card) == expected)
 }
 
+/// The cash-flow card follows the picked month, for today's June and two earlier months: its money
+/// in, money out and left over are the Transactions screen's `InOut` of the same days (the 1st
+/// through the 30th, February's through its 28th), and its checking balance is the shared
+/// wind-back's at the end of that last day, 0, 31 and 122 days before June 30.
+@Test(arguments: ["maya", "daniel"])
+func cashFlowCardFollowsThePickedMonth(persona: String) throws {
+    let database = try inMemory(persona)
+    let rows = try ListedTransaction.all(in: database)
+    let closing = try #require(try database.dbQueue.read { try Simulator.closingBalances($0, days: 123) })
+    for (month, last, back) in [("2026-06", "2026-06-30", 0), ("2026-05", "2026-05-30", 31), ("2026-02", "2026-02-28", 122)] {
+        let card = try SpendingView.monthFlow(in: database, month: month, asOf: "2026-06-30")
+        let money = InOut(rows.filter { $0.date >= month + "-01" && $0.date <= last })
+        #expect(money.moneyOut > 0, "\(persona) \(month)")
+        #expect(card.money == money, "\(persona) \(month)")
+        #expect(card.money.leftOver == money.moneyIn - money.moneyOut)
+        #expect(card.lastDay == last)
+        #expect(card.checking == closing[back], "\(persona) \(month)")
+    }
+}
+
 /// Mosaic widths follow each block's share and fill the space; a sliver is raised to the minimum.
 @Test func mosaicSplitKeepsSmallBlocksReadable() {
     #expect(SpendingView.split([300, 100], length: 404, gap: 4, minimum: 56) == [300, 100])

@@ -436,7 +436,7 @@ final class SedgeUITests: XCTestCase {
             attachScreenshot(app, "\(persona) spending")
 
             app.buttons["cashFlow"].tap()
-            let field = app.textFields["Extra purchase in dollars"]
+            let field = app.textFields["Amount"]
             XCTAssertTrue(field.waitForExistence(timeout: 10))
             field.tap()
             field.typeText("400")
@@ -605,7 +605,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Your patterns"].waitForExistence(timeout: 10))
         attachScreenshot(app, "tab-trends-spending")
         app.buttons["cashFlow"].tap()
-        XCTAssertTrue(app.textFields["Extra purchase in dollars"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.textFields["Amount"].waitForExistence(timeout: 10))
         attachScreenshot(app, "trends-cash-flow")
 
         app.tabBars.buttons["Accounts"].tap()
@@ -705,6 +705,64 @@ final class SedgeUITests: XCTestCase {
         let lowest = app.descendants(matching: .any).matching(NSPredicate(
             format: "label BEGINSWITH 'Lowest projected balance' AND label CONTAINS %@ AND label CONTAINS %@", parts[0], parts[1])).firstMatch
         XCTAssertTrue(lowest.waitForExistence(timeout: 10), "Cash flow doesn't show \(parts)")
+    }
+
+    /// The Cash flow card follows the picked month. On June it has the three figures and the
+    /// projected line and opens the Cash flow screen; on May (its bar tapped) it has the three
+    /// figures and checking's May 30 balance, no line, and a tap opens nothing. The screenshots are
+    /// light, or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testCashFlowCardFollowsThePickedMonth() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let now = app.buttons["cashFlow"]
+        XCTAssertTrue(now.waitForExistence(timeout: 10))
+        let june = NSPredicate(format: "label BEGINSWITH 'Cash flow · June so far' AND label CONTAINS 'Money in' AND label CONTAINS 'Money out' AND label CONTAINS 'Left over' AND label CONTAINS 'Low point $'")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: june, object: now)], timeout: 10), .completed, now.label)
+        for _ in 0..<3 where now.frame.maxY > app.tabBars.firstMatch.frame.minY { app.swipeUp() }
+        attachScreenshot(app, "cash-flow-card-june")
+        now.tap()
+        XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
+        app.navigationBars.buttons.firstMatch.tap()
+
+        for _ in 0..<3 where !app.otherElements["May"].isHittable { app.swipeDown() }
+        app.otherElements["May"].tap()
+        let past = app.descendants(matching: .any)["cashFlow"]
+        XCTAssertTrue(past.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["cashFlow"].exists)
+        XCTAssertTrue(past.label.hasPrefix("Cash flow · May,") && past.label.contains("Money in") && past.label.contains("Money out")
+                      && past.label.contains("Left over") && past.label.contains("Checking · May 30, $"), past.label)
+        XCTAssertFalse(past.label.contains("Low point"), past.label)
+        for _ in 0..<3 where past.frame.maxY > app.tabBars.firstMatch.frame.minY { app.swipeUp() }
+        attachScreenshot(app, "cash-flow-card-may")
+        past.tap()
+        XCTAssertFalse(app.staticTexts["projected"].waitForExistence(timeout: 2))
+        XCTAssertTrue(past.exists)
+    }
+
+    /// The Cash flow screen keeps only the toolbar's info button: no shading sentence and no second
+    /// "What's included?" link. The bill change reads "None chosen" while off.
+    @MainActor
+    func testCashFlowScreenDropsExtraText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        app.buttons["cashFlow"].tap()
+        XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
+        attachScreenshot(app, "cash-flow-screen")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Shading shows'")).firstMatch.exists)
+        XCTAssertTrue(app.navigationBars.buttons["What’s included?"].exists)
+        XCTAssertFalse(app.buttons["What’s included? →"].exists)
+        let bill = app.switches["bill"]
+        XCTAssertTrue(bill.waitForExistence(timeout: 5))
+        XCTAssertTrue(bill.label.contains("None chosen"), bill.label)
+        for _ in 0..<3 where !app.staticTexts["Preview only"].isHittable { app.swipeUp() }
+        attachScreenshot(app, "cash-flow-screen-scenarios")
     }
 
     /// Maya's Spending screen opens on the March to June page with June picked; one swipe right
@@ -966,7 +1024,7 @@ final class SedgeUITests: XCTestCase {
         let plan = try dollars(projected.label)
 
         // A $400 purchase starts switched on.
-        let field = app.textFields["Extra purchase in dollars"]
+        let field = app.textFields["Amount"]
         field.tap()
         field.typeText("400")
         app.buttons["Add purchase"].tap()
@@ -1038,7 +1096,7 @@ final class SedgeUITests: XCTestCase {
             app.buttons["\(days) days"].tap()
             try slide("\(days)-days", expectsPlan: false)
         }
-        let field = app.textFields["Extra purchase in dollars"]
+        let field = app.textFields["Amount"]
         field.tap()
         field.typeText("400")
         app.buttons["Add purchase"].tap()
@@ -1060,11 +1118,11 @@ final class SedgeUITests: XCTestCase {
 
         // Switch "Change a bill" on to show its amount field.
         flip(app.switches["bill"], in: app)
-        let billAmount = app.textFields["Change per bill in dollars, e.g. 200 or -50"]
+        let billAmount = app.textFields["Change per charge"]
         XCTAssertTrue(billAmount.waitForExistence(timeout: 5))
 
         for (name, element) in [("Add purchase", app.buttons["Add purchase"]),
-                                ("Extra purchase field", app.textFields["Extra purchase in dollars"]),
+                                ("Extra purchase field", app.textFields["Amount"]),
                                 ("Bill amount field", billAmount)] {
             XCTAssertGreaterThanOrEqual(element.frame.height, 44, "\(name) is \(element.frame.height) pt tall")
         }
@@ -1073,7 +1131,7 @@ final class SedgeUITests: XCTestCase {
     /// A tap anywhere in the 44 pt purchase and bill fields focuses them, not only in the middle.
     @MainActor
     func testCashFlowFieldsFocusFromTheirWholeHeight() throws {
-        for name in ["Extra purchase in dollars", "Change per bill in dollars, e.g. 200 or -50"] {
+        for name in ["Amount", "Change per charge"] {
             let app = XCUIApplication()
             app.launchArguments = ["-persona", "maya"]
             app.launch()

@@ -38,10 +38,12 @@ The three tabs:
   - Swipe the chart sideways to page through the last four months, or tap a month's bar to pick it,
     compared up to the same day of each month.
   - The category chip opens a grid of categories, with **All** first for every category added up.
-  - The page's month as a mosaic of stores (or categories with **All**), and its biggest change from
-    the month before.
-  - A **Cash flow** card with the projected checking balance for the next 30 days. It opens the Cash
-    flow screen (30, 60 or 90 days, with scenarios to switch on and off).
+  - The page's month as a mosaic of stores (or categories with **All**), and under it its biggest
+    change from the month before.
+  - A **Cash flow** card for the picked month: money in, money out and what's left over, over the
+    same days as its bar. An earlier month adds checking's balance at the end of those days. Today's
+    month adds the projected checking balance for the next 30 days and opens the Cash flow screen
+    (30, 60 or 90 days, with scenarios to switch on and off).
   - A link to **All months & categories** and, when there are any, the recent
     purchases **Worth a look**.
 - **Accounts**:

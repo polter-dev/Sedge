@@ -98,6 +98,8 @@ struct SpendingView: View {
     @State private var change: (name: String, cents: Int, latest: String?)?
     /// The next 30 days of checking, as the Cash flow screen first shows them; nil without a bank account.
     @State private var cashFlow: CashFlow?
+    /// The cash-flow card's figures for the picked month; nil until loaded.
+    @State private var monthFlow: MonthFlow?
     /// The transaction a double-tapped store opens, by id; nil when none is open.
     @State private var opened: String?
     /// How many recent purchases are worth a look; the row for them shows only above 0.
@@ -119,6 +121,16 @@ struct SpendingView: View {
         var id: String { name }
         /// Summed in whole cents, as the tools sum.
         var total: Double { Double(rows.reduce(0) { $0 + Int(($1.amount * 100).rounded()) }) / 100 }
+    }
+
+    /// The cash-flow card's figures for one month, over the same days as its bar.
+    struct MonthFlow {
+        /// Money in and out, by the Transactions screen's rule.
+        let money: InOut
+        /// The window's last day, "YYYY-MM-DD": a month shorter than the window ends on its own last day.
+        let lastDay: String
+        /// The everyday checking account's balance in cents at the end of `lastDay`; nil without one.
+        let checking: Int?
     }
 
     /// The name of the "All" mosaic's block that adds up the smaller categories.
@@ -287,6 +299,20 @@ struct SpendingView: View {
             + " vs " + (month + "-01").displayDate(.dateTime.month(.abbreviated))
     }
 
+    /// One month's cash flow over its `window` (the 1st through today's day of the month): money in
+    /// and out by `InOut`, as the Transactions screen counts them, and checking's balance at the end
+    /// of the window's last day, wound back from today's by `Simulator.closingBalance`.
+    static func monthFlow(in database: SedgeDatabase, month: String, asOf: String) throws -> MonthFlow {
+        let window = window(month, asOf: asOf)
+        let rows = try ListedTransaction.all(in: database).filter { $0.date >= window.from && $0.date <= window.through }
+        return try database.dbQueue.read { db in
+            // "2026-02-30" is no day, so a short month's window ends on the day before the next month's 1st.
+            let lastDay = try String.fetchOne(db, sql: "SELECT MIN(?, date(?, '+1 month', '-1 day'))",
+                                              arguments: [window.through, window.from])!
+            return MonthFlow(money: InOut(rows), lastDay: lastDay, checking: try Simulator.closingBalance(db, on: lastDay))
+        }
+    }
+
     /// "Low point $1,236.45 · Jul 1": the shown line's lowest balance, as the Cash flow screen gives it.
     static func lowPointLine(_ cashFlow: CashFlow) -> String? {
         cashFlow.lowest(cashFlow.shown).map {
@@ -366,8 +392,9 @@ struct SpendingView: View {
                     patternsHeader
                     categoryButton
                     pager(asOf)
-                    cashFlowCard
                     connected
+                    if let change { changeRow(change) }
+                    cashFlowCard
                     allMonthsLink
                     if let store = Self.stores(rows).first(where: { $0.name == selected }), let row = store.rows.first {
                         latest(row)
@@ -396,6 +423,7 @@ struct SpendingView: View {
                     page = thisMonth
                 }
                 guard let asOf else { return }
+                monthFlow = try Self.monthFlow(in: database, month: shownMonth, asOf: asOf)
                 let before = Self.monthBefore(shownMonth)
                 if let category {
                     let window = Self.window(shownMonth, asOf: asOf), earlier = Self.window(before, asOf: asOf)
@@ -604,48 +632,86 @@ struct SpendingView: View {
         }
     }
 
-    /// One block: "Cash flow" with this person's projected checking balance for the next 30 days
-    /// and its low point, opening the Cash flow screen, then the biggest change from the month
-    /// before. The line and low point come from `CashFlow`, the same as that screen's first view.
+    /// "Cash flow" for the picked month: money in, money out and what is left over, over the same
+    /// days as the month's bar. Today's month adds the projected checking balance for the next 30
+    /// days and its low point (from `CashFlow`, as the Cash flow screen first shows them) and opens
+    /// that screen, the only way to it, since only today can be projected from. An earlier month
+    /// shows checking's balance at the end of its last day instead and opens nothing.
+    @ViewBuilder
     private var cashFlowCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            NavigationLink {
-                CashFlowView(database: database).navigationTitle("Cash flow")
-            } label: {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Cash flow").font(.cardTitle).foregroundStyle(Color.ink)
-                            if let cashFlow, let line = Self.lowPointLine(cashFlow) {
-                                Text(line).font(.row).foregroundStyle(Color.muted)
-                            }
-                        }
-                        Spacer(minLength: 8)
-                        Image(systemName: "chevron.right")
-                            .font(.row)
-                            .foregroundStyle(Color.muted)
-                            .accessibilityHidden(true)
-                    }
-                    if let cashFlow { balanceLine(cashFlow) }
+        let isNow = shownMonth == thisMonth
+        let name = (shownMonth + "-01").displayDate(.dateTime.month(.wide))
+        let content = VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Text("Cash flow · " + (isNow ? "\(name) so far" : name)).font(.cardTitle).foregroundStyle(Color.ink)
+                Spacer(minLength: 8)
+                if isNow {
+                    Image(systemName: "chevron.right")
+                        .font(.row)
+                        .foregroundStyle(Color.muted)
+                        .accessibilityHidden(true)
                 }
-                .frame(minHeight: 44)
-                .contentShape(.rect)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("cashFlow")
-            if let change {
-                Rectangle().fill(Color.line).frame(height: 1)
-                changeRow(change)
+            if let monthFlow { figures(monthFlow.money) }
+            if isNow {
+                if let cashFlow, let line = Self.lowPointLine(cashFlow) {
+                    Text(line).font(.row).foregroundStyle(Color.muted)
+                }
+                if let cashFlow { balanceLine(cashFlow) }
+            } else if let monthFlow, let checking = monthFlow.checking {
+                HStack {
+                    Text("Checking · " + monthFlow.lastDay.displayDate(.dateTime.month(.abbreviated).day()))
+                        .foregroundStyle(Color.muted)
+                    Spacer(minLength: 8)
+                    Text((Double(checking) / 100).formatted(.currency(code: "USD")))
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
+                        .foregroundStyle(Color.ink)
+                }
+                .font(.row)
             }
         }
+        .frame(minHeight: 44)
         .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, change == nil ? 14 : 4)
+        .padding(.vertical, 14)
         .background(Color.group, in: .rect(cornerRadius: 14))
+        .contentShape(.rect)
+        if isNow {
+            NavigationLink {
+                CashFlowView(database: database).navigationTitle("Cash flow")
+            } label: { content }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("cashFlow")
+        } else {
+            content
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("cashFlow")
+        }
     }
 
-    /// The projected balance, day by day, with the low point marked and labeled under it. The
-    /// title above already says the low point, so VoiceOver skips the drawing.
+    /// "Money in", "Money out" and "Left over" side by side, or stacked at the largest text sizes.
+    private func figures(_ money: InOut) -> some View {
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+        return layout {
+            ForEach([("Money in", money.moneyIn), ("Money out", money.moneyOut), ("Left over", money.leftOver)], id: \.0) { label, cents in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label).font(.row).foregroundStyle(Color.muted)
+                    Text((Double(cents) / 100).formatted(.currency(code: "USD")))
+                        .font(.callout.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.ink)
+                        .minimumScaleFactor(0.8)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+            }
+        }
+    }
+
+    /// The projected balance, day by day, with the low point marked. The line above the chart
+    /// already says the low point, so VoiceOver skips the drawing.
     private func balanceLine(_ cashFlow: CashFlow) -> some View {
         let low = cashFlow.lowest(cashFlow.shown)
         let format = Date.FormatStyle.dateTime.month(.abbreviated).day()
@@ -663,30 +729,10 @@ struct SpendingView: View {
                         }
                 }
             }
-            // Only the shape matters, so no axes; the room at the bottom is for the low point's label.
+            // Only the shape matters, so no axes; the padding keeps the low point's dot inside the chart.
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
-            .chartYScale(domain: .automatic(includesZero: false), range: .plotDimension(startPadding: 20, endPadding: 4))
-            .chartOverlay { proxy in
-                // The low point's amount and day just under it. Drawn over the chart, since a
-                // Charts annotation there gets moved above the point when it nears the edge. At the
-                // largest text sizes it would cover the dates, and the title above already says it.
-                GeometryReader { geometry in
-                    if !dynamicTypeSize.isAccessibilitySize, let low, let plot = proxy.plotFrame.map({ geometry[$0] }),
-                       let x = proxy.position(forX: low.date), let y = proxy.position(forY: low.balance) {
-                        // Starts under the point on the left half and ends under it on the right half, so it stays on the card.
-                        let onLeft = x < plot.width / 2
-                        Text("\(low.balance.formatted(Self.dollars)) · \(low.date.displayDate(format))")
-                            .font(.note.weight(.medium))
-                            .foregroundStyle(Color.muted)
-                            .fixedSize()
-                            .frame(width: plot.width, alignment: onLeft ? .leading : .trailing)
-                            .offset(x: onLeft ? max(0, x - 6) : -max(0, plot.width - x - 6))
-                            .position(x: plot.midX, y: plot.minY + y + 13)
-                    }
-                }
-                .allowsHitTesting(false)
-            }
+            .chartYScale(domain: .automatic(includesZero: false), range: .plotDimension(startPadding: 6, endPadding: 4))
             .frame(height: 84)
             // The days the line covers: it starts tomorrow, the first projected day.
             HStack {

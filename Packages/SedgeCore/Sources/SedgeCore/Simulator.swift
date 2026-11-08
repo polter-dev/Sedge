@@ -115,6 +115,39 @@ public enum Simulator {
             """)
     }
 
+    /// The everyday account's (`checkingAccount`) end-of-day balances in cents, today's first: index
+    /// 0 is today, 1 yesterday, up to `days - 1` days back. Each day's is today's balance with every
+    /// posted transaction after that day undone. Nil when there is no bank account with a balance.
+    /// Savings' tight days and the Trends cash-flow card both read balances this way.
+    public static func closingBalances(_ db: Database, days: Int) throws -> [Int]? {
+        let today = try asOf(db)
+        guard let id = try checkingAccount(db), let current = try Int.fetchOne(db, sql: """
+            SELECT ROUND(json_extract(balances, '$.current') * 100) FROM accounts WHERE account_id = ?
+            """, arguments: [id]) else { return nil }
+        // Cents that left (positive) or came into (negative) the account, per day back from today.
+        var moved = Array(repeating: 0, count: days)
+        for row in try Row.fetchAll(db, sql: "SELECT date, CAST(ROUND(amount * 100) AS INTEGER) FROM transactions WHERE account_id = ? AND NOT pending",
+                                    arguments: [id]) {
+            let back = calendar.dateComponents([.day], from: try date(row[0]), to: today).day!
+            if back >= 0 && back < moved.count { moved[back] += row[1] as Int }
+        }
+        // Walking back a day adds back what left that day: Plaid's positive amount lowered the balance.
+        var balance = current
+        var closing = Array(repeating: 0, count: days)
+        for back in 0..<days {
+            closing[back] = balance
+            balance += moved[back]
+        }
+        return closing
+    }
+
+    /// The everyday account's balance in cents at the end of one "YYYY-MM-DD" day, today or
+    /// earlier (`closingBalances`). Nil for a day after today, or with no bank account with a balance.
+    public static func closingBalance(_ db: Database, on day: String) throws -> Int? {
+        let back = calendar.dateComponents([.day], from: try date(day), to: try asOf(db)).day!
+        return back < 0 ? nil : try closingBalances(db, days: back + 1)?.last
+    }
+
     /// The dataset's today.
     static func asOf(_ db: Database) throws -> Date {
         guard let asOf = try String.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'as_of'") else {
