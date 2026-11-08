@@ -707,48 +707,57 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(lowest.waitForExistence(timeout: 10), "Cash flow doesn't show \(parts)")
     }
 
-    /// Maya's Spending screen opens on June's page; one swipe right turns to May: the total, the
-    /// marked bar, the mosaic's heading and a May latest transaction. Dining, counted by hand over
-    /// the 1st to the 30th: June $10.40 + $9.11 = $19.51, May $9.29 + $8.81 = $18.10. Tapping
-    /// June's bar turns back. The screenshots are light, or dark after
-    /// `xcrun simctl ui <device> appearance dark`.
+    /// Maya's Spending screen opens on the March to June page with June picked; one swipe right
+    /// turns to November to February, her earliest, with February picked: the total, the marked
+    /// bar, the mosaic's heading and a February latest transaction. Tapping January's bar picks
+    /// January, and the filled dot moves left on the swipe but not on the tap. Dining (Corner
+    /// Cafe), counted by hand over the 1st to the 30th: June $10.40 + $9.11 = $19.51, February
+    /// $7.80 + $11.24 + $11.15 = $30.19, January $7.70 + $7.99 = $15.69. The screenshots are
+    /// light, or dark after `xcrun simctl ui <device> appearance dark`.
     @MainActor
-    func testSwipingBackShowsTheMonthBefore() throws {
+    func testSwipingBackShowsTheMonthsBefore() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya"]
         app.launch()
 
         app.tabBars.buttons["Trends"].tap()
-        let shown = app.otherElements["shownMonth"]
+        let shown = app.otherElements["shownMonth"], dots = app.otherElements["Months"]
         XCTAssertTrue(shown.waitForExistence(timeout: 10))
         XCTAssertEqual(shown.label, "June")
         XCTAssertEqual(app.staticTexts["total"].label, "$20")
         XCTAssertTrue(app.staticTexts["Connected spending · June"].exists)
+        // Two pages, so two dots, the right one filled.
+        XCTAssertEqual(dots.identifier, "filledDot1")
+        XCTAssertEqual(dots.value as? String, "Mar\u{2009}–\u{2009}Jun 2026")
         attachScreenshot(app, "month-current")
 
         app.scrollViews["months"].swipeRight()
-        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
-        XCTAssertEqual(shown.label, "May")
-        XCTAssertEqual(shown.value as? String, "$18")
-        XCTAssertEqual(app.staticTexts["total"].label, "$18")
-        XCTAssertEqual(app.otherElements["Month"].value as? String, "May")
+        XCTAssertTrue(app.staticTexts["Connected spending · February"].waitForExistence(timeout: 5))
+        XCTAssertEqual(shown.label, "February")
+        XCTAssertEqual(shown.value as? String, "$30")
+        XCTAssertEqual(app.staticTexts["total"].label, "$30")
+        XCTAssertEqual(dots.identifier, "filledDot0")
+        XCTAssertEqual(dots.value as? String, "Nov 2025\u{2009}–\u{2009}Feb 2026")
         let store = app.buttons.matching(identifier: "store").firstMatch
         XCTAssertTrue(store.waitForExistence(timeout: 5))
         store.tap()
         let latest = app.buttons["latest"]
         XCTAssertTrue(latest.waitForExistence(timeout: 5))
-        XCTAssertTrue(latest.label.contains("May "), "\(latest.label) isn't from May")
-        attachScreenshot(app, "month-previous")
+        XCTAssertTrue(latest.label.contains("Feb "), "\(latest.label) isn't from February")
+        attachScreenshot(app, "month-earliest")
 
-        app.otherElements["June"].tap()
-        XCTAssertTrue(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 5))
-        XCTAssertEqual(shown.label, "June")
-        XCTAssertEqual(app.staticTexts["total"].label, "$20")
+        app.otherElements["January"].tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · January"].waitForExistence(timeout: 5))
+        XCTAssertEqual(shown.label, "January")
+        XCTAssertEqual(app.staticTexts["total"].label, "$16")
+        XCTAssertEqual(dots.identifier, "filledDot0")
+        XCTAssertEqual(dots.value as? String, "Nov 2025\u{2009}–\u{2009}Feb 2026")
     }
 
     /// On Maya's Spending screen a tap picks a month and a swipe pages. From June, tapping April's
     /// bar shows April (Dining, counted by hand: $11.95 + $11.03 = $22.98), and tapping it again
-    /// keeps April instead of going back to June. A swipe left then pages on to May ($18.10).
+    /// keeps April instead of going back to June, on the same page. A swipe right then a swipe left
+    /// come back to the last page with its newest month, June ($19.51), picked.
     /// Ways to save is gone; All months is still there.
     @MainActor
     func testTappingAMonthPicksItAndSwipingPages() throws {
@@ -770,7 +779,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(shown.label, "April")
         XCTAssertEqual(shown.value as? String, "$23")
         XCTAssertEqual(app.staticTexts["total"].label, "$23")
-        XCTAssertEqual(app.otherElements["Month"].value as? String, "April")
+        XCTAssertEqual(app.otherElements["Months"].value as? String, "Mar\u{2009}–\u{2009}Jun 2026")
         attachScreenshot(app, "month-tapped")
 
         // The picked month tapped again stays picked.
@@ -778,11 +787,13 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 2))
         XCTAssertEqual(shown.label, "April")
 
+        app.scrollViews["months"].swipeRight()
+        XCTAssertTrue(app.staticTexts["Connected spending · February"].waitForExistence(timeout: 5))
         app.scrollViews["months"].swipeLeft()
-        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
-        XCTAssertEqual(shown.label, "May")
-        XCTAssertEqual(app.staticTexts["total"].label, "$18")
-        XCTAssertEqual(app.otherElements["Month"].value as? String, "May")
+        XCTAssertTrue(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 5))
+        XCTAssertEqual(shown.label, "June")
+        XCTAssertEqual(app.staticTexts["total"].label, "$20")
+        XCTAssertEqual(app.otherElements["Months"].value as? String, "Mar\u{2009}–\u{2009}Jun 2026")
     }
 
     /// "All" on Maya's Spending screen adds up every category: June 1–30 is $966, counted by hand

@@ -71,8 +71,8 @@ extension ListedTransaction {
     }
 }
 
-/// The Trends tab's Spending screen: one category's last four months (or every category's,
-/// with "All") as pages you swipe through, and a mosaic of what made up the page's month.
+/// The Trends tab's Spending screen: one category's months (or every category's, with "All")
+/// four to a page over the whole history, and a mosaic of what made up the picked month.
 struct SpendingView: View {
     let database: SedgeDatabase
     /// On a page pushed from "All", its one category, kept for good (so no category chip); nil on the Trends tab itself.
@@ -89,8 +89,10 @@ struct SpendingView: View {
     @State private var rows: [ListedTransaction] = []
     /// The store tapped last, by name.
     @State private var selected: String?
-    /// The month page on screen, "YYYY-MM"; it starts on today's month.
+    /// The picked month, "YYYY-MM"; it starts on today's month.
     @State private var page: String?
+    /// The page on screen, by its last month "YYYY-MM"; nil is the last page, ending at today's month.
+    @State private var span: String?
     /// The month under the last tap on the chart, cleared again once `page` is set from it.
     @State private var tapped: String?
     /// The store (or, with "All", the category) whose spending changed most from the month before
@@ -181,6 +183,38 @@ struct SpendingView: View {
               (last + 86_400).formatted(day).hasPrefix(month) else { return nil }
         // The dates are midnight UTC, so they're shown in UTC too, as `AllMonthsView.span` does.
         return (start..<last).formatted(Date.IntervalFormatStyle(timeZone: .gmt).month(.abbreviated).day().year())
+    }
+
+    /// The pages of four months over the whole history, each by its last month, oldest first.
+    /// The last page ends at `asOf`'s month and each one before ends four months earlier, until a
+    /// page holds the first month with spending. With no spending there is still the last page.
+    static func pages(_ totals: [SpendingTotal], asOf: String) -> [String] {
+        let last = String(asOf.prefix(7))
+        var pages = [last]
+        // Only months up to today count, so data saved past `asOf` can't add pages.
+        guard let first = totals.map(\.month).filter({ $0 <= last }).min() else { return pages }
+        while let start = months(endingAt: pages[0]).first, start > first {
+            pages.insert(monthBefore(start), at: 0)
+        }
+        return pages
+    }
+
+    /// The page dots for page `index` of `count` (oldest first): at most four dots, as indexes of
+    /// pages, which of them is filled, and whether more pages lie past the left or right dot.
+    static func dotWindow(count: Int, index: Int) -> (dots: Range<Int>, filled: Int, left: Bool, right: Bool) {
+        // The window slides with the page, keeping it one dot in from the left, so the end dots
+        // fill only on the oldest and newest pages.
+        let start = max(0, min(index - 1, count - 4))
+        let end = min(count, start + 4)
+        return (start..<end, index - start, start > 0, end < count)
+    }
+
+    /// The year shown under a bar's month label, e.g. "2025", or nil. A page that isn't all in
+    /// today's year shows it under its first month and under January, so the year is never a guess.
+    static func axisYear(_ month: String, pageEnd: String, asOf: String) -> String? {
+        guard let first = months(endingAt: pageEnd).first, first.prefix(4) != asOf.prefix(4),
+              month == first || month.hasSuffix("-01") else { return nil }
+        return String(month.prefix(4))
     }
 
     /// The month before `month`, "YYYY-MM".
@@ -303,7 +337,7 @@ struct SpendingView: View {
 
     /// The categories with spending in the four months shown, in the category sheet's order.
     private var categories: [String] {
-        asOf.map { Self.categoryOrder(totals, asOf: $0, month: shownMonth) } ?? []
+        asOf == nil ? [] : Self.categoryOrder(totals, asOf: span ?? thisMonth, month: shownMonth)
     }
 
     /// The categories with spending in the four months ending at `asOf`, most spent in `month`
@@ -341,7 +375,7 @@ struct SpendingView: View {
 
     var body: some View {
         ScrollView {
-            if let asOf, !categories.isEmpty {
+            if let asOf, !totals.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     patternsHeader
                     if fixedCategory == nil { categoryButton }
@@ -360,8 +394,8 @@ struct SpendingView: View {
         }
         .background(Color.background)
         .overlay {
-            // Spending only older than the four months shown counts as none.
-            if categories.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
+            // Any spending in the history keeps the screen, since a page with none can still be swiped past.
+            if totals.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
         }
         // Runs each time the screen shows, so a transaction moved to another category counts
         // here, and again whenever another category or month page is picked.
@@ -427,30 +461,28 @@ struct SpendingView: View {
         }
     }
 
-    /// The pager: one page per month on the chart, today's last, so swiping right goes back in
-    /// time. Each page has its month's total and the chart with that month marked. The dots
-    /// below say which page is showing.
+    /// The pager: one page per four months, today's last, so swiping right goes back in time.
+    /// A swipe picks the new page's newest month and a tap on a bar picks that month. The dots
+    /// below say where the page sits in the timeline.
     private func pager(_ asOf: String) -> some View {
-        let months = Self.months(endingAt: asOf)
-        let bars = Self.bars(totals, category: category, asOf: asOf)
-        let top = Self.axisTop(bars.map(\.total).max() ?? 0)
+        let pages = Self.pages(totals, asOf: asOf)
         return VStack(spacing: 8) {
             ScrollView(.horizontal) {
                 HStack(spacing: 0) {
-                    ForEach(months, id: \.self) { month in
-                        monthPage(month, bars: bars, top: top)
+                    ForEach(pages, id: \.self) { end in
+                        monthPage(end, asOf: asOf)
                             .containerRelativeFrame(.horizontal)
                             // Keeps the zero line's end from peeking into the next page.
                             .clipped()
                             // VoiceOver reads only the page on screen, so each month is named once.
-                            .accessibilityHidden(month != shownMonth)
+                            .accessibilityHidden(end != (span ?? thisMonth))
                     }
                 }
                 .scrollTargetLayout()
             }
             .scrollTargetBehavior(.paging)
             .scrollIndicators(.hidden)
-            .scrollPosition(id: $page)
+            .scrollPosition(id: $span)
             // Opens on today's month, the last page, with nothing after it.
             .defaultScrollAnchor(startMonth == nil ? .trailing : nil)
             // A pushed page opens on `startMonth` instead: there the anchor kept the layout from ever
@@ -459,17 +491,24 @@ struct SpendingView: View {
                 if laidOut, page == nil, let startMonth { page = startMonth }
             }
             .accessibilityIdentifier("months")
-            dots(months)
+            // The big total always matches a bar on screen, so a new page picks its newest month.
+            .onChange(of: span) { if let span { page = span } }
+            dots(pages)
         }
         // A new category re-heights the bars and rolls the total in place; with Reduce Motion
         // they change at once.
         .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: category)
     }
 
-    /// One month's page: its total and the four bars, with its own bar marked in `chartNow` and
-    /// the others in the lighter `chartPast`. An earlier month's bar also gets a ring and its amount
-    /// above it. Either way its axis label is bold.
-    private func monthPage(_ month: String, bars: [(month: String, total: Double)], top: Double) -> some View {
+    /// One page, by its last month: the marked month's total and the page's four bars on their own
+    /// dollar axis. The marked month is the picked one when it's on this page, else the page's
+    /// newest, which a swipe picks. Its bar is in `chartNow` and the others in the lighter
+    /// `chartPast`; a month before today's also gets a ring and its amount above it. Either way
+    /// its axis label is bold.
+    private func monthPage(_ end: String, asOf: String) -> some View {
+        let bars = Self.bars(totals, category: category, asOf: end)
+        let top = Self.axisTop(bars.map(\.total).max() ?? 0)
+        let month = bars.contains { $0.month == shownMonth } ? shownMonth : end
         let total = bars.first { $0.month == month }?.total ?? 0
         let isEarlier = month != thisMonth
         return VStack(alignment: .leading, spacing: 8) {
@@ -501,12 +540,17 @@ struct SpendingView: View {
             .chartXAxis {
                 AxisMarks { value in
                     // "2026-06" is shown as "Jun" ("J" at the largest text sizes, as on All months);
-                    // the page's month in bold ink.
+                    // the marked month in bold ink. A page outside today's year adds the year under it.
                     if let label = value.as(String.self) {
                         AxisValueLabel {
-                            Text((label + "-01").displayDate(.dateTime.month(dynamicTypeSize.isAccessibilitySize ? .narrow : .abbreviated)))
-                                .fontWeight(label == month ? .semibold : .regular)
-                                .foregroundStyle(label == month ? Color.ink : Color.muted)
+                            VStack(spacing: 0) {
+                                Text((label + "-01").displayDate(.dateTime.month(dynamicTypeSize.isAccessibilitySize ? .narrow : .abbreviated)))
+                                    .fontWeight(label == month ? .semibold : .regular)
+                                    .foregroundStyle(label == month ? Color.ink : Color.muted)
+                                if let year = Self.axisYear(label, pageEnd: end, asOf: asOf) {
+                                    Text(year).foregroundStyle(Color.muted)
+                                }
+                            }
                         }
                     }
                 }
@@ -539,8 +583,7 @@ struct SpendingView: View {
             }
             .onChange(of: tapped) {
                 guard let tapped else { return }
-                // Set without animation: every page draws the same bars, so jumping to the month's page
-                // reads as picking it in place, while an animated jump slid the strip like a swipe.
+                // The tapped month is on the page on screen, so the page stays and only the pick moves.
                 page = tapped
                 self.tapped = nil
             }
@@ -548,25 +591,35 @@ struct SpendingView: View {
         }
     }
 
-    /// One dot per page; the page on screen in ink. VoiceOver reads it as the
-    /// month and swipes up or down to turn the page, since the pages themselves are swiped sideways.
-    private func dots(_ months: [String]) -> some View {
-        HStack(spacing: 6) {
-            ForEach(months, id: \.self) { month in
-                let isShown = month == shownMonth
+    /// One dot per page, at most four, the newest page on the right and the page on screen in ink.
+    /// With more pages, a muted chevron sits on each side that has more beyond its dots. VoiceOver
+    /// reads the page's span, e.g. "Mar – Jun 2026", and swipes up or down to turn the page, since
+    /// the pages themselves are swiped sideways.
+    private func dots(_ pages: [String]) -> some View {
+        let index = pages.firstIndex(of: span ?? thisMonth) ?? pages.count - 1
+        let window = Self.dotWindow(count: pages.count, index: index)
+        return HStack(spacing: 6) {
+            // Both chevrons always take their room, so the dots stay centered as they come and go.
+            Image(systemName: "chevron.left").opacity(window.left ? 1 : 0)
+            ForEach(window.dots, id: \.self) { dot in
+                let isShown = dot == index
                 Circle()
                     .fill(isShown ? Color.ink : Color.line)
                     .frame(width: isShown ? dotSize + 1 : dotSize, height: isShown ? dotSize + 1 : dotSize)
             }
+            Image(systemName: "chevron.right").opacity(window.right ? 1 : 0)
         }
+        .font(.note.weight(.semibold))
+        .foregroundStyle(Color.muted)
         .frame(maxWidth: .infinity)
         .accessibilityElement()
-        .accessibilityLabel("Month")
-        .accessibilityValue((shownMonth + "-01").displayDate(.dateTime.month(.wide)))
+        .accessibilityLabel("Months")
+        .accessibilityValue(AllMonthsView.span(Self.months(endingAt: pages[index])))
+        // Lets a test see which dot is filled, which is otherwise shown only by color and size.
+        .accessibilityIdentifier("filledDot\(window.filled)")
         .accessibilityAdjustableAction { direction in
-            guard let index = months.firstIndex(of: shownMonth) else { return }
             let next = direction == .increment ? index + 1 : index - 1
-            if months.indices.contains(next) { withAnimation(Self.pageTurn(reduceMotion: reduceMotion)) { page = months[next] } }
+            if pages.indices.contains(next) { withAnimation(Self.pageTurn(reduceMotion: reduceMotion)) { span = pages[next] } }
         }
     }
 
