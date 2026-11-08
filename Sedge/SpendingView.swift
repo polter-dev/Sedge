@@ -199,6 +199,13 @@ struct SpendingView: View {
         return pages
     }
 
+    /// The page holding `month`, by its last month "YYYY-MM", counted in fours back from `asOf`'s month as `pages` counts.
+    static func pageEnd(holding month: String, asOf: String) -> String {
+        var end = String(asOf.prefix(7))
+        while let start = months(endingAt: end).first, start > month { end = monthBefore(start) }
+        return end
+    }
+
     /// The page dots for page `index` of `count` (oldest first): at most four dots, as indexes of
     /// pages, which of them is filled, and whether more pages lie past the left or right dot.
     static func dotWindow(count: Int, index: Int) -> (dots: Range<Int>, filled: Int, left: Bool, right: Bool) {
@@ -283,10 +290,10 @@ struct SpendingView: View {
     }
 
     /// With "All", the category whose spending changed most from the month before `month`, among
-    /// the ones the category sheet lists, so tapping it always picks a listed category. On the
-    /// oldest page the month before is not one of the four shown, so a category spent only then is left out.
+    /// the ones spent on `month`'s page, so tapping it always opens a category of that page. When
+    /// the month before is on the page before, a category spent only then is left out.
     static func categoryChange(_ totals: [SpendingTotal], asOf: String, month: String) -> (name: String, cents: Int)? {
-        let listed = Set(categoryOrder(totals, asOf: asOf, month: month))
+        let listed = Set(categoryOrder(totals, asOf: pageEnd(holding: month, asOf: asOf), month: month))
         return biggestChange(now: cents(totals, month: month), before: cents(totals, month: monthBefore(month)).filter { listed.contains($0.key) })
     }
 
@@ -485,14 +492,18 @@ struct SpendingView: View {
             .scrollPosition(id: $span)
             // Opens on today's month, the last page, with nothing after it.
             .defaultScrollAnchor(startMonth == nil ? .trailing : nil)
-            // A pushed page opens on `startMonth` instead: there the anchor kept the layout from ever
+            // A pushed page opens on `startMonth`'s page instead: there the anchor kept the layout from ever
             // settling, and a page set before the pages have a width is ignored, so it is set once they do.
             .onScrollGeometryChange(for: Bool.self, of: { $0.contentSize.width > $0.containerSize.width }) { _, laidOut in
-                if laidOut, page == nil, let startMonth { page = startMonth }
+                if laidOut, span == nil, let startMonth {
+                    page = startMonth
+                    span = Self.pageEnd(holding: startMonth, asOf: asOf)
+                }
             }
             .accessibilityIdentifier("months")
-            // The big total always matches a bar on screen, so a new page picks its newest month.
-            .onChange(of: span) { if let span { page = span } }
+            // The big total always matches a bar on screen, so a new page picks its newest month
+            // (a pushed page's first page keeps `startMonth`, already on it).
+            .onChange(of: span) { if let span, !Self.months(endingAt: span).contains(shownMonth) { page = span } }
             dots(pages)
         }
         // A new category re-heights the bars and rolls the total in place; with Reduce Motion

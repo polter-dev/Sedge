@@ -824,9 +824,11 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Groceries"].exists)
     }
 
-    /// With "All" on May, tapping a category block opens that category's own page on May, going
-    /// back finds "All" still on May, and a second block opens its page too. The screenshots are
-    /// All, the pushed page and All after going back, in light, or dark after
+    /// With "All" on an earlier page (November to February) with January picked, tapping a category
+    /// block opens that category's own page on January and that page, going back finds "All" still
+    /// there, and a second block opens its page too. Groceries in January, counted by hand over the
+    /// 1st to the 30th: $19.11 + $18.87 + $20.19 + $25.01 = $83.18. The screenshots are All on the
+    /// newest page, the pushed page and All after going back, in light, or dark after
     /// `xcrun simctl ui <device> appearance dark`.
     @MainActor
     func testAllCategoryBlocksOpenTheirOwnPages() throws {
@@ -836,9 +838,13 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Trends"].tap()
         chooseSpendingCategory(app, "All")
-        app.otherElements["May"].tap()
-        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
-        attachScreenshot(app, "all-may")
+        XCTAssertTrue(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 5))
+        attachScreenshot(app, "all-newest")
+        app.scrollViews["months"].swipeRight()
+        XCTAssertTrue(app.staticTexts["Connected spending · February"].waitForExistence(timeout: 5))
+        app.otherElements["January"].tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · January"].waitForExistence(timeout: 5))
+        let earlier = "Nov 2025\u{2009}–\u{2009}Feb 2026"
 
         let blocks = app.buttons.matching(identifier: "categoryBlock")
         let groceries = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Groceries, '")).firstMatch
@@ -846,28 +852,32 @@ final class SedgeUITests: XCTestCase {
         groceries.tap()
         XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["by store"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Connected spending · May"].exists)
-        XCTAssertEqual(app.otherElements["shownMonth"].label, "May")
-        // May's page is the one on screen, not only the one picked.
+        XCTAssertTrue(app.staticTexts["Connected spending · January"].exists)
+        XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
+        // January's page is the one on screen, not only the one picked, and its dots say so.
         XCTAssertTrue(app.windows.firstMatch.frame.contains(app.otherElements["shownMonth"].frame))
-        XCTAssertEqual(app.staticTexts["total"].label, "$115")
+        XCTAssertEqual(app.staticTexts["total"].label, "$83")
+        XCTAssertEqual(app.otherElements["Months"].value as? String, earlier)
+        XCTAssertEqual(app.otherElements["Months"].identifier, "filledDot0")
         Thread.sleep(forTimeInterval: 0.5) // the push's slide
-        attachScreenshot(app, "pushed-groceries")
+        attachScreenshot(app, "pushed-groceries-earlier")
 
         app.navigationBars.buttons.firstMatch.tap()
         let category = app.buttons["Category"]
         XCTAssertTrue(category.waitForExistence(timeout: 5))
         XCTAssertEqual(category.value as? String, "All")
-        XCTAssertEqual(app.otherElements["shownMonth"].label, "May")
+        XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
+        XCTAssertEqual(app.otherElements["Months"].value as? String, earlier)
         XCTAssertTrue(app.staticTexts["by category"].exists)
         Thread.sleep(forTimeInterval: 0.5)
-        attachScreenshot(app, "all-may-after-back")
+        attachScreenshot(app, "all-after-back")
 
         let housing = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Housing, '")).firstMatch
         XCTAssertTrue(housing.waitForExistence(timeout: 5))
         housing.tap()
         XCTAssertTrue(app.navigationBars["Housing"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["by store"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
     }
 
     /// With "All", the Biggest change row (Groceries on Maya's June) opens Groceries' own page,

@@ -242,6 +242,19 @@ func biggestChangeMatchesAHandCount(persona: String, category: String?, name: St
     #expect(SpendingView.categoryOrder(totals, asOf: "2026-06-30", month: "2026-03").contains(change?.name ?? ""))
 }
 
+/// On an earlier page (November to February), "All"'s biggest change picks among that page's
+/// categories: travel, spent only in January, fell $900 in February and wins over dining's +$10.
+@Test func categoryChangeUsesThePickedPagesCategories() {
+    let totals = [SpendingTotal(month: "2026-01", category: "travel", total: 900), SpendingTotal(month: "2026-01", category: "dining", total: 40),
+                  SpendingTotal(month: "2026-02", category: "dining", total: 50), SpendingTotal(month: "2026-06", category: "coffee", total: 5)]
+    let change = SpendingView.categoryChange(totals, asOf: "2026-06-30", month: "2026-02")
+    #expect(change?.name == "travel" && change?.cents == -90000, "\(String(describing: change))")
+    #expect(SpendingView.pageEnd(holding: "2026-02", asOf: "2026-06-30") == "2026-02")
+    #expect(SpendingView.pageEnd(holding: "2025-11", asOf: "2026-06-30") == "2026-02")
+    #expect(SpendingView.pageEnd(holding: "2025-10", asOf: "2026-06-30") == "2025-10")
+    #expect(SpendingView.pageEnd(holding: "2026-03", asOf: "2026-06-30") == "2026-06")
+}
+
 /// For Maya and Daniel, every page's "All" biggest change is the same as comparing every category,
 /// so leaving out unlisted categories changes none of their numbers.
 @Test(arguments: ["maya", "daniel"])
