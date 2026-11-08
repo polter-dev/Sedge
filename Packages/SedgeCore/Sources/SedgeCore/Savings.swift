@@ -116,7 +116,7 @@ public enum Savings {
         // Every day of data, today included, for the tight-stretch rate below.
         let days = try daysBack(earliest) + 1
         // Tight days (as days back from today), or nil with no bank balance to tell them from others.
-        let tight = try tightDays(db, today: today, days: days, daysBack: daysBack)
+        let tight = try tightDays(db, today: today, days: days)
         let largest = stores.values.map { $0.map(\.cents).reduce(0, +) }.max() ?? 1
 
         var ranked: [Cut] = []
@@ -167,27 +167,10 @@ public enum Savings {
     /// with under 7 days of data has none. It is per month, not the lowest weeks of all the data,
     /// because balances drift (they rise over the half-year for every persona): the lowest weeks
     /// overall would all be early ones and measure early spending, not spending when money is short.
-    /// Each day's closing balance is found by undoing, from today's balance, every posted
-    /// transaction after it.
-    private static func tightDays(_ db: Database, today: Date, days: Int, daysBack: (String) throws -> Int) throws -> Set<Int>? {
-        // The same account simulate_balance and the cash-flow screen use.
-        guard let id = try Simulator.checkingAccount(db), let checking = try Row.fetchOne(db, sql: """
-            SELECT account_id, ROUND(json_extract(balances, '$.current') * 100) FROM accounts WHERE account_id = ?
-            """, arguments: [id]) else { return nil }
-        // Cents that left (positive) or came into (negative) the account, per day back from today.
-        var moved = Array(repeating: 0, count: days)
-        for row in try Row.fetchAll(db, sql: "SELECT date, CAST(ROUND(amount * 100) AS INTEGER) FROM transactions WHERE account_id = ? AND NOT pending",
-                                    arguments: [checking[0] as String]) {
-            let back = try daysBack(row[0])
-            if back >= 0 && back < moved.count { moved[back] += row[1] as Int }
-        }
-        // Walking back a day adds back what left that day: Plaid's positive amount lowered the balance.
-        var balance = checking[1] as Int
-        var closing = Array(repeating: 0, count: days)
-        for back in 0..<days {
-            closing[back] = balance
-            balance += moved[back]
-        }
+    /// Each day's closing balance comes from `Simulator.closingBalances`, on the same account
+    /// simulate_balance and the cash-flow screen use.
+    private static func tightDays(_ db: Database, today: Date, days: Int) throws -> Set<Int>? {
+        guard let closing = try Simulator.closingBalances(db, days: days) else { return nil }
         // Days grouped by calendar month ("YYYY-MM"), each month's days oldest first.
         let months = Dictionary(grouping: (0..<days).reversed()) { back in
             Simulator.text(Simulator.calendar.date(byAdding: .day, value: -back, to: today)!).prefix(7)

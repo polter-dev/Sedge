@@ -232,3 +232,42 @@ private func madeUpPerson(extra: [(String, String, String, Double)] = [], idleCh
     #expect(answer["note"] as? String == "Can't reach the goal without cutting bills.")
     #expect(rows(answer, "cuts").count == 4)
 }
+
+/// The shared wind-back (`Simulator.closingBalances`, which `Savings` reads its tight days from):
+/// each day's closing checking balance is today's balance plus every posted checking transaction
+/// after that day, summed here in SQL instead. `closingBalance(on:)` reads the same list.
+@Test(arguments: ["maya", "daniel"])
+func closingBalancesUndoLaterTransactions(persona: String) throws {
+    let database = try organizedPersona(persona)
+    try database.dbQueue.read { db in
+        let account = try #require(try Simulator.checkingAccount(db))
+        let closing = try #require(try Simulator.closingBalances(db, days: 200))
+        #expect(closing.count == 200)
+        for back in closing.indices {
+            let day = Simulator.text(Simulator.calendar.date(byAdding: .day, value: -back, to: try Simulator.date(Persona.asOf))!)
+            let expected = try #require(try Int.fetchOne(db, sql: """
+                SELECT ROUND(json_extract(a.balances, '$.current') * 100)
+                     + COALESCE((SELECT SUM(CAST(ROUND(t.amount * 100) AS INTEGER)) FROM transactions t
+                                 WHERE t.account_id = a.account_id AND NOT t.pending AND t.date > ? AND t.date <= ?), 0)
+                FROM accounts a WHERE a.account_id = ?
+                """, arguments: [day, Persona.asOf, account]))
+            #expect(closing[back] == expected, "\(persona) \(day)")
+        }
+        #expect(try Simulator.closingBalance(db, on: "2026-05-30") == closing[31])
+        #expect(try Simulator.closingBalance(db, on: Persona.asOf) == closing[0])
+        #expect(try Simulator.closingBalance(db, on: "2026-07-01") == nil)
+    }
+}
+
+/// savings_options answers exactly as it did before the wind-back moved out of `Savings` (#232):
+/// the replies and daniel's whole ranked list were recorded from the old code.
+@Test func savingsOutputUnchangedByTheSharedWindBack() throws {
+    let tool = try #require(Tool.named("savings_options"))
+    #expect(tool.call(Data(#"{"goal_amount": 200}"#.utf8), database: try organizedPersona("maya")) == #"{"cuts":[{"category":"subscriptions","evidence":"bought in 5 of 25 weeks; once a month at most, so not judged on lowest-balance weeks","per_month":16.74,"store":"Netflix","value":0.29},{"category":"dining","evidence":"bought in 12 of 25 weeks; 27% of usual in each month's lowest-balance week","per_month":20.86,"store":"Corner Cafe","value":0.32},{"category":"coffee","evidence":"bought in 24 of 25 weeks; 88% of usual in each month's lowest-balance week","per_month":11.87,"store":"Bean Street Coffee","value":0.65},{"category":"groceries","evidence":"bought in 22 of 25 weeks; 87% of usual in each month's lowest-balance week","per_month":95.77,"store":"Value Mart","value":0.92}],"goal_per_month":200,"note":"Can't reach the goal without cutting bills.","reached":false,"short_by":54.76,"total_per_month":145.24}"#)
+    let daniel = try organizedPersona("daniel")
+    #expect(tool.call(Data(#"{"goal_amount": 1000}"#.utf8), database: daniel) == #"{"cuts":[{"category":"subscriptions","evidence":"bought in 5 of 25 weeks; once a month at most, so not judged on lowest-balance weeks","per_month":16.74,"store":"Netflix","value":0.25},{"category":"shopping","evidence":"bought in 8 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":47.29,"store":"Homegoods","value":0.49},{"category":"shopping","evidence":"bought in 7 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":70.6,"store":"Amazon","value":0.5},{"category":"coffee","evidence":"bought in 12 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":10.21,"store":"Bean Street Coffee","value":0.5},{"category":"dining","evidence":"bought in 22 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":180.01,"store":"Corner Cafe","value":0.81}],"goal_per_month":1000,"note":"Can't reach the goal without cutting bills.","reached":false,"short_by":675.15,"total_per_month":324.85}"#)
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = .sortedKeys
+    let ranked = try daniel.dbQueue.read { try Savings.ranked($0) }
+    #expect(String(decoding: try encoder.encode(ranked), as: UTF8.self) == #"[{"category":"subscriptions","evidence":"bought in 5 of 25 weeks; once a month at most, so not judged on lowest-balance weeks","per_month":16.74,"store":"Netflix","value":0.25},{"category":"shopping","evidence":"bought in 8 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":47.29,"store":"Homegoods","value":0.49},{"category":"shopping","evidence":"bought in 7 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":70.6,"store":"Amazon","value":0.5},{"category":"coffee","evidence":"bought in 12 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":10.21,"store":"Bean Street Coffee","value":0.5},{"category":"dining","evidence":"bought in 22 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":180.01,"store":"Corner Cafe","value":0.81},{"category":"gas","evidence":"bought in 24 of 25 weeks; 100% of usual in each month's lowest-balance week","per_month":163.88,"store":"Shell Service Station","value":0.82},{"category":"groceries","evidence":"bought in 21 of 25 weeks; 72% of usual in each month's lowest-balance week","per_month":334.21,"store":"Value Mart","value":0.85}]"#)
+}
