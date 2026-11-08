@@ -118,7 +118,7 @@ struct CategoryView: View {
             do {
                 let asOf = try database.asOf()
                 guard let asOf else { return }
-                totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: Int(asOf.suffix(2)) ?? 31)
+                totals = try SpendingTotal.all(in: database, throughDay: Int(asOf.suffix(2)) ?? 31)
                 rows = try Self.rows(in: database, category: category, month: shown, asOf: asOf)
                 rowsBefore = try Self.rows(in: database, category: category, month: SpendingView.monthBefore(shown), asOf: asOf)
                 self.asOf = asOf
@@ -224,7 +224,7 @@ struct CategoryView: View {
                     }
                     GeometryReader { space in
                         // A store refunded more than it spent has no bar.
-                        Capsule().fill(AllMonthsView.color(category)).frame(width: space.size.width * min(1, max(0, share)))
+                        Capsule().fill(SpendingView.color(category)).frame(width: space.size.width * min(1, max(0, share)))
                     }
                     .frame(height: 6)
                 }
@@ -270,7 +270,7 @@ struct CategoryView: View {
         .accessibilityIdentifier("categoryChange")
     }
 
-    /// One transaction, as the month's transaction sheet lists it: date, store and amount.
+    /// One transaction in the page's list: date, store and amount.
     private func transactionRow(_ row: ListedTransaction) -> some View {
         let layout = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
             : AnyLayout(HStackLayout(spacing: 12))
@@ -325,8 +325,8 @@ struct MonthCategoriesSheet: View {
     let totals: [SpendingTotal]
     /// "YYYY-MM".
     let month: String
-    /// True for today's month, whose title says "so far".
-    let isThisMonth: Bool
+    /// The dataset's "today", "YYYY-MM-DD", for the title.
+    let asOf: String
     let open: (String) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -335,31 +335,61 @@ struct MonthCategoriesSheet: View {
     static func rows(_ totals: [SpendingTotal], month: String) -> [(category: String, cents: Int, dollars: Int)] {
         let spent = SpendingView.cents(totals, month: month)
             .sorted { ($0.value, SpendingView.title($1.key)) > ($1.value, SpendingView.title($0.key)) }
-        return zip(spent, AllMonthsView.wholeDollars(spent.map(\.value))).map { ($0.key, $0.value, $1) }
+        return zip(spent, wholeDollars(spent.map(\.value))).map { ($0.key, $0.value, $1) }
+    }
+
+    /// The sheet's title: "June so far" for today's month; the days counted when they cut a past
+    /// month short, e.g. "May 1 – 30, 2026"; else the month's name, e.g. "April".
+    static func title(month: String, asOf: String) -> String {
+        let name = (month + "-01").displayDate(.dateTime.month(.wide))
+        if month == asOf.prefix(7) { return "\(name) so far" }
+        let day = Date.ISO8601FormatStyle().year().month().day()
+        // A day past the month's end rolls into the next month ("2026-04-31" reads as May 1), so the
+        // window is the whole month exactly when the day after its last day isn't in the month.
+        guard let start = try? Date(month + "-01", strategy: day),
+              let last = try? Date(SpendingView.window(month, asOf: asOf).through, strategy: day),
+              (last + 86_400).formatted(day).hasPrefix(month) else { return name }
+        // The dates are midnight UTC, so they're shown in UTC too, as `SpendingView.span` does.
+        return (start..<last).formatted(Date.IntervalFormatStyle(timeZone: .gmt).month(.abbreviated).day().year())
+    }
+
+    /// Cents rounded to the nearest whole dollar, 50 cents to the even dollar, as the bars' dollar
+    /// format rounds, so Total always reads the same as its month's bar.
+    static func rounded(_ cents: Int) -> Int { Int((Double(cents) / 100).rounded(.toNearestOrEven)) }
+
+    /// Whole dollars for amounts in cents that add up exactly to their total rounded to the
+    /// dollar (largest-remainder rounding): each is rounded down, then the dollars still missing
+    /// go one each to the biggest leftover cents, the earlier amount first on a tie. Rounding each
+    /// on its own can be $1 off: $1.50 + $1.50 + $1.00 is $4, but $2 + $2 + $1 is $5.
+    static func wholeDollars(_ cents: [Int]) -> [Int] {
+        let floors = cents.map { Int((Double($0) / 100).rounded(.down)) }
+        let left = cents.indices.map { cents[$0] - floors[$0] * 100 }
+        let missing = rounded(cents.reduce(0, +)) - floors.reduce(0, +)
+        let raised = Set(cents.indices.sorted { (left[$0], $1) > (left[$1], $0) }.prefix(missing))
+        return cents.indices.map { floors[$0] + (raised.contains($0) ? 1 : 0) }
     }
 
     var body: some View {
         let rows = Self.rows(totals, month: month)
         let total = rows.reduce(0) { $0 + $1.cents }
-        let name = (month + "-01").displayDate(.dateTime.month(.wide))
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(isThisMonth ? "\(name) so far" : name).font(.title3.bold()).foregroundStyle(Color.ink)
+                    Text(Self.title(month: month, asOf: asOf)).font(.title3.bold()).foregroundStyle(Color.ink)
                     Spacer(minLength: 8)
                     Button("Done") { dismiss() }.font(.headline).frame(minHeight: 44)
                 }
-                ShareRow(name: "Total", dollars: AllMonthsView.rounded(total), share: 1, color: .chartPast, bold: true)
+                ShareRow(name: "Total", dollars: Self.rounded(total), share: 1, color: .chartPast, bold: true)
                     .padding(.top, 12)
                     .padding(.bottom, 6)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Total")
-                    .accessibilityValue(AllMonthsView.rounded(total).formatted(.currency(code: "USD")))
+                    .accessibilityValue(Self.rounded(total).formatted(.currency(code: "USD")))
                 ForEach(rows, id: \.category) { row in
                     let title = SpendingView.title(row.category)
                     Button { open(row.category) } label: {
                         ShareRow(name: title, dollars: row.dollars, share: total > 0 ? Double(row.cents) / Double(total) : 0,
-                                 color: AllMonthsView.color(row.category))
+                                 color: SpendingView.color(row.category))
                             .frame(minHeight: 44)
                             .contentShape(.rect)
                     }

@@ -93,7 +93,7 @@ struct StoreContext: Equatable {
 }
 
 /// One transaction: when, where, how much, Sedge's context, and the person's answers about it.
-/// Opened from the transactions list and the Spending screen's latest transaction.
+/// Opened from the transactions list and a category's page on Trends.
 struct TransactionDetailView: View {
     let database: SedgeDatabase
     let id: String

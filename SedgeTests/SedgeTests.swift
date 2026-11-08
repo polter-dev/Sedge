@@ -59,12 +59,7 @@ struct SedgeTests {
     @Test(arguments: Persona.all) func newScreensHaveData(persona: String) throws {
         let database = try SedgeDatabase.open(persona)
 
-        // Money moved between accounts only shows up when the toggle asks for it, and adds to the total.
-        let spending = try SpendingTotal.all(in: database, includeMoved: false)
-        let withMoved = try SpendingTotal.all(in: database, includeMoved: true)
-        #expect(!spending.isEmpty)
-        #expect(!spending.contains { $0.category == SpendingTotal.movedCategory })
-        #expect(withMoved.contains { $0.category == SpendingTotal.movedCategory && $0.total > 0 })
+        #expect(!(try SpendingTotal.all(in: database)).isEmpty)
 
         // A $400 purchase tomorrow lowers every projected checking balance by $400.
         let tomorrow = try #require(try CashFlow.load(database)?.without.first?.date)

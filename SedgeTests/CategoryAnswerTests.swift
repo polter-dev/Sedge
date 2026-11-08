@@ -17,7 +17,7 @@ import Testing
                      into: database)
     try Organizer.organize(database)
     func may(_ category: String) throws -> Double {
-        try SpendingTotal.all(in: database, includeMoved: false).first { $0.month == "2026-05" && $0.category == category }?.total ?? 0
+        try SpendingTotal.all(in: database).first { $0.month == "2026-05" && $0.category == category }?.total ?? 0
     }
     let dining = try may("dining"), groceries = try may("groceries")
 

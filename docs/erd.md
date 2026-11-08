@@ -156,8 +156,8 @@ erDiagram
 - **accounts.owner**, **transactions.familiar** and **transactions.category_override** are the
   person's answers about one account or transaction, set and cleared by `Answers`. A category
   belongs to a store (its in_category edge); `category_override` moves one transaction to
-  another category wherever spending is split by category (the tools' category input and the
-  Spending and All months screens). Like merchant_id they aren't part of `Account` or
+  another category wherever spending is split by category (the tools' category input, the
+  Spending screen and the category pages). Like merchant_id they aren't part of `Account` or
   `Transaction`, so reloading the data or organizing again keeps them. A pending charge's
   answers stay with the pending row, so they are dropped when it posts under a new id.
 - **accounts.nickname** is the person's own name for an account, typed in the account check

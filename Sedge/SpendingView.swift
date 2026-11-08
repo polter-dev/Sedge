@@ -12,12 +12,9 @@ import SwiftUI
 struct SpendingTotal: Decodable, FetchableRecord {
     /// "YYYY-MM".
     let month: String
-    /// The category the person moved the transaction to, else the organizer's category for the store, or `movedCategory`.
+    /// The category the person moved the transaction to, else the organizer's category for the store.
     let category: String
     let total: Double
-
-    /// The category name used for money sent to the person's own accounts.
-    static let movedCategory = "moved between accounts"
 
     /// A transaction's category, as the tools' `spendingFilter` reads it: the person's answer
     /// first, then the store's `in_category` edge. Both queries on this screen use it, so they agree.
@@ -28,32 +25,29 @@ struct SpendingTotal: Decodable, FetchableRecord {
     static let categoryOf = "COALESCE(t.category_override, c.name, 'other')"
 
     /// Spending per month and category, counted the way the tools count it: posted spending
-    /// less refunds. With `includeMoved`, transfers and card payments are added as their own
-    /// category. Only the side leaving an account (a positive amount) is counted, because the
-    /// other side is the same money arriving and would cancel it out. `throughDay` keeps only
-    /// the first that many days of each month, so months can be compared at the same point.
-    static func all(in database: SedgeDatabase, includeMoved: Bool, throughDay: Int = 31) throws -> [SpendingTotal] {
+    /// less refunds; money moved between the person's own accounts isn't spending. `throughDay`
+    /// keeps only the first that many days of each month, so months can be compared at the same point.
+    static func all(in database: SedgeDatabase, throughDay: Int = 31) throws -> [SpendingTotal] {
         try database.dbQueue.read { db in
             try SpendingTotal.fetchAll(db, sql: """
                 SELECT substr(t.date, 1, 7) AS month,
-                       CASE WHEN t.kind IN ('transfer', 'card_payment') THEN ? ELSE \(categoryOf) END AS category,
+                       \(categoryOf) AS category,
                        SUM(ROUND(t.amount * 100)) / 100.0 AS total
                 FROM transactions t
                 \(categoryJoins)
                 WHERE NOT t.pending
-                  AND (t.kind IN ('spending', 'refund') OR (? AND t.kind IN ('transfer', 'card_payment') AND t.amount > 0))
+                  AND t.kind IN ('spending', 'refund')
                   AND CAST(substr(t.date, 9, 2) AS INTEGER) <= ?
                 GROUP BY month, category
                 ORDER BY month, category
-                """, arguments: [movedCategory, includeMoved, throughDay])
+                """, arguments: [throughDay])
         }
     }
 }
 
 extension ListedTransaction {
     /// Spending (and refunds) in one category between two dates, newest first, counted the
-    /// same way as `SpendingTotal.all` and the tools' `total_spent`. With `SpendingTotal.movedCategory`
-    /// it lists money moved instead, only the side leaving an account, as `SpendingTotal.all` counts it.
+    /// same way as `SpendingTotal.all` and the tools' `total_spent`.
     static func spending(in database: SedgeDatabase, category: String, from start: String, through end: String) throws -> [ListedTransaction] {
         try database.dbQueue.read { db in
             try ListedTransaction.fetchAll(db, sql: """
@@ -62,17 +56,17 @@ extension ListedTransaction {
                 LEFT JOIN entities m ON m.id = t.merchant_id
                 \(SpendingTotal.categoryJoins)
                 WHERE NOT t.pending
-                  AND (t.kind IN ('spending', 'refund') OR (t.kind IN ('transfer', 'card_payment') AND t.amount > 0))
+                  AND t.kind IN ('spending', 'refund')
                   AND t.date BETWEEN ? AND ?
-                  AND CASE WHEN t.kind IN ('transfer', 'card_payment') THEN ? ELSE \(SpendingTotal.categoryOf) END = ?
+                  AND \(SpendingTotal.categoryOf) = ?
                 ORDER BY t.date DESC, t.transaction_id DESC
-                """, arguments: [start, end, SpendingTotal.movedCategory, category])
+                """, arguments: [start, end, category])
         }
     }
 }
 
-/// The Trends tab's Spending screen: one category's months (or every category's, with "All")
-/// four to a page over the whole history, and a mosaic of what made up the picked month.
+/// The Trends tab's Spending screen: every category's months added up, four to a page over the
+/// whole history, and a mosaic of the categories that made up the picked month.
 struct SpendingView: View {
     let database: SedgeDatabase
     /// Opens Ask with a question typed in, for a category page's question chip.
@@ -81,42 +75,31 @@ struct SpendingView: View {
     @State private var asOf: String?
     /// Spending per month and category over the first `day` days of each month.
     @State private var totals: [SpendingTotal] = []
-    /// The picked category; nil is "All".
-    @State private var category: String?
-    /// The page's spending in `category`, newest first; empty with "All".
-    @State private var rows: [ListedTransaction] = []
-    /// The store tapped last, by name.
-    @State private var selected: String?
     /// The picked month, "YYYY-MM"; it starts on today's month.
     @State private var page: String?
     /// The page on screen, by its last month "YYYY-MM"; nil is the last page, ending at today's month.
     @State private var span: String?
     /// The month under the last tap on the chart, cleared again once `page` is set from it.
     @State private var tapped: String?
-    /// The store (or, with "All", the category) whose spending changed most from the month before
-    /// the page's, the change in cents, and for a store its latest transaction's id.
-    @State private var change: (name: String, cents: Int, latest: String?)?
+    /// The category whose spending changed most from the month before the page's, and the change in cents.
+    @State private var change: (name: String, cents: Int)?
     /// The next 30 days of checking, as the Cash flow screen first shows them; nil without a bank account.
     @State private var cashFlow: CashFlow?
     /// The cash-flow card's figures for the picked month; nil until loaded.
     @State private var monthFlow: MonthFlow?
-    /// The transaction a double-tapped store opens, by id; nil when none is open.
-    @State private var opened: String?
     /// How many recent purchases are worth a look; the row for them shows only above 0.
     @State private var worthALook = 0
     /// True while the Worth a look sheet is open.
     @State private var showingWorthALook = false
-    /// True while the category sheet is open.
-    @State private var showingCategories = false
     /// True while the month's categories sheet, opened from the "Other categories" block, is open.
     @State private var showingMonthCategories = false
-    /// The category an "All" block, the Biggest change row or the month's categories sheet pushes its page for; nil when none is pushed.
+    /// The category a block, the Biggest change row or the month's categories sheet pushes its page for; nil when none is pushed.
     @State private var pushed: String?
 
-    /// One store in the mosaic, or "Other stores" for the rest.
+    /// One store of a category's page.
     struct Store: Identifiable {
         let name: String
-        /// Its transactions this month, newest first, so the first is the latest.
+        /// Its transactions this month, newest first.
         let rows: [ListedTransaction]
         var id: String { name }
         /// Summed in whole cents, as the tools sum.
@@ -133,12 +116,12 @@ struct SpendingView: View {
         let checking: Int?
     }
 
-    /// The name of the "All" mosaic's block that adds up the smaller categories.
+    /// The name of the mosaic's block that adds up the smaller categories.
     static let otherCategories = "Other categories"
 
-    /// A mosaic block's color: with "All" its own category's, the same as on All months (Other
-    /// categories in `second`); with one category picked, every store block takes that category's.
-    static func blockColor(_ name: String, category: String?) -> Color { AllMonthsView.color(category ?? name) }
+    /// A category's color, by its stored name: in the mosaic, on its page and in the month's
+    /// categories sheet. Other categories, and any category without a hue, are `second`.
+    static func color(_ category: String) -> Color { Color.category(title(category)) }
 
     /// The four months the bars cover (or `count` months), oldest first, as "YYYY-MM": `asOf`'s
     /// month and the ones before it. `asOf` may be "YYYY-MM-DD" or "YYYY-MM".
@@ -176,7 +159,7 @@ struct SpendingView: View {
     }
 
     /// The days one month's bar covers: its first day through the same day of the month as
-    /// today, so the mosaic and the latest row for that month add up to its bar. A shorter month
+    /// today, so the mosaic and the category pages for that month add up to its bar. A shorter month
     /// just ends sooner, since "2026-02-30" still sorts after every February date.
     static func window(_ month: String, asOf: String) -> (from: String, through: String) {
         (month + "-01", month + "-" + asOf.suffix(2))
@@ -224,7 +207,17 @@ struct SpendingView: View {
     /// The month before `month`, "YYYY-MM".
     static func monthBefore(_ month: String) -> String { months(endingAt: month + "-01")[2] }
 
-    /// The change beside "Your patterns": the month's bar against the month before's, e.g.
+    /// Months ("YYYY-MM", oldest first) written for people, e.g. "Mar – Jun 2026" or "Nov 2025 – Feb 2026".
+    static func span(_ months: [String]) -> String {
+        let day = Date.ISO8601FormatStyle().year().month().day()
+        guard let first = months.first, let last = months.last,
+              let start = try? Date(first + "-01", strategy: day), let end = try? Date(last + "-01", strategy: day)
+        else { return "" }
+        // The dates are midnight UTC, so they're shown in UTC too, as `displayDate` does.
+        return (start..<end).formatted(Date.IntervalFormatStyle(timeZone: .gmt).month(.abbreviated).year())
+    }
+
+    /// The change beside the total: the month's bar against the month before's, e.g.
     /// "+24% vs Apr". Nil when nothing was spent the month before, as there is no percentage to give.
     static func changeLine(_ totals: [SpendingTotal], category: String?, month: String) -> String? {
         // The four bars ending at `month`; the last two are the month before and the month itself.
@@ -235,18 +228,7 @@ struct SpendingView: View {
         return String(format: "%+d%%", percent) + " vs " + (pair[0].month + "-01").displayDate(.dateTime.month(.abbreviated))
     }
 
-    /// The biggest three stores and "Other stores" for the rest, or every store when there are
-    /// four or fewer, so the mosaic never has more than four blocks.
-    static func stores(_ rows: [ListedTransaction]) -> [Store] {
-        // Grouping keeps each store's rows in their newest-first order.
-        let all = Dictionary(grouping: rows, by: \.store).map { Store(name: $0.key, rows: $0.value) }
-            .sorted { ($0.total, $1.name) > ($1.total, $0.name) }
-        guard all.count > 4 else { return all }
-        let rest = Set(all.dropFirst(3).map(\.name))
-        return Array(all.prefix(3)) + [Store(name: "Other stores", rows: rows.filter { rest.contains($0.store) })]
-    }
-
-    /// The "All" mosaic for one month: the biggest three categories and `otherCategories` for the
+    /// The mosaic for one month: the biggest three categories and `otherCategories` for the
     /// rest added up in cents, or every category when there are four or fewer.
     static func categoryBlocks(_ totals: [SpendingTotal], month: String) -> [(name: String, total: Double)] {
         let all = rankedCategories(totals, month: month)
@@ -280,7 +262,7 @@ struct SpendingView: View {
         return top
     }
 
-    /// With "All", the category whose spending changed most from the month before `month`, among
+    /// The category whose spending changed most from the month before `month`, among
     /// the ones spent on `month`'s page, so tapping it always opens a category of that page. When
     /// the month before is on the page before, a category spent only then is left out.
     static func categoryChange(_ totals: [SpendingTotal], asOf: String, month: String) -> (name: String, cents: Int)? {
@@ -347,11 +329,6 @@ struct SpendingView: View {
     /// The month the screen shows, "YYYY-MM": the page's, else today's.
     private var shownMonth: String { page ?? thisMonth }
 
-    /// The categories with spending in the four months shown, in the category sheet's order.
-    private var categories: [String] {
-        asOf == nil ? [] : Self.categoryOrder(totals, asOf: span ?? thisMonth, month: shownMonth)
-    }
-
     /// The categories with spending in the four months ending at `asOf`, most spent in `month`
     /// first (a category with none that month counts $0), and by name on a tie.
     static func categoryOrder(_ totals: [SpendingTotal], asOf: String, month: String) -> [String] {
@@ -381,7 +358,7 @@ struct SpendingView: View {
     @ScaledMetric(relativeTo: .caption) private var blockWidth: CGFloat = 80
     /// A block narrower than this shows only its name's first word.
     @ScaledMetric(relativeTo: .caption) private var shortName: CGFloat = 84
-    /// The reader's Reduce Motion setting: when on, a new category or page changes the chart without animating.
+    /// The reader's Reduce Motion setting: when on, a new page changes without animating.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -389,16 +366,10 @@ struct SpendingView: View {
         ScrollView {
             if let asOf, !totals.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    patternsHeader
-                    categoryButton
                     pager(asOf)
                     connected
                     if let change { changeRow(change) }
                     cashFlowCard
-                    allMonthsLink
-                    if let store = Self.stores(rows).first(where: { $0.name == selected }), let row = store.rows.first {
-                        latest(row)
-                    }
                     if worthALook > 0 { worthALookRow }
                 }
                 .padding(.horizontal, 20)
@@ -411,32 +382,16 @@ struct SpendingView: View {
             if totals.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
         }
         // Runs each time the screen shows, so a transaction moved to another category counts
-        // here, and again whenever another category or month page is picked.
-        .task(id: [category ?? "", page ?? ""]) {
+        // here, and again whenever another month is picked.
+        .task(id: page) {
             do {
                 let first = asOf == nil
                 asOf = try database.asOf()
-                totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: day)
-                if first {
-                    // The design opens on dining; any other data opens on its first category.
-                    category = categories.contains("dining") ? "dining" : categories.first
-                    page = thisMonth
-                }
+                totals = try SpendingTotal.all(in: database, throughDay: day)
+                if first { page = thisMonth }
                 guard let asOf else { return }
                 monthFlow = try Self.monthFlow(in: database, month: shownMonth, asOf: asOf)
-                let before = Self.monthBefore(shownMonth)
-                if let category {
-                    let window = Self.window(shownMonth, asOf: asOf), earlier = Self.window(before, asOf: asOf)
-                    rows = try ListedTransaction.spending(in: database, category: category, from: window.from, through: window.through)
-                    let beforeRows = try ListedTransaction.spending(in: database, category: category, from: earlier.from, through: earlier.through)
-                    change = Self.biggestChange(now: Self.cents(rows), before: Self.cents(beforeRows)).map { top in
-                        // A store that spent nothing this month opens its latest from the month before.
-                        (top.name, top.cents, (rows + beforeRows).first { $0.store == top.name }?.id)
-                    }
-                } else {
-                    rows = []
-                    change = Self.categoryChange(totals, asOf: asOf, month: shownMonth).map { ($0.name, $0.cents, nil) }
-                }
+                change = Self.categoryChange(totals, asOf: asOf, month: shownMonth)
             } catch {
                 print("Could not read spending:", error)
             }
@@ -453,26 +408,13 @@ struct SpendingView: View {
         // Closing the sheet counts again, since answers given in it take purchases off.
         .sheet(isPresented: $showingWorthALook, onDismiss: countWorthALook) { WorthALookView(database: database) }
         .sheet(isPresented: $showingMonthCategories) {
-            MonthCategoriesSheet(totals: totals, month: shownMonth, isThisMonth: shownMonth == thisMonth) { name in
+            MonthCategoriesSheet(totals: totals, month: shownMonth, asOf: asOf ?? "") { name in
                 showingMonthCategories = false
                 pushed = name
             }
         }
-        // A tapped store belongs to one category, so picking another clears it.
-        .onChange(of: category) { selected = nil }
-        // A double-tapped store's latest transaction, the same screen its row below opens.
-        .navigationDestination(item: $opened) { TransactionDetailView(database: database, id: $0) }
-        // A category's own page on top of "All", so going back finds "All" just as it was left.
+        // A category's own page on top, so going back finds the screen just as it was left.
         .navigationDestination(item: $pushed) { CategoryView(database: database, category: $0, month: shownMonth, ask: ask) }
-    }
-
-    /// "Your patterns" and the page's change from the month before, side by side, or stacked
-    /// once both no longer fit on one line.
-    private var patternsHeader: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack { patternsTitle; Spacer(minLength: 8); changePill }
-            VStack(alignment: .leading, spacing: 4) { patternsTitle; changePill }
-        }
     }
 
     /// The pager: one page per four months, today's last, so swiping right goes back in time.
@@ -504,29 +446,26 @@ struct SpendingView: View {
             .onChange(of: span) { if let span, !Self.months(endingAt: span).contains(shownMonth) { page = span } }
             dots(pages)
         }
-        // A new category re-heights the bars and rolls the total in place; with Reduce Motion
-        // they change at once.
-        .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: category)
     }
 
-    /// One page, by its last month: the marked month's total and the page's four bars on their own
-    /// dollar axis. The marked month is the picked one when it's on this page, else the page's
-    /// newest, which a swipe picks. Its bar is in `chartNow` and the others in the lighter
-    /// `chartPast`; a month before today's also gets a ring and its amount above it. Either way
-    /// its axis label is bold.
+    /// One page, by its last month: the marked month's total and its change from the month before,
+    /// and the page's four bars on their own dollar axis. The marked month is the picked one when
+    /// it's on this page, else the page's newest, which a swipe picks. Its bar is in `chartNow` and
+    /// the others in the lighter `chartPast`; a month before today's also gets a ring and its amount
+    /// above it. Either way its axis label is bold.
     private func monthPage(_ end: String, asOf: String) -> some View {
-        let bars = Self.bars(totals, category: category, asOf: end)
+        let bars = Self.bars(totals, category: nil, asOf: end)
         let top = Self.axisTop(bars.map(\.total).max() ?? 0)
         let month = bars.contains { $0.month == shownMonth } ? shownMonth : end
         let total = bars.first { $0.month == month }?.total ?? 0
         let isEarlier = month != thisMonth
+        let amount = Text(total, format: Self.dollars).font(.bigValue).foregroundStyle(Color.ink).accessibilityIdentifier("total")
         return VStack(alignment: .leading, spacing: 8) {
-            Text(total, format: Self.dollars)
-                .font(.bigValue)
-                .foregroundStyle(Color.ink)
-                // The total rolls digit by digit to the new category's amount.
-                .contentTransition(.numericText(value: total))
-                .accessibilityIdentifier("total")
+            // Side by side, or stacked once both no longer fit on one line.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) { amount; Spacer(minLength: 8); changePill(month) }
+                VStack(alignment: .leading, spacing: 4) { amount; changePill(month) }
+            }
             Chart {
                 ForEach(bars, id: \.month) { bar in
                     BarMark(x: .value("Month", bar.month), y: .value("Spent", bar.total), width: .ratio(0.55))
@@ -548,7 +487,7 @@ struct SpendingView: View {
             .chartYScale(domain: 0...top)
             .chartXAxis {
                 AxisMarks { value in
-                    // "2026-06" is shown as "Jun" ("J" at the largest text sizes, as on All months);
+                    // "2026-06" is shown as "Jun" ("J" at the largest text sizes);
                     // the marked month in bold ink. A page outside today's year adds the year under it.
                     if let label = value.as(String.self) {
                         AxisValueLabel {
@@ -623,7 +562,7 @@ struct SpendingView: View {
         .frame(maxWidth: .infinity)
         .accessibilityElement()
         .accessibilityLabel("Months")
-        .accessibilityValue(AllMonthsView.span(Self.months(endingAt: pages[index])))
+        .accessibilityValue(Self.span(Self.months(endingAt: pages[index])))
         // Lets a test see which dot is filled, which is otherwise shown only by color and size.
         .accessibilityIdentifier("filledDot\(window.filled)")
         .accessibilityAdjustableAction { direction in
@@ -746,19 +685,16 @@ struct SpendingView: View {
         .accessibilityHidden(true)
     }
 
-    /// "Biggest change · Corner Cafe · +$22 vs May": red when spending rose, green when it fell.
-    /// Tapping it opens the store's latest transaction, or with "All" pushes that category's page.
-    private func changeRow(_ change: (name: String, cents: Int, latest: String?)) -> some View {
-        let name = category == nil ? Self.title(change.name) : change.name
+    /// "Biggest change · Groceries · -$28 vs May": red when spending rose, green when it fell.
+    /// Tapping it pushes that category's page.
+    private func changeRow(_ change: (name: String, cents: Int)) -> some View {
         let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
             : AnyLayout(HStackLayout(spacing: 8))
-        return Button {
-            if category == nil { pushed = change.name } else { opened = change.latest }
-        } label: {
+        return Button { pushed = change.name } label: {
             HStack(spacing: 8) {
                 layout {
                     Text("Biggest change").font(.row).foregroundStyle(Color.muted)
-                    Text(name)
+                    Text(Self.title(change.name))
                         .font(.link.weight(.semibold))
                         .foregroundStyle(Color.ink)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
@@ -778,17 +714,6 @@ struct SpendingView: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("biggestChange")
-    }
-
-    /// "All months & categories": the longer view drills down from the short one it widens.
-    private var allMonthsLink: some View {
-        NavigationLink {
-            AllMonthsView(database: database).navigationTitle("All months")
-        } label: {
-            // The whole 44 pt row takes the tap, not only the words.
-            Text("All months & categories →").frame(minHeight: 44).contentShape(.rect)
-        }
-        .font(.link)
     }
 
     /// "1 purchase worth a look →" with the count in a small badge, opening the Worth a look sheet.
@@ -823,14 +748,10 @@ struct SpendingView: View {
         }
     }
 
-    private var patternsTitle: some View {
-        Text("Your patterns").font(.title2.bold()).foregroundStyle(Color.ink)
-    }
-
-    /// The page's change from the month before, in a soft capsule; nothing when there is none to give.
+    /// A month's change from the month before, in a soft capsule; nothing when there is none to give.
     @ViewBuilder
-    private var changePill: some View {
-        if let line = Self.changeLine(totals, category: category, month: shownMonth) {
+    private func changePill(_ month: String) -> some View {
+        if let line = Self.changeLine(totals, category: nil, month: month) {
             Text(line)
                 .font(.row.weight(.medium))
                 .foregroundStyle(Color.ink)
@@ -840,105 +761,17 @@ struct SpendingView: View {
         }
     }
 
-    /// The picked category's name and a grid icon in a soft capsule, opening the category sheet.
-    private var categoryButton: some View {
-        Button { showingCategories = true } label: {
-            HStack(spacing: 6) {
-                Text(category.map(Self.title) ?? "All").font(.link).foregroundStyle(Color.ink)
-                Image(systemName: "square.grid.2x2").font(.row).foregroundStyle(Color.ink)
-            }
-            .padding(.horizontal, 10)
-            .frame(minHeight: 32)
-            .background(Color.soft, in: .capsule)
-            // Apple's minimum tap target: the 32 pt capsule sits in a 44 pt row.
-            .frame(minHeight: 44)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Category")
-        .accessibilityValue(category.map(Self.title) ?? "All")
-        .accessibilityHint("Shows every category to pick from")
-        .sheet(isPresented: $showingCategories) { categorySheet }
-    }
-
-    /// "Category": "All", then every category, most spent in the page's month first, each with
-    /// that month's amount. Picking one closes the sheet as the chart changes behind it.
-    private var categorySheet: some View {
-        let spent = Self.cents(totals, month: shownMonth)
-        let month = (shownMonth + "-01").displayDate(.dateTime.month(.wide))
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Category").font(.headline).foregroundStyle(Color.ink)
-                    Spacer(minLength: 8)
-                    Text(shownMonth == thisMonth ? "\(month) so far" : month).font(.row).foregroundStyle(Color.muted)
-                }
-                // Two columns, or one once large text widens the cells.
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                    categoryCell(nil, cents: spent.values.reduce(0, +))
-                    ForEach(categories, id: \.self) { categoryCell($0, cents: spent[$0] ?? 0) }
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-        }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color.group)
-    }
-
-    /// One cell of the category sheet; `name` nil is "All". The picked one has an accent ring and a checkmark.
-    private func categoryCell(_ name: String?, cents: Int) -> some View {
-        let picked = name == category
-        let title = name.map(Self.title) ?? "All"
-        let amount = (Double(cents) / 100).formatted(Self.dollars)
-        return Button {
-            category = name
-            showingCategories = false
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.subheadline.weight(.medium)).foregroundStyle(Color.ink)
-                    Text(amount).font(.caption).foregroundStyle(Color.muted)
-                }
-                Spacer(minLength: 8)
-                if picked { Image(systemName: "checkmark").font(.row.weight(.semibold)).foregroundStyle(Color.ink) }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-            .background(Color.soft, in: .rect(cornerRadius: 12))
-            .overlay { if picked { RoundedRectangle(cornerRadius: 12).stroke(Color.accent, lineWidth: 1.5) } }
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityValue(amount)
-        .accessibilityAddTraits(picked ? .isSelected : [])
-        .accessibilityIdentifier("categoryCell")
-    }
-
-    /// "Connected spending": the page's month as a mosaic, a block per store (or per category with
-    /// "All") sized by its amount. The blocks add up to the page's total.
+    /// The page's month ("June", or "June so far" for today's) as a mosaic, a block per category
+    /// sized by its amount. The blocks add up to the page's total.
     @ViewBuilder
     private var connected: some View {
         let name = (shownMonth + "-01").displayDate(.dateTime.month(.wide))
-        let blocks: [(name: String, total: Double)] = category == nil
-            ? Self.categoryBlocks(totals, month: shownMonth)
-            : Self.stores(rows).map { ($0.name, $0.total) }
-        // Side by side, or stacked at the largest text sizes so the heading keeps the full width.
-        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
-            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
-        layout {
-            Text("Connected spending · \(name)").font(.headline).foregroundStyle(Color.ink)
-            Spacer(minLength: 8)
-            Text(category == nil ? "by category" : "by store").font(.row).foregroundStyle(Color.muted)
-        }
-        .padding(.top, 10)
+        let blocks = Self.categoryBlocks(totals, month: shownMonth)
+        Text(shownMonth == thisMonth ? "\(name) so far" : name).font(.headline).foregroundStyle(Color.ink)
+            .padding(.top, 10)
         if blocks.isEmpty {
-            let what = category.map { Self.title($0).lowercased() + " " } ?? ""
-            Text(shownMonth == thisMonth ? "No \(what)spending so far this month."
-                                         : "No \(what)spending in the first \(day) days of \(name).")
+            Text(shownMonth == thisMonth ? "No spending so far this month."
+                                         : "No spending in the first \(day) days of \(name).")
                 .font(.row)
                 .foregroundStyle(Color.muted)
         } else {
@@ -952,7 +785,7 @@ struct SpendingView: View {
                     mosaic(blocks)
                 }
             }
-            // The new category's or month's blocks fade in once they load, a little after the tap.
+            // The new month's blocks fade in once they load, a little after the tap.
             .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25), value: blocks.map(\.name))
         }
     }
@@ -991,13 +824,10 @@ struct SpendingView: View {
         .frame(height: mosaicHeight)
     }
 
-    /// One mosaic block, tinted with `blockColor` so the text stays ink on every block. With a
-    /// store, one tap selects it and shows its latest transaction below, two open that transaction;
-    /// with "All", a tap pushes that category's page, and "Other categories" opens the month's categories.
-    @ViewBuilder
+    /// One mosaic block, tinted with its category's color so the text stays ink on every block. A
+    /// tap pushes that category's page, and "Other categories" opens the month's categories.
     private func block(_ item: (name: String, total: Double), width: CGFloat?, height: CGFloat?) -> some View {
-        let isAll = category == nil
-        let name = isAll ? Self.title(item.name) : item.name
+        let name = Self.title(item.name)
         let face = VStack(alignment: .leading, spacing: 2) {
             // A narrow block shows the name's first word, so it never clips mid-word.
             Text(width.map { $0 < shortName } == true ? String(name.split(separator: " ").first ?? "") : name).font(.row.weight(.medium))
@@ -1009,61 +839,17 @@ struct SpendingView: View {
         .padding(.vertical, 8)
         // A given size is exact; without one the block is full width and as tall as its text.
         .frame(minWidth: width, maxWidth: width ?? .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
-        // A light tint of the category color: the hue matches All months without a wall of strong color.
-        .background(Self.blockColor(item.name, category: category).opacity(0.22), in: .rect(cornerRadius: 10))
-        .overlay {
-            if !isAll && selected == item.name { RoundedRectangle(cornerRadius: 10).stroke(Color.ink, lineWidth: 1.5) }
-        }
-        let label = "\(name), \(item.total.formatted(Self.dollars))"
-        if isAll {
-            // Several categories together have no single category to open, so Other lists the month's categories.
-            let isOther = item.name == Self.otherCategories
-            Button {
-                if isOther { showingMonthCategories = true } else { pushed = item.name }
-            } label: { face }
-                .buttonStyle(.plain)
-                .accessibilityLabel(label)
-                .accessibilityHint(isOther ? "Shows the month's categories" : "Shows this category")
-                .accessibilityIdentifier("categoryBlock")
-        } else {
-            let latest = Self.stores(rows).first { $0.name == item.name }?.rows.first?.id
-            Button { selected = item.name } label: { face }
-                .buttonStyle(.plain)
-                .accessibilityLabel(label)
-                .simultaneousGesture(TapGesture(count: 2).onEnded { opened = latest })
-                .accessibilityHint("Shows the latest transaction")
-                // VoiceOver's double tap is the button's own tap, so opening is offered as a named action.
-                .accessibilityAction(named: "Open latest transaction") { opened = latest }
-                .accessibilityIdentifier("store")
-                .accessibilityAddTraits(selected == item.name ? .isSelected : [])
-        }
-    }
-
-    /// The tapped store's latest transaction; tapping it opens the transaction.
-    private func latest(_ row: ListedTransaction) -> some View {
-        NavigationLink {
-            TransactionDetailView(database: database, id: row.id)
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(row.store).font(.subheadline).foregroundStyle(Color.ink)
-                    Text(row.date.displayDate(.dateTime.month(.abbreviated).day()) + " · Latest transaction")
-                        .font(.row)
-                        .foregroundStyle(Color.muted)
-                }
-                Spacer()
-                Text(row.amount, format: .currency(code: "USD"))
-                    .font(.subheadline.bold())
-                    .monospacedDigit()
-                    .foregroundStyle(Color.ink)
-            }
-            .padding(.vertical, 12)
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.line).frame(height: 1) }
-            // A plain button only takes taps on what it draws; this makes the gap in the middle tappable too.
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("latest")
+        // A light tint of the category color: the hue matches its page without a wall of strong color.
+        .background(Self.color(item.name).opacity(0.22), in: .rect(cornerRadius: 10))
+        // Several categories together have no single category to open, so Other lists the month's categories.
+        let isOther = item.name == Self.otherCategories
+        return Button {
+            if isOther { showingMonthCategories = true } else { pushed = item.name }
+        } label: { face }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(name), \(item.total.formatted(Self.dollars))")
+            .accessibilityHint(isOther ? "Shows the month's categories" : "Shows this category")
+            .accessibilityIdentifier("categoryBlock")
     }
 }
 
