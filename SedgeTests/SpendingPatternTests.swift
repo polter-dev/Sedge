@@ -507,3 +507,80 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     let span = AllMonthsView.span(["2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"])
     #expect(span.contains("Oct 2025") && span.contains("Mar 2026"), "\(span)")
 }
+
+/// Spending pages for 3, 4, 9, 16 and 24 months of history up to June 2026 (one made-up total a
+/// month): the last page ends at June, each page before ends four months earlier, and the
+/// earliest page holds the first month with spending.
+@Test(arguments: [(3, 1), (4, 1), (9, 3), (16, 4), (24, 6)])
+func spendingPagesCoverTheWholeHistory(history: Int, count: Int) throws {
+    let asOf = "2026-06-30"
+    let months = SpendingView.months(endingAt: asOf, count: history)
+    let totals = months.map { SpendingTotal(month: $0, category: "dining", total: 10) }
+    let pages = SpendingView.pages(totals, asOf: asOf)
+    #expect(pages.count == count)
+    #expect(pages.last == "2026-06")
+    for (earlier, later) in zip(pages, pages.dropFirst()) {
+        #expect(SpendingView.months(endingAt: later, count: 5).first == earlier, "\(history): \(earlier) to \(later)")
+    }
+    let earliest = SpendingView.months(endingAt: try #require(pages.first))
+    #expect(earliest.contains(try #require(months.first)), "\(history): \(earliest)")
+}
+
+/// Years under the bar labels: none on a page in today's year, else under the first month and
+/// January. No spending at all still has the last page.
+@Test func spendingPageYearsShowOnAnEarlierYear() {
+    let asOf = "2026-06-30"
+    #expect(SpendingView.months(endingAt: "2026-02").map { SpendingView.axisYear($0, pageEnd: "2026-02", asOf: asOf) }
+            == ["2025", nil, "2026", nil])
+    #expect(SpendingView.months(endingAt: "2025-06").map { SpendingView.axisYear($0, pageEnd: "2025-06", asOf: asOf) }
+            == ["2025", nil, nil, nil])
+    #expect(SpendingView.months(endingAt: "2026-06").allSatisfy { SpendingView.axisYear($0, pageEnd: "2026-06", asOf: asOf) == nil })
+    #expect(SpendingView.pages([], asOf: asOf) == ["2026-06"])
+}
+
+/// The dots for 1, 4, 5 and 7 pages on every page, oldest first: which pages have a dot, which
+/// dot is filled, and whether the left and right chevrons show. The newest page fills the
+/// right-most dot and the earliest the left-most.
+@Test func spendingDotsSlideWithThePage() {
+    typealias Dots = (dots: Range<Int>, filled: Int, left: Bool, right: Bool)
+    let expected: [Int: [Dots]] = [
+        1: [(0..<1, 0, false, false)],
+        4: (0..<4).map { (0..<4, $0, false, false) },
+        5: [(0..<4, 0, false, true), (0..<4, 1, false, true), (1..<5, 1, true, false), (1..<5, 2, true, false), (1..<5, 3, true, false)],
+        7: [(0..<4, 0, false, true), (0..<4, 1, false, true), (1..<5, 1, true, true), (2..<6, 1, true, true),
+            (3..<7, 1, true, false), (3..<7, 2, true, false), (3..<7, 3, true, false)],
+    ]
+    for (count, all) in expected {
+        #expect(all.count == count)
+        for (index, want) in all.enumerated() {
+            let got = SpendingView.dotWindow(count: count, index: index)
+            #expect(got.dots == want.dots && got.filled == want.filled && got.left == want.left && got.right == want.right,
+                    "\(count) pages, page \(index): \(got)")
+        }
+        #expect(SpendingView.dotWindow(count: count, index: count - 1).filled == min(count, 4) - 1)
+        #expect(SpendingView.dotWindow(count: count, index: 0).filled == 0)
+    }
+}
+
+/// For Maya and Daniel, the bars on the page before the last (November to February) equal the
+/// month totals for January and February, each over its 1st to the 30th (all of February):
+/// every category's bar and the "All" bar against `total_spent`.
+@Test(arguments: ["maya", "daniel"])
+func earlierPageBarsMatchTheMonthTotals(persona: String) throws {
+    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
+    let asOf = try #require(try database.asOf())
+    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: 30)
+    let pages = SpendingView.pages(totals, asOf: asOf)
+    #expect(pages == ["2026-02", "2026-06"])
+    for category in [nil] + Set(totals.map(\.category)).sorted() as [String?] {
+        let bars = SpendingView.bars(totals, category: category, asOf: pages[0])
+        #expect(bars.map(\.month) == ["2025-11", "2025-12", "2026-01", "2026-02"])
+        // Before the data starts there is no bar.
+        #expect(bars.prefix(2).allSatisfy { $0.total == 0 })
+        for (month, end) in [("2026-01", "2026-01-30"), ("2026-02", "2026-02-28")] {
+            let bar = try #require(bars.first { $0.month == month })
+            let tool = try totalSpent(category, month + "-01", end, in: database)
+            #expect(abs(bar.total - tool) < 0.005, "\(persona) \(category ?? "All") \(month): bar \(bar.total), total_spent \(tool)")
+        }
+    }
+}
