@@ -209,7 +209,7 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
-        let example = app.staticTexts["exampleQuestion"]
+        let example = app.buttons["exampleQuestion"]
         XCTAssertTrue(example.waitForExistence(timeout: 5))
         let first = example.label
         attachScreenshot(app, "ask-example-first")
@@ -288,12 +288,63 @@ final class SedgeUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
-        let example = app.staticTexts["exampleQuestion"]
+        let example = app.buttons["exampleQuestion"]
         XCTAssertTrue(example.waitForExistence(timeout: 5))
         XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
         // As long as the rotation test waits for a swap, so both watch the same window.
         Thread.sleep(forTimeInterval: 15)
         XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
+    }
+
+    /// A chat of one short line starts at the same left edge as a long one. Screenshots: the
+    /// long chat, then the short one.
+    @MainActor
+    func testAskShortChatStartsAtTheLeft() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES", "-reduceMotion", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let long = app.staticTexts["You · Have I been overspending on food?"]
+        XCTAssertTrue(long.waitForExistence(timeout: 10), "No sample chat")
+        let left = long.frame.minX
+        attachScreenshot(app, "ask-long-chat")
+
+        app.navigationBars.buttons["New chat"].tap()
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText("hello")
+        app.buttons["Send"].tap()
+        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["You · hello"].frame.minX, left, accuracy: 1, "The short chat isn't at the left")
+        attachScreenshot(app, "ask-one-question")
+    }
+
+    /// After New chat the example question is there, also with the keyboard up, and tapping it
+    /// asks it. Screenshots: the empty chat, then with the keyboard up.
+    @MainActor
+    func testAskExampleQuestionAsksIt() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES", "-reduceMotion", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["Food & dining"].waitForExistence(timeout: 10), "No sample chat")
+        app.navigationBars.buttons["New chat"].tap()
+        let example = app.buttons["exampleQuestion"]
+        XCTAssertTrue(example.waitForExistence(timeout: 2), "No example after New chat")
+        attachScreenshot(app, "ask-new-chat-empty")
+
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        Thread.sleep(forTimeInterval: 0.6) // the keyboard sliding up
+        XCTAssertTrue(example.isHittable, "The example is hidden with the keyboard up")
+        attachScreenshot(app, "ask-new-chat-keyboard")
+
+        let question = example.label
+        example.tap()
+        XCTAssertTrue(app.staticTexts["You · \(question)"].waitForExistence(timeout: 3), "Tapping didn't ask it")
+        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 10))
     }
 
     /// The Debug sample conversation shows the breakdown card, the answer and the quick check,

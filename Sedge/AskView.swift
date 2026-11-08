@@ -143,6 +143,9 @@ struct AskView: View {
                 }
             }
             .animation(.easeOut(duration: 0.25), value: session.status)
+            // A plain VStack is only as wide as its widest line and the ScrollView centers it, so
+            // a chat of short lines sat right of the margin. Full width keeps every chat at the left.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, 16)
         }
         // A sent question, its answer and a reopened chat each jump to the end, so the newest turn
@@ -156,7 +159,7 @@ struct AskView: View {
                 ContentUnavailableView {
                     Label("Ask about your money", image: "tab-ask")
                 } description: {
-                    ExampleQuestion(rotates: !reduceMotion).foregroundStyle(Color.muted)
+                    ExampleQuestion(rotates: !reduceMotion, ask: ask).foregroundStyle(Color.muted)
                 }
             }
         }
@@ -316,6 +319,12 @@ struct AskView: View {
         }
     }
 
+    /// Asks `example` as if it were typed and sent.
+    private func ask(_ example: String) {
+        question = example
+        send()
+    }
+
     private func send() {
         let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canSend else { return }
@@ -339,10 +348,12 @@ struct AskView: View {
     }
 }
 
-/// The empty screen's example question. Each one stays 4 seconds, then crossfades to the next,
-/// looping through all six. When `rotates` is false (Reduce Motion) it keeps the first one.
+/// The empty screen's example question, a button that asks it. Each one stays 4 seconds, then
+/// crossfades to the next, looping through all six. When `rotates` is false (Reduce Motion) it
+/// keeps the first one.
 private struct ExampleQuestion: View {
     let rotates: Bool
+    let ask: (String) -> Void
     @State private var index = 0
 
     static let questions = [
@@ -355,17 +366,23 @@ private struct ExampleQuestion: View {
     ]
 
     var body: some View {
-        ZStack {
-            // Invisible copies of every question keep the slot as tall as the tallest one,
-            // so the screen doesn't jump when a longer question wraps at large text sizes.
-            ForEach(Self.questions, id: \.self) { Text($0).hidden() }
-            // A new id makes this a new view, so the old question fades out as the new one fades in.
-            Text(Self.questions[index])
-                .id(index)
-                .transition(.asymmetric(insertion: .opacity.animation(.easeIn(duration: 0.3)),
-                                        removal: .opacity.animation(.easeOut(duration: 0.3))))
-                .accessibilityIdentifier("exampleQuestion")
+        Button { ask(Self.questions[index]) } label: {
+            ZStack {
+                // Invisible copies of every question keep the slot as tall as the tallest one,
+                // so the screen doesn't jump when a longer question wraps at large text sizes.
+                ForEach(Self.questions, id: \.self) { chip($0).hidden() }
+                // A new id makes this a new view, so the old question fades out as the new one fades in.
+                chip(Self.questions[index])
+                    .background(Color.surface, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.line))
+                    .id(index)
+                    .transition(.asymmetric(insertion: .opacity.animation(.easeIn(duration: 0.3)),
+                                            removal: .opacity.animation(.easeOut(duration: 0.3))))
+            }
         }
+        // Plain keeps the muted words; the default style would tint them the accent color.
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("exampleQuestion")
         .task(id: rotates) {
             guard rotates else { index = 0; return }
             // 4 seconds fully shown plus the 0.3-second fade. Sleeping throws once the screen
@@ -374,6 +391,11 @@ private struct ExampleQuestion: View {
                 withAnimation { index = (index + 1) % Self.questions.count }
             }
         }
+    }
+
+    /// A question's words with the chip's inner space, so the chip looks like a suggestion.
+    private func chip(_ text: String) -> some View {
+        Text(text).padding(.horizontal, 14).padding(.vertical, 8)
     }
 }
 
