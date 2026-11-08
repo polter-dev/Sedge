@@ -48,12 +48,9 @@ struct AllMonthsView: View {
         let category: String
         let folded: [String]
         let month: String
-        /// The last day listed, "YYYY-MM-DD"; nil is the whole month. Spending's Other categories
-        /// block sets it, as its month only runs to today's day of the month.
+        /// The last day listed, "YYYY-MM-DD"; nil is the whole month. Set to stop at today's day
+        /// of the month, as Spending counts each month.
         var through: String?
-        /// The days listed, e.g. "May 1 – 30, 2026", when they're only part of a past month; the
-        /// sheet's title shows them in place of the month name.
-        var period: String?
         var id: Self { self }
     }
 
@@ -152,8 +149,6 @@ struct AllMonthsView: View {
     /// The reader's text size setting.
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The name column in the category list, 112 pt in the design; it grows with the text size.
-    @ScaledMetric(relativeTo: .footnote) private var nameWidth: CGFloat = 112
 
     /// "2026-03" written for people: "March 2026" (or "Mar" / "M" with `month`).
     private static func monthName(_ month: String, _ style: Date.FormatStyle = .dateTime.month(.wide).year()) -> String {
@@ -200,7 +195,7 @@ struct AllMonthsView: View {
                     .frame(minHeight: 52)
                     .background(Color.group, in: .rect(cornerRadius: 12))
                     .padding(.top, 8)
-                row("Total", dollars: Self.rounded(total), share: 1, color: .chartPast, bold: true)
+                ShareRow(name: "Total", dollars: Self.rounded(total), share: 1, color: .chartPast, bold: true)
                     .padding(.top, 12)
                     .padding(.bottom, 6)
                     .accessibilityElement(children: .ignore)
@@ -210,8 +205,8 @@ struct AllMonthsView: View {
                     let title = SpendingView.title(part.category)
                     Button { opened = Opened(category: part.category, folded: part.folded, month: shown) } label: {
                         // Scaled against Total, so even the biggest category's bar is shorter than Total's.
-                        row(title, dollars: part.dollars, share: total > 0 ? Double(part.cents) / Double(total) : 0,
-                            color: Self.color(part.category))
+                        ShareRow(name: title, dollars: part.dollars, share: total > 0 ? Double(part.cents) / Double(total) : 0,
+                                 color: Self.color(part.category))
                             // The design draws 34 pt rows; the whole 44 pt row takes the tap.
                             .frame(minHeight: 44)
                             .contentShape(.rect)
@@ -334,36 +329,10 @@ struct AllMonthsView: View {
             }
         }
     }
-
-    /// One list row: a color dot and the name, a bar at `share` of its width, and whole dollars.
-    /// At the largest text sizes the name sits over the bar and amount, so nothing is cut off.
-    private func row(_ name: String, dollars: Int, share: Double, color: Color, bold: Bool = false) -> some View {
-        let label = HStack(spacing: 8) {
-            Circle().fill(color).frame(width: 10, height: 10)
-            Text(name).foregroundStyle(Color.ink)
-        }
-        let bar = GeometryReader { space in
-            // A category refunded more than it spent has no bar, and none is wider than Total's.
-            Capsule().fill(color).frame(width: space.size.width * min(1, max(0, share)))
-        }
-        .frame(minWidth: 60)
-        .frame(height: 6)
-        let amount = Text(Double(dollars), format: Self.dollars)
-            .foregroundStyle(bold ? Color.ink : Color.muted)
-            .frame(minWidth: 48, alignment: .trailing)
-        let layout = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
-            : AnyLayout(HStackLayout(spacing: 8))
-        return layout {
-            label.frame(width: textSize.isAccessibilitySize ? nil : nameWidth, alignment: .leading)
-            HStack(spacing: 8) { bar; amount }
-        }
-        .font(bold ? .footnote.weight(.semibold) : .footnote)
-    }
 }
 
 /// The sheet a category row opens: that row's transactions in one month, oldest first,
-/// under their count and exact total, counted the same way as the row. Spending's Other
-/// categories block opens it too.
+/// under their count and exact total, counted the same way as the row.
 struct MonthTransactions: View {
     let database: SedgeDatabase
     let opened: AllMonthsView.Opened
@@ -381,7 +350,7 @@ struct MonthTransactions: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 line {
-                    Text("\(SpendingView.title(opened.category)) · \(opened.period ?? (opened.month + "-01").displayDate(.dateTime.month(.wide).year()))")
+                    Text("\(SpendingView.title(opened.category)) · \((opened.month + "-01").displayDate(.dateTime.month(.wide).year()))")
                         .font(.title3.bold())
                         .foregroundStyle(Color.ink)
                     Spacer(minLength: 8)
