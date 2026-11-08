@@ -11,7 +11,7 @@ import SwiftUI
 // app's AccentColor set (Xcode names it `Color.accent`), so it also colors every button and toggle.
 //
 // The Marsh chart colors work the same way, one color set each:
-// - `chartNow`: the shown month's bar on Spending. `chartPast`: the other months' bars, on Spending and All months.
+// - `chartNow`: the shown month's bar on Spending. `chartPast`: the other months' bars.
 // - `chartLine`: the cash-flow line and its low point, on the Trends card and the Cash flow screen. Its plum
 //   hue sits apart from every category color and from `moneySpent`, so the line never reads as a category.
 // - `amountNow`, `nodeCategory`, `onNodeCategory`, `nodeStore`: no longer on Trends (the Spending mosaic
@@ -25,19 +25,16 @@ import SwiftUI
 // `tileTuition`, `tileAccounts`), money back and spent (`moneyBack`, `moneySpent`), a fill per
 // account type (`accountChecking`, `accountSavings`, `accountCard`) and the text on them (`onAccount`).
 //
-// The category colors on All months, one color set each: `catHousing`, `catUtilities`,
-// `catPhoneInternet`, `catTransport`, `catSubscriptions`, `catEducation` and `catCoffee`.
-// Money moved between accounts is `accent`, the near-black (light) or near-white (dark) of the buttons:
-// no hue, so no category can be mistaken for it, and far darker or lighter than Other's mid gray.
-// `Color.category` picks one by name; categories without a hue of their own use `second`,
-// and All months folds them into one "Other" row. The Spending mosaic tints its blocks with the same colors.
+// The category colors, one color set each: `catHousing`, `catUtilities`, `catPhoneInternet`,
+// `catTransport`, `catSubscriptions`, `catEducation` and `catCoffee`. `Color.category` picks one by
+// name; categories without a hue of their own use `second`. The Spending mosaic tints its blocks
+// with them, and a category's page and the month's categories sheet draw its bars in them.
 
 extension Color {
     /// The categories with a hue of their own, by the name the screens show (e.g. "Phone internet").
     static let categoryColors: [String: Color] = [
         "Housing": .catHousing, "Utilities": .catUtilities, "Phone internet": .catPhoneInternet, "Transport": .catTransport,
         "Subscriptions": .catSubscriptions, "Education": .catEducation, "Coffee": .catCoffee,
-        "Moved between accounts": .accent,
     ]
 
     /// A category's color in charts, by the name the screens show; `second` when it has no hue of its own.

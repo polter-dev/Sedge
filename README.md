@@ -35,17 +35,17 @@ The three tabs:
   - When a chat gets too long, it ends with a "This chat is full" card and a **Start new
     session** button. Nothing reaches the limit yet, so use `-demoTokenLimit YES` (below) to see it.
 - **Trends**: the **Spending** screen.
-  - Swipe the chart sideways to page through the last four months, or tap a month's bar to pick it,
-    compared up to the same day of each month.
-  - The category chip opens a grid of categories, with **All** first for every category added up.
-  - The page's month as a mosaic of stores (or categories with **All**), and under it its biggest
-    change from the month before.
+  - Every category added up, with the change from the month before. Swipe the chart sideways to
+    page back four months at a time, or tap a month's bar to pick it, compared up to the same day
+    of each month.
+  - The picked month as a mosaic of categories, and under it the category that changed most from
+    the month before. A category's block (or that row) opens its page: its months, stores and
+    transactions, and a question to take to Ask. **Other categories** lists every category of the month.
   - A **Cash flow** card for the picked month: money in, money out and what's left over, over the
     same days as its bar. An earlier month adds checking's balance at the end of those days. Today's
     month adds the projected checking balance for the next 30 days and opens the Cash flow screen
     (30, 60 or 90 days, with scenarios to switch on and off).
-  - A link to **All months & categories** and, when there are any, the recent
-    purchases **Worth a look**.
+  - When there are any, the recent purchases **Worth a look**.
 - **Accounts**:
   - **Transactions**: one month at a time (arrows step between months), split into income, spending
     and transfers and grouped by week. Tap one for its details and the store's history.

@@ -15,7 +15,7 @@ import Testing
 @Test(arguments: ["maya", "daniel"]) func categoryPageMatchesTrends(persona: String) throws {
     let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
     let asOf = try #require(try database.asOf())
-    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: try #require(Int(asOf.suffix(2))))
+    let totals = try SpendingTotal.all(in: database, throughDay: try #require(Int(asOf.suffix(2))))
     let thisMonth = String(asOf.prefix(7))
     func cents(_ dollars: Double) -> Int { Int((dollars * 100).rounded()) }
 
@@ -49,8 +49,8 @@ import Testing
             #expect(stores.map(\.total) == stores.map(\.total).sorted(by: >), "\(label): stores not biggest first")
 
             // The month's transaction sheet over the same days lists the same rows.
-            let sheet = try AllMonthsView.sheetRows(in: database, .init(category: category, folded: [category], month: month,
-                                                                        through: SpendingView.window(month, asOf: asOf).through))
+            let sheet = try MonthTransactions.sheetRows(in: database, .init(category: category, folded: [category], month: month,
+                                                                            through: SpendingView.window(month, asOf: asOf).through))
             #expect(rows.count == sheet.count, "\(label): count")
             #expect(rows.reduce(0) { $0 + $1.cents } == sheet.reduce(0) { $0 + $1.cents }, "\(label): total")
             #expect(rows.map(\.date) == rows.map(\.date).sorted(by: >), "\(label): not newest first")
@@ -60,7 +60,7 @@ import Testing
         let sheet = MonthCategoriesSheet.rows(totals, month: month)
         #expect(Set(sheet.map(\.category)) == categories)
         #expect(Array(sheet.prefix(3).map(\.category)) == Array(blocks.prefix(3).map(\.name)), "\(persona) \(month)")
-        #expect(sheet.reduce(0) { $0 + $1.dollars } == AllMonthsView.rounded(cents(SpendingView.bars(totals, category: nil, asOf: month + "-01")[3].total)))
+        #expect(sheet.reduce(0) { $0 + $1.dollars } == MonthCategoriesSheet.rounded(cents(SpendingView.bars(totals, category: nil, asOf: month + "-01")[3].total)))
     }
 }
 
@@ -69,7 +69,7 @@ import Testing
 @Test func mayaGroceriesJune() throws {
     let database = try inMemory("maya")
     let asOf = try #require(try database.asOf())
-    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: 30)
+    let totals = try SpendingTotal.all(in: database, throughDay: 30)
     let strip = CategoryView.strip(totals, category: "groceries", months: CategoryView.stripMonths(opening: "2026-06", asOf: asOf))
     #expect(strip.map(\.month) == ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"])
     let rows = try CategoryView.rows(in: database, category: "groceries", month: "2026-06", asOf: asOf)
