@@ -787,7 +787,7 @@ final class SedgeUITests: XCTestCase {
 
     /// "All" on Maya's Spending screen adds up every category: June 1–30 is $966, counted by hand
     /// from her transactions. The mosaic shows categories, the biggest change is by category
-    /// (groceries fell $28.26 from May), and tapping a category's block picks that category.
+    /// (groceries fell $28.26 from May), and tapping a category's block opens that category's page.
     /// The screenshot is light, or dark after `xcrun simctl ui <device> appearance dark`.
     @MainActor
     func testAllShowsEveryCategory() throws {
@@ -810,7 +810,77 @@ final class SedgeUITests: XCTestCase {
 
         app.buttons["Groceries, $87"].tap()
         XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.buttons["Category"].value as? String, "Groceries")
+        XCTAssertTrue(app.navigationBars["Groceries"].exists)
+    }
+
+    /// With "All" on May, tapping a category block opens that category's own page on May, going
+    /// back finds "All" still on May, and a second block opens its page too. The screenshots are
+    /// All, the pushed page and All after going back, in light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testAllCategoryBlocksOpenTheirOwnPages() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        chooseSpendingCategory(app, "All")
+        app.otherElements["May"].tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
+        attachScreenshot(app, "all-may")
+
+        let blocks = app.buttons.matching(identifier: "categoryBlock")
+        let groceries = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Groceries, '")).firstMatch
+        XCTAssertTrue(groceries.waitForExistence(timeout: 5))
+        groceries.tap()
+        XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["by store"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Connected spending · May"].exists)
+        XCTAssertEqual(app.otherElements["shownMonth"].label, "May")
+        // May's page is the one on screen, not only the one picked.
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(app.otherElements["shownMonth"].frame))
+        XCTAssertEqual(app.staticTexts["total"].label, "$115")
+        Thread.sleep(forTimeInterval: 0.5) // the push's slide
+        attachScreenshot(app, "pushed-groceries")
+
+        app.navigationBars.buttons.firstMatch.tap()
+        let category = app.buttons["Category"]
+        XCTAssertTrue(category.waitForExistence(timeout: 5))
+        XCTAssertEqual(category.value as? String, "All")
+        XCTAssertEqual(app.otherElements["shownMonth"].label, "May")
+        XCTAssertTrue(app.staticTexts["by category"].exists)
+        Thread.sleep(forTimeInterval: 0.5)
+        attachScreenshot(app, "all-may-after-back")
+
+        let housing = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Housing, '")).firstMatch
+        XCTAssertTrue(housing.waitForExistence(timeout: 5))
+        housing.tap()
+        XCTAssertTrue(app.navigationBars["Housing"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["by store"].waitForExistence(timeout: 5))
+    }
+
+    /// With "All", the Biggest change row (Groceries on Maya's June) opens Groceries' own page,
+    /// and going back finds "All" again.
+    @MainActor
+    func testAllBiggestChangeOpensItsCategoryPage() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        chooseSpendingCategory(app, "All")
+        let change = app.buttons["biggestChange"]
+        XCTAssertTrue(change.waitForExistence(timeout: 5))
+        XCTAssertTrue(change.label.contains("Groceries"), change.label)
+        change.tap()
+        XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))
+
+        app.navigationBars.buttons.firstMatch.tap()
+        let category = app.buttons["Category"]
+        XCTAssertTrue(category.waitForExistence(timeout: 5))
+        XCTAssertEqual(category.value as? String, "All")
+        XCTAssertTrue(app.staticTexts["by category"].exists)
     }
 
     /// On Maya's cash flow, switching a scenario on moves "Projected" by exactly its amount, and

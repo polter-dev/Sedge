@@ -75,6 +75,10 @@ extension ListedTransaction {
 /// with "All") as pages you swipe through, and a mosaic of what made up the page's month.
 struct SpendingView: View {
     let database: SedgeDatabase
+    /// On a page pushed from "All", its one category, kept for good (so no category chip); nil on the Trends tab itself.
+    var fixedCategory: String? = nil
+    /// The month a pushed page opens on, the one "All" was showing; nil opens on today's month.
+    var startMonth: String? = nil
     /// The dataset's "today"; nil until loaded, or when nothing has been saved yet.
     @State private var asOf: String?
     /// Spending per month and category over the first `day` days of each month.
@@ -104,6 +108,8 @@ struct SpendingView: View {
     @State private var showingCategories = false
     /// The transactions the "Other categories" block opens; nil when that sheet is closed.
     @State private var openedOther: AllMonthsView.Opened?
+    /// The category an "All" block or the Biggest change row pushes its own page for; nil when none is pushed.
+    @State private var pushed: String?
 
     /// One store in the mosaic, or "Other stores" for the rest.
     struct Store: Identifiable {
@@ -292,8 +298,8 @@ struct SpendingView: View {
     /// Today's month, "YYYY-MM": the last page and the last bar.
     private var thisMonth: String { String((asOf ?? "").prefix(7)) }
 
-    /// The month the screen shows, "YYYY-MM": the page's, else today's.
-    private var shownMonth: String { page ?? thisMonth }
+    /// The month the screen shows, "YYYY-MM": the page's, else the month a pushed page opens on, else today's.
+    private var shownMonth: String { page ?? startMonth ?? thisMonth }
 
     /// The categories with spending in the four months shown, in the category sheet's order.
     private var categories: [String] {
@@ -338,7 +344,7 @@ struct SpendingView: View {
             if let asOf, !categories.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     patternsHeader
-                    categoryButton
+                    if fixedCategory == nil { categoryButton }
                     pager(asOf)
                     cashFlowCard
                     connected
@@ -366,8 +372,9 @@ struct SpendingView: View {
                 totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: day)
                 if first {
                     // The design opens on dining; any other data opens on its first category.
-                    category = categories.contains("dining") ? "dining" : categories.first
-                    page = thisMonth
+                    category = fixedCategory ?? (categories.contains("dining") ? "dining" : categories.first)
+                    // A pushed page sets its page once the pager is laid out (see `pager`).
+                    if startMonth == nil { page = thisMonth }
                 }
                 guard let asOf else { return }
                 let before = Self.monthBefore(shownMonth)
@@ -403,6 +410,12 @@ struct SpendingView: View {
         .onChange(of: category) { selected = nil }
         // A double-tapped store's latest transaction, the same screen its row below opens.
         .navigationDestination(item: $opened) { TransactionDetailView(database: database, id: $0) }
+        // A category's own page on top of "All", so going back finds "All" just as it was left.
+        .navigationDestination(item: $pushed) {
+            SpendingView(database: database, fixedCategory: $0, startMonth: shownMonth)
+                .navigationTitle(Self.title($0))
+                .navigationBarTitleDisplayMode(.inline)
+        }
     }
 
     /// "Your patterns" and the page's change from the month before, side by side, or stacked
@@ -439,7 +452,12 @@ struct SpendingView: View {
             .scrollIndicators(.hidden)
             .scrollPosition(id: $page)
             // Opens on today's month, the last page, with nothing after it.
-            .defaultScrollAnchor(.trailing)
+            .defaultScrollAnchor(startMonth == nil ? .trailing : nil)
+            // A pushed page opens on `startMonth` instead: there the anchor kept the layout from ever
+            // settling, and a page set before the pages have a width is ignored, so it is set once they do.
+            .onScrollGeometryChange(for: Bool.self, of: { $0.contentSize.width > $0.containerSize.width }) { _, laidOut in
+                if laidOut, page == nil, let startMonth { page = startMonth }
+            }
             .accessibilityIdentifier("months")
             dots(months)
         }
@@ -649,13 +667,13 @@ struct SpendingView: View {
     }
 
     /// "Biggest change · Corner Cafe · +$22 vs May": red when spending rose, green when it fell.
-    /// Tapping it opens the store's latest transaction, or with "All" picks that category.
+    /// Tapping it opens the store's latest transaction, or with "All" pushes that category's page.
     private func changeRow(_ change: (name: String, cents: Int, latest: String?)) -> some View {
         let name = category == nil ? Self.title(change.name) : change.name
         let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
             : AnyLayout(HStackLayout(spacing: 8))
         return Button {
-            if category == nil { category = change.name } else { opened = change.latest }
+            if category == nil { pushed = change.name } else { opened = change.latest }
         } label: {
             HStack(spacing: 8) {
                 layout {
@@ -895,7 +913,7 @@ struct SpendingView: View {
 
     /// One mosaic block, tinted with `blockColor` so the text stays ink on every block. With a
     /// store, one tap selects it and shows its latest transaction below, two open that transaction;
-    /// with "All", a tap picks that category, and "Other categories" opens the transactions it adds up.
+    /// with "All", a tap pushes that category's page, and "Other categories" opens the transactions it adds up.
     @ViewBuilder
     private func block(_ item: (name: String, total: Double), width: CGFloat?, height: CGFloat?) -> some View {
         let isAll = category == nil
@@ -922,7 +940,7 @@ struct SpendingView: View {
             let isOther = item.name == Self.otherCategories
             Button {
                 if !isOther {
-                    category = item.name
+                    pushed = item.name
                 } else if let asOf {
                     openedOther = .init(category: item.name, folded: Self.otherCategoryNames(totals, month: shownMonth),
                                         month: shownMonth, through: Self.window(shownMonth, asOf: asOf).through,
