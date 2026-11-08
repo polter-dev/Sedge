@@ -270,7 +270,7 @@ struct CategoryView: View {
         .accessibilityIdentifier("categoryChange")
     }
 
-    /// One transaction, as the month's transaction sheet lists it: date, store and amount.
+    /// One transaction in the page's list: date, store and amount.
     private func transactionRow(_ row: ListedTransaction) -> some View {
         let layout = textSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
             : AnyLayout(HStackLayout(spacing: 12))

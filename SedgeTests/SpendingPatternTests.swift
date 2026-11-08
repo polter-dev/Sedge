@@ -329,26 +329,14 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     #expect(MonthCategoriesSheet.wholeDollars([]).isEmpty)
 }
 
-/// For Maya and Daniel, a month's transaction sheet over several categories lists every one of
-/// their transactions through the day given, oldest first, adding up to their totals, and a
-/// transaction the person moved out of Dining into Coffee is listed under Coffee, not Dining.
-@Test(arguments: ["maya", "daniel"]) func monthTransactionsMatchTheirCategories(persona: String) throws {
+/// A transaction the person moved out of Dining into Coffee is listed on Coffee's page, not Dining's.
+@Test(arguments: ["maya", "daniel"]) func categoryPageFollowsTheMovedCategory(persona: String) throws {
     let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
-    let dining = try ListedTransaction.spending(in: database, category: "dining", from: "2026-06-01", through: "2026-06-30")
+    let dining = try CategoryView.rows(in: database, category: "dining", month: "2026-06", asOf: "2026-06-30")
     let moved = try #require(dining.first)
     try Answers.setCategory("coffee", transaction: moved.id, in: database)
-    func sheet(_ folded: [String], _ month: String) throws -> [ListedTransaction] {
-        try MonthTransactions.sheetRows(in: database, .init(category: folded[0], folded: folded, month: month, through: month + "-30"))
-    }
-    #expect(try sheet(["coffee"], "2026-06").contains { $0.id == moved.id })
-    #expect(try !sheet(["dining"], "2026-06").contains { $0.id == moved.id })
-    let totals = try SpendingTotal.all(in: database, throughDay: 30)
-    for month in Set(totals.map(\.month)) {
-        let cents = SpendingView.cents(totals, month: month)
-        let rows = try sheet(["dining", "groceries"], month)
-        #expect(rows.reduce(0) { $0 + $1.cents } == cents["dining", default: 0] + cents["groceries", default: 0], "\(persona) \(month)")
-        #expect(rows.map(\.date) == rows.map(\.date).sorted(), "\(persona) \(month)")
-    }
+    #expect(try CategoryView.rows(in: database, category: "coffee", month: "2026-06", asOf: "2026-06-30").contains { $0.id == moved.id })
+    #expect(try !CategoryView.rows(in: database, category: "dining", month: "2026-06", asOf: "2026-06-30").contains { $0.id == moved.id })
 }
 
 /// A span of months is written across the year in UTC, e.g. "Oct 2025 – Mar 2026".

@@ -9,9 +9,9 @@ import Testing
 @testable import Sedge
 
 /// For Maya and Daniel, in today's month and the month before, every category's page agrees with
-/// Trends and the month's transaction sheet: its amount is the root's bar and block, each strip bar
-/// is the month's first-N-days total, its stores add up to the amount, and its transactions are the
-/// sheet's, count and exact total. The month's categories sheet adds up to the root's bar too.
+/// Trends: its amount is the root's bar and block, each strip bar is the exact total of that month's
+/// first-N-days transactions, and its stores add up to the amount. The month's categories sheet
+/// adds up to the root's bar too.
 @Test(arguments: ["maya", "daniel"]) func categoryPageMatchesTrends(persona: String) throws {
     let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
     let asOf = try #require(try database.asOf())
@@ -48,11 +48,6 @@ import Testing
             #expect(stores.reduce(0) { $0 + cents($1.total) } == amount, "\(label): stores")
             #expect(stores.map(\.total) == stores.map(\.total).sorted(by: >), "\(label): stores not biggest first")
 
-            // The month's transaction sheet over the same days lists the same rows.
-            let sheet = try MonthTransactions.sheetRows(in: database, .init(category: category, folded: [category], month: month,
-                                                                            through: SpendingView.window(month, asOf: asOf).through))
-            #expect(rows.count == sheet.count, "\(label): count")
-            #expect(rows.reduce(0) { $0 + $1.cents } == sheet.reduce(0) { $0 + $1.cents }, "\(label): total")
             #expect(rows.map(\.date) == rows.map(\.date).sorted(by: >), "\(label): not newest first")
         }
 
