@@ -33,15 +33,15 @@ final class SedgeUITests: XCTestCase {
         // https://developer.apple.com/documentation/xcuiautomation
     }
 
-    /// No model is wired in, so asking shows the thinking row briefly, then says so plainly
-    /// instead of answering.
+    /// Asking shows the thinking row while the model works, then its answer. In the Simulator the
+    /// answer comes from the scripted test model; `-modelReady` starts as if the weights were here.
     @MainActor
-    func testAskSaysNotConnected() throws {
+    func testAskShowsThinkingThenTheAnswer() throws {
         let app = XCUIApplication()
         // Reduce Motion keeps the sprout still. It draws and erases on a loop, and the test waits
         // for the screen to settle after each tap, which would outlast the thinking row.
-        // `-slowThinking` holds the row 6 s instead of 1.5 s, so a busy machine can't miss it.
-        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-slowThinking", "YES"]
+        // `-slowThinking` holds each model step 3 s, so a busy machine can't miss the row.
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-slowThinking", "YES", "-modelReady", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
@@ -50,10 +50,110 @@ final class SedgeUITests: XCTestCase {
         field.typeText("How much did I spend at Netflix this year?")
         app.buttons["Send"].tap()
         XCTAssertTrue(app.staticTexts["thinkingRow"].waitForExistence(timeout: 3), "No thinking row")
-        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 15))
         XCTAssertFalse(app.staticTexts["thinkingRow"].exists, "The thinking row stayed after the reply")
         XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
-        attachScreenshot(app, "ask-not-connected")
+        attachScreenshot(app, "ask-answered")
+    }
+
+    /// What the Simulator's scripted test model answers.
+    private let testModelAnswer = "This answer comes from the test model."
+
+    /// Types `question` and sends it.
+    private func ask(_ app: XCUIApplication, _ question: String) {
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.tap()
+        field.typeText(question)
+        app.buttons["Send"].tap()
+    }
+
+    /// Without the weights, the first question asks before downloading: the model's size, then
+    /// Download and Not now. Screenshot: the prompt.
+    @MainActor
+    func testFirstQuestionAsksToDownloadTheModel() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        ask(app, "How much did I spend at Netflix this year?")
+        let prompt = app.alerts["Sedge needs its on-device model"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 5), "No download prompt")
+        XCTAssertTrue(prompt.staticTexts["About 3 GB, downloaded once."].exists)
+        XCTAssertTrue(prompt.buttons["Download"].exists)
+        XCTAssertTrue(prompt.buttons["Not now"].exists)
+        XCTAssertFalse(app.staticTexts["You · How much did I spend at Netflix this year?"].exists, "Asked without the model")
+        attachScreenshot(app, "model-prompt")
+    }
+
+    /// Not now replaces the chat with a screen that needs the model and offers Download; nothing can
+    /// be asked meanwhile. Screenshot: the declined screen.
+    @MainActor
+    func testNotNowShowsTheNeedsModelScreen() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        ask(app, "How much did I spend at Netflix this year?")
+        app.alerts.buttons["Not now"].tap()
+        XCTAssertTrue(app.staticTexts["Sedge needs its on-device model"].waitForExistence(timeout: 5), "No declined screen")
+        XCTAssertTrue(app.buttons["Download"].exists)
+        XCTAssertFalse(app.buttons["exampleQuestion"].isHittable, "The empty chat still shows")
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        XCTAssertFalse(field.isEnabled, "The question box takes typing without the model")
+        attachScreenshot(app, "model-declined")
+    }
+
+    /// A stubbed download shows its progress, then the chat is back and the question still in the
+    /// box gets the test model's answer. Screenshots: downloading, then the answered chat.
+    @MainActor
+    func testStubbedDownloadLeadsToAnAnsweredChat() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-stubDownload", "ok"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        ask(app, "How much did I spend at Netflix this year?")
+        app.alerts.buttons["Download"].tap()
+        let downloading = app.staticTexts["Downloading the on-device model"]
+        XCTAssertTrue(downloading.waitForExistence(timeout: 2), "No download progress")
+        attachScreenshot(app, "model-downloading")
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 10), "The chat didn't come back")
+        app.buttons["Send"].tap()
+        XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 10), "No answer after the download")
+        attachScreenshot(app, "model-answered")
+    }
+
+    /// A stubbed failure stops the download with Try again, which starts it over.
+    @MainActor
+    func testStubbedDownloadFailureShowsTryAgain() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-stubDownload", "fail"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        ask(app, "How much did I spend at Netflix this year?")
+        app.alerts.buttons["Download"].tap()
+        let tryAgain = app.buttons["Try again"]
+        XCTAssertTrue(tryAgain.waitForExistence(timeout: 10), "No Try again")
+        XCTAssertTrue(app.staticTexts["The download stopped"].exists)
+        attachScreenshot(app, "model-failed")
+        tryAgain.tap()
+        XCTAssertTrue(app.staticTexts["Downloading the on-device model"].waitForExistence(timeout: 2), "Try again didn't restart")
+    }
+
+    /// When the model asks with `ask_user`, its question shows as a quick check and the answer waits
+    /// for the tap. "Later" saves nothing, so the test leaves no saved answer behind.
+    @MainActor
+    func testModelQuestionWaitsForTheQuickCheck() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-modelReady", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        ask(app, "How much do I spend on food?")
+        XCTAssertTrue(app.staticTexts["Should food include groceries?"].waitForExistence(timeout: 5), "No quick check")
+        XCTAssertFalse(app.staticTexts[testModelAnswer].exists, "Answered before the tap")
+        attachScreenshot(app, "model-quick-check")
+        app.buttons["Later"].tap()
+        XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 10), "No answer after the tap")
+        XCTAssertFalse(app.staticTexts["Should food include groceries?"].exists, "The quick check stayed")
     }
 
     /// `-demoThinking` holds a question at the thinking row, with one of the design's phrases.
@@ -113,7 +213,7 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     func testPreviousChatsReopenAndContinueAChat() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-modelReady", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
@@ -123,7 +223,7 @@ final class SedgeUITests: XCTestCase {
         field.tap()
         field.typeText(question)
         app.buttons["Send"].tap()
-        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 5))
         attachScreenshot(app, "ask-toolbar")
 
         app.navigationBars.buttons["New chat"].tap()
@@ -157,7 +257,7 @@ final class SedgeUITests: XCTestCase {
         field.typeText("And coffee?")
         app.buttons["Send"].tap()
         XCTAssertTrue(app.staticTexts["You · And coffee?"].waitForExistence(timeout: 2))
-        let replies = app.staticTexts.matching(NSPredicate(format: "label == %@", "The assistant isn't connected yet."))
+        let replies = app.staticTexts.matching(NSPredicate(format: "label == %@", testModelAnswer))
         XCTAssertTrue(replies.element(boundBy: 1).waitForExistence(timeout: 5), "No reply to the new question")
         attachScreenshot(app, "continued-chat")
 
@@ -263,7 +363,7 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     func testAskNewestTurnStaysAboveTheKeyboard() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-modelReady", "YES"]
         app.launch()
         app.tabBars.buttons["Ask"].tap()
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
@@ -272,7 +372,7 @@ final class SedgeUITests: XCTestCase {
         for i in 1...9 {
             field.typeText("Question number \(i)")
             app.buttons["Send"].tap()
-            let replies = app.staticTexts.matching(identifier: "The assistant isn't connected yet.")
+            let replies = app.staticTexts.matching(identifier: testModelAnswer)
             wait(for: [expectation(for: NSPredicate(format: "count == \(i)"), evaluatedWith: replies)], timeout: 8)
             Thread.sleep(forTimeInterval: 0.6)
             let last = replies.element(boundBy: i - 1)
@@ -301,7 +401,7 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     func testAskShortChatStartsAtTheLeft() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES", "-reduceMotion", "YES"]
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES", "-reduceMotion", "YES", "-modelReady", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
@@ -315,7 +415,7 @@ final class SedgeUITests: XCTestCase {
         field.tap()
         field.typeText("hello")
         app.buttons["Send"].tap()
-        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["You · hello"].frame.minX, left, accuracy: 1, "The short chat isn't at the left")
         attachScreenshot(app, "ask-one-question")
     }
@@ -325,7 +425,7 @@ final class SedgeUITests: XCTestCase {
     @MainActor
     func testAskExampleQuestionAsksIt() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES", "-reduceMotion", "YES"]
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES", "-reduceMotion", "YES", "-modelReady", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
@@ -344,7 +444,7 @@ final class SedgeUITests: XCTestCase {
         let question = example.label
         example.tap()
         XCTAssertTrue(app.staticTexts["You · \(question)"].waitForExistence(timeout: 3), "Tapping didn't ask it")
-        XCTAssertTrue(app.staticTexts["The assistant isn't connected yet."].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 10))
     }
 
     /// The Debug sample conversation shows the breakdown card, the answer and the quick check,

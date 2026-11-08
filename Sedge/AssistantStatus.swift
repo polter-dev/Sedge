@@ -5,8 +5,8 @@
 
 import Observation
 
-/// What the assistant is doing, as the Ask screen shows it. Whatever answers questions reports
-/// it through `ChatSession.report(_:)`; until something does, the screen reports it itself.
+/// What the assistant is doing, as the Ask screen shows it. The on-device model's loop reports
+/// it through `ChatSession.report(_:)`.
 enum AssistantStatus: Equatable {
     /// Nothing in progress: the person can ask.
     case idle
@@ -31,6 +31,23 @@ enum AssistantStatus: Equatable {
     private(set) var phrase = ""
     /// Seconds each phrase shows before the next one pushes it out, as in the design.
     static let phraseSeconds = 2.2
+    /// A question the model asked with `ask_user`, shown as a quick check while the answer waits,
+    /// and how to hand the person's tap back (nil for "Later").
+    private(set) var pendingCheck: (check: QuickCheck, reply: (String?) -> Void)?
+
+    /// Shows `check` and waits for the person's tap. The `ask_user` tool calls this through `AskPerson`.
+    func ask(_ check: QuickCheck) async -> String? {
+        await withCheckedContinuation { continuation in
+            pendingCheck = (check, { continuation.resume(returning: $0) })
+        }
+    }
+
+    /// Hands the tap (or nil) to the waiting question and takes the card away. Resumes it only once.
+    func answerCheck(_ reply: String?) {
+        let pending = pendingCheck
+        pendingCheck = nil
+        pending?.reply(reply)
+    }
 
     /// The design's ten placeholder phrases for the thinking row.
     static let phrases = [
@@ -69,6 +86,8 @@ enum AssistantStatus: Equatable {
     /// "Start new session" and New chat: clears the conversation so the person can ask again.
     /// The chat so far stays saved in Previous chats.
     func startNewSession() {
+        // A question still waiting on a quick check carries on as if skipped; its turn is gone.
+        answerCheck(nil)
         turns = []
         chatID = nil
         reopenedTitle = nil
@@ -77,6 +96,7 @@ enum AssistantStatus: Equatable {
 
     /// Shows an older chat from Previous chats. New questions are added to it.
     func open(_ chat: Int64, titled title: String, turns: [ChatTurn]) {
+        answerCheck(nil)
         self.turns = turns
         chatID = chat
         reopenedTitle = title

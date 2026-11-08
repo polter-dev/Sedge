@@ -27,8 +27,12 @@ open Sedge.xcodeproj
 
 The three tabs:
 
-- **Ask**: a chat about the chosen data. No assistant is connected yet, so a typed question shows the
-  thinking row (a sprout and a short phrase) for a moment, then "The assistant isn't connected yet."
+- **Ask**: a chat about the chosen data, answered on the device by Qwen3.5-4B (4-bit, run with MLX);
+  nothing leaves the phone. The first question asks to download the model once (about 3 GB, kept in
+  Application Support); "Not now" shows a screen with Download instead of the chat. While the model
+  works, the thinking row (a sprout and a short phrase) shows each step, and a question the model asks
+  back shows as a quick check. The iOS Simulator can't run MLX, so there a scripted test model answers
+  "This answer comes from the test model." A Mac with Apple silicon or an iPhone runs the real model.
   - The empty screen rotates through example questions.
   - Each question is saved with the data. **Previous chats** (clock icon, top left) lists them, opens
     one or deletes it; **New chat** (top right) starts over.
@@ -60,7 +64,9 @@ Launch arguments (Product > Scheme > Edit Scheme > Run > Arguments):
 - Debug builds only, mostly for UI tests and screenshots:
   - `-sampleChat YES` shows a sample conversation on Ask, with numbers worked out from the data.
   - `-demoThinking YES` holds a question on the thinking row; `-demoTokenLimit YES` shows the limit message.
-  - `-slowThinking YES` keeps the thinking row for 6 seconds instead of 1.5 before the reply.
+  - `-slowThinking YES` holds each step of the test model 3 seconds instead of 0.3.
+  - `-modelReady YES` starts as if the on-device model were downloaded; `-stubDownload ok` or `fail` shows a
+    fake download that ends ready or stopped; `-fakeModel YES` answers with the test model outside the Simulator.
   - `-reduceMotion YES` makes Ask act as if Reduce Motion were on.
   - `-firstLaunch YES` forgets the chosen data, so the app opens on Welcome as on a fresh install.
   - `-emptyBank YES` uses a separate, empty bank file that never syncs, so the bank shows its sign-in screen
