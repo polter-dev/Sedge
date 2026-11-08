@@ -820,64 +820,108 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "spending-all-mosaic")
 
         app.buttons["Groceries, $87"].tap()
-        XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.navigationBars["Groceries"].exists)
+        XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["categoryAmount"].label, "$87")
     }
 
-    /// With "All" on an earlier page (November to February) with January picked, tapping a category
-    /// block opens that category's own page on January and that page, going back finds "All" still
-    /// there, and a second block opens its page too. Groceries in January, counted by hand over the
-    /// 1st to the 30th: $19.11 + $18.87 + $20.19 + $25.01 = $83.18. The screenshots are All on the
-    /// newest page, the pushed page and All after going back, in light, or dark after
-    /// `xcrun simctl ui <device> appearance dark`.
+    /// With "All" on an earlier page (November to February) with January picked, tapping the
+    /// Groceries block opens Groceries' own page on January: its title, January's $83 (counted by
+    /// hand over the 1st to the 30th: $19.11 + $18.87 + $20.19 + $25.01), Stores and Transactions,
+    /// and no month pager. Tapping February's strip bar changes the amount, tapping a store opens
+    /// its history, and going back twice finds "All" still on January. The screenshots are the page
+    /// on June and on January, in light, or dark after `xcrun simctl ui <device> appearance dark`.
     @MainActor
-    func testAllCategoryBlocksOpenTheirOwnPages() throws {
+    func testAllCategoryBlockOpensTheCategoryPage() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya"]
         app.launch()
 
         app.tabBars.buttons["Trends"].tap()
         chooseSpendingCategory(app, "All")
-        XCTAssertTrue(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 5))
-        attachScreenshot(app, "all-newest")
-        app.scrollViews["months"].swipeRight()
-        XCTAssertTrue(app.staticTexts["Connected spending · February"].waitForExistence(timeout: 5))
-        app.otherElements["January"].tap()
-        XCTAssertTrue(app.staticTexts["Connected spending · January"].waitForExistence(timeout: 5))
-        let earlier = "Nov 2025\u{2009}–\u{2009}Feb 2026"
-
         let blocks = app.buttons.matching(identifier: "categoryBlock")
         let groceries = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Groceries, '")).firstMatch
         XCTAssertTrue(groceries.waitForExistence(timeout: 5))
         groceries.tap()
         XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["by store"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Connected spending · January"].exists)
-        XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
-        // January's page is the one on screen, not only the one picked, and its dots say so.
-        XCTAssertTrue(app.windows.firstMatch.frame.contains(app.otherElements["shownMonth"].frame))
-        XCTAssertEqual(app.staticTexts["total"].label, "$83")
-        XCTAssertEqual(app.otherElements["Months"].value as? String, earlier)
-        XCTAssertEqual(app.otherElements["Months"].identifier, "filledDot0")
+        XCTAssertTrue(app.staticTexts["Stores"].waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5) // the push's slide
-        attachScreenshot(app, "pushed-groceries-earlier")
+        attachScreenshot(app, "category-page-june")
+        app.navigationBars.buttons.firstMatch.tap()
 
+        XCTAssertTrue(app.staticTexts["Connected spending · June"].waitForExistence(timeout: 5))
+        app.scrollViews["months"].swipeRight()
+        XCTAssertTrue(app.staticTexts["Connected spending · February"].waitForExistence(timeout: 5))
+        app.otherElements["January"].tap()
+        XCTAssertTrue(app.staticTexts["Connected spending · January"].waitForExistence(timeout: 5))
+        let earlier = "Nov 2025\u{2009}–\u{2009}Feb 2026"
+        XCTAssertTrue(groceries.waitForExistence(timeout: 5))
+        groceries.tap()
+
+        XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
+        let amount = app.staticTexts["categoryAmount"]
+        XCTAssertTrue(amount.waitForExistence(timeout: 5))
+        XCTAssertEqual(amount.label, "$83")
+        XCTAssertTrue(app.staticTexts["Stores"].exists)
+        XCTAssertFalse(app.scrollViews["months"].exists, "the category page has a month pager")
+        XCTAssertFalse(app.buttons["Category"].exists)
+        let bars = app.buttons.matching(identifier: "stripBar")
+        XCTAssertEqual(bars.count, 6)
+        XCTAssertTrue(bars.element(boundBy: 0).isSelected, "January isn't the picked bar")
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["Transactions"].waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+        app.swipeDown()
+        attachScreenshot(app, "category-page-january")
+
+        bars.element(boundBy: 1).tap()
+        XCTAssertTrue(bars.element(boundBy: 1).isSelected, "February isn't the picked bar")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != '$83'"), object: amount)],
+                                      timeout: 5), .completed, "the amount didn't change")
+
+        let store = app.buttons.matching(identifier: "categoryStore").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 5))
+        store.tap()
+        XCTAssertTrue(app.otherElements["storeChart"].waitForExistence(timeout: 5), "no store history")
+
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.firstMatch.tap()
         let category = app.buttons["Category"]
         XCTAssertTrue(category.waitForExistence(timeout: 5))
         XCTAssertEqual(category.value as? String, "All")
         XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
         XCTAssertEqual(app.otherElements["Months"].value as? String, earlier)
-        XCTAssertTrue(app.staticTexts["by category"].exists)
-        Thread.sleep(forTimeInterval: 0.5)
-        attachScreenshot(app, "all-after-back")
+        XCTAssertTrue(app.staticTexts["Connected spending · January"].exists)
+    }
 
-        let housing = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Housing, '")).firstMatch
-        XCTAssertTrue(housing.waitForExistence(timeout: 5))
-        housing.tap()
-        XCTAssertTrue(app.navigationBars["Housing"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["by store"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
+    /// The question chip at the bottom of Maya's June Groceries page (down from May) opens Ask on
+    /// a new chat, the sample chat set aside, with the question typed in the box and not sent.
+    @MainActor
+    func testCategoryQuestionOpensAskWithItTyped() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Food & dining"].waitForExistence(timeout: 10), "No sample chat")
+        app.tabBars.buttons["Trends"].tap()
+        chooseSpendingCategory(app, "All")
+        let groceries = app.buttons.matching(NSPredicate(format: "identifier == 'categoryBlock' AND label BEGINSWITH 'Groceries, '")).firstMatch
+        XCTAssertTrue(groceries.waitForExistence(timeout: 5))
+        groceries.tap()
+        let chip = app.buttons["categoryQuestion"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        let question = "Why was groceries lower in June than May?"
+        XCTAssertEqual(chip.label, question)
+        for _ in 0..<5 where !chip.isHittable { app.swipeUp() }
+        chip.tap()
+
+        XCTAssertTrue(app.tabBars.buttons["Ask"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Ask"].isSelected)
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertEqual(field.value as? String, question)
+        XCTAssertFalse(app.staticTexts["Food & dining"].exists, "the sample chat is still on screen")
+        XCTAssertFalse(app.staticTexts["You · \(question)"].exists, "the question was sent")
     }
 
     /// With "All", the Biggest change row (Groceries on Maya's June) opens Groceries' own page,
@@ -895,7 +939,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(change.label.contains("Groceries"), change.label)
         change.tap()
         XCTAssertTrue(app.navigationBars["Groceries"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Value Mart, $87"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["categoryAmount"].label, "$87")
 
         app.navigationBars.buttons.firstMatch.tap()
         let category = app.buttons["Category"]
@@ -1758,47 +1802,32 @@ final class SedgeUITests: XCTestCase {
         }
     }
 
-    /// Spending with "All": Maya's June "Other categories" block ($169.03: utilities, transport,
-    /// dining, education, subscriptions, coffee over June 1-30) opens its 10 transactions.
-    /// The screenshot is the sheet in light, or dark after `xcrun simctl ui <device> appearance dark`.
+    /// Spending with "All": Maya's June "Other categories" block opens the month's categories sheet,
+    /// titled "June so far", with every category of June, biggest first, and tapping Transport opens
+    /// Transport's page. The screenshot is the sheet in light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
     @MainActor
-    func testSpendingAllOtherCategoriesOpensItsTransactions() throws {
+    func testSpendingAllOtherCategoriesOpensTheMonthsCategories() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Trends"].tap()
-        let category = app.buttons["Category"]
-        XCTAssertTrue(category.waitForExistence(timeout: 10))
-        category.tap()
-        let all = app.buttons.matching(NSPredicate(format: "identifier == 'categoryCell' AND label == 'All'")).firstMatch
-        XCTAssertTrue(all.waitForExistence(timeout: 5))
-        all.tap()
-        XCTAssertTrue(app.staticTexts["by category"].waitForExistence(timeout: 5))
+        chooseSpendingCategory(app, "All")
         app.swipeUp()
-        let block = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Other categories, $169'")).firstMatch
+        let block = app.buttons["Other categories, $169"]
         XCTAssertTrue(block.waitForExistence(timeout: 5), "no Other categories block")
-        XCTAssertTrue(app.buttons["Other categories, $169"].exists, "Other categories is not a button")
         block.tap()
-        XCTAssertTrue(app.staticTexts["10 transactions"].waitForExistence(timeout: 5), "tapping Other categories opened nothing")
-        XCTAssertTrue(app.staticTexts["$169.03"].exists)
-        // Today's month keeps the month's name.
-        XCTAssertTrue(app.staticTexts["Other categories · June 2026"].exists)
+        XCTAssertTrue(app.staticTexts["June so far"].waitForExistence(timeout: 5), "tapping Other categories opened nothing")
+        let rows = app.buttons.matching(identifier: "monthCategory")
+        XCTAssertEqual(rows.allElementsBoundByIndex.map(\.label),
+                       ["Housing", "Groceries", "Phone internet", "Utilities", "Transport", "Dining", "Education", "Subscriptions", "Coffee"])
         Thread.sleep(forTimeInterval: 0.5) // the sheet's slide
-        attachScreenshot(app, "spending-other-categories")
+        attachScreenshot(app, "month-categories-sheet")
 
-        // May only runs to the 30th, the same day as today, and its sheet's title says so.
-        app.buttons["Done"].tap()
-        app.swipeDown()
-        let may = app.otherElements["May"]
-        XCTAssertTrue(may.waitForExistence(timeout: 5))
-        may.tap()
-        XCTAssertTrue(app.staticTexts["Connected spending · May"].waitForExistence(timeout: 5))
-        app.swipeUp()
-        let mayBlock = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Other categories, '")).firstMatch
-        XCTAssertTrue(mayBlock.waitForExistence(timeout: 5), "no Other categories block in May")
-        mayBlock.tap()
-        XCTAssertTrue(app.staticTexts["Other categories · May 1\u{2009}–\u{2009}30, 2026"].waitForExistence(timeout: 5),
-                      "May's sheet doesn't name its days")
+        rows.matching(NSPredicate(format: "label == 'Transport'")).firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Transport"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["June so far"].exists, "the sheet stayed open")
+        XCTAssertTrue(app.staticTexts["categoryAmount"].exists)
     }
 
     /// The All months screen opens from Trends on June 2026, the newest month, with its list

@@ -141,6 +141,8 @@ struct MainView: View {
     let changeData: () -> Void
     /// The Ask box's text. It lives here so a typed question stays when the tab changes.
     @State private var question = ""
+    /// Counts the questions handed to Ask from Trends; each one asks Ask for an empty chat.
+    @State private var handedQuestions = 0
     /// True while Ask shows an older chat: its title is the chat's, so Rename (which names the data) is left out.
     @State private var chatReopened = false
     /// The person's own name for this data, kept in the app's settings (one per choice), never in a database.
@@ -182,7 +184,7 @@ struct MainView: View {
         TabView(selection: $tab) {
             Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
-                    AskView(database: database, question: $question, reopened: $chatReopened) { tab = $0 }
+                    AskView(database: database, question: $question, reopened: $chatReopened, newChatRequests: handedQuestions) { tab = $0 }
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                         // Left out, chevron and all, while an older chat is shown. It hangs off a background
@@ -192,7 +194,12 @@ struct MainView: View {
             }
             Tab("Trends", image: "tab-trends", value: .trends) {
                 NavigationStack {
-                    SpendingView(database: database)
+                    // A category page's question chip: Ask on an empty chat, with the question typed in, unsent.
+                    SpendingView(database: database) { text in
+                        question = text
+                        handedQuestions += 1
+                        tab = .ask
+                    }
                         .navigationTitle("Spending")
                         // Inline because iOS shows the title menu only on an inline title.
                         .navigationBarTitleDisplayMode(.inline)
