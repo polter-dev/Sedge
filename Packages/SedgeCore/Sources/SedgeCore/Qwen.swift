@@ -6,6 +6,7 @@ import os // os_proc_available_memory
 import MLX
 import MLXLLM
 import MLXLMCommon
+import Synchronization
 import Tokenizers
 
 /// Qwen3.5-4B (4-bit), the on-device model, run with MLX the way the benchmark notebook's
@@ -44,9 +45,33 @@ public final class QwenModel: AssistantModel {
     public static func load(from folder: URL) async throws -> QwenModel {
         // A small buffer cache keeps memory down on a phone; MLX would otherwise hold freed buffers for reuse.
         Memory.cacheLimit = 20 * 1024 * 1024
-        let container = try await withError { try await loadModelContainer(from: folder, using: TokenizerLoader()) }
+        let container = try await catchingLoadErrors { try await loadModelContainer(from: folder, using: TokenizerLoader()) }
         let source = try String(contentsOf: folder.appending(path: "chat_template.jinja"), encoding: .utf8)
         return QwenModel(container: container, template: try template(source))
+    }
+
+    /// The first MLX error raised while the weights load, or nil.
+    private static let loadError = Mutex<String?>(nil)
+
+    /// Runs `body` (the load) with MLX errors (such as a failed allocation on a phone short of memory) turned
+    /// into a thrown error instead of MLX's default, which ends the app. withError can't do it here: its handler
+    /// only covers the calling task, and mlx-swift-lm reads the weights on a global dispatch queue. So a
+    /// process-wide handler collects the errors while the load runs (one load at a time: OnDeviceModel shares
+    /// it, and nothing else uses MLX then).
+    /// shortcut: a few mlx-swift functions read their result right after an error and trap whatever the handler
+    /// does (e.g. `quantized` with a group size the weights can't divide by, which the pinned config rules out);
+    /// revisit if mlx-swift stops reading failed results.
+    private static func catchingLoadErrors<R>(_ body: () async throws -> R) async throws -> R {
+        loadError.withLock { $0 = nil }
+        // A C function can't capture anything, so it writes to the static above.
+        setErrorHandler { message, _ in
+            let text = message.map { String(cString: $0) } ?? ""
+            QwenModel.loadError.withLock { if $0 == nil { $0 = text } }
+        }
+        defer { setErrorHandler(nil) } // back to MLX's default once the load is over
+        let result = try await body()
+        if let message = loadError.withLock({ $0 }) { throw MLXError.caught(message) }
+        return result
     }
 
     /// The chat template compiled with the settings Hugging Face's transformers uses.
@@ -66,6 +91,7 @@ public final class QwenModel: AssistantModel {
     }
 
     public func reply(to messages: [Value], tools: [Value]) async throws -> String {
+        try Task.checkCancellation() // the question was dropped (its chat screen is gone): start no new step
         let prompt = try Self.render(template, messages: messages, tools: tools)
         return try await container.perform { context in
             // MLX's own answer to a failure (a GPU error, or GPU work while the app is in the background)
@@ -84,6 +110,7 @@ public final class QwenModel: AssistantModel {
                 var text = ""
                 while let token = iterator.next(), token != stop {
                     try error.check()
+                    try Task.checkCancellation() // and free the GPU mid-step
                     output.append(token)
                     text = context.tokenizer.decode(tokenIds: output, skipSpecialTokens: false)
                     if Assistant.isComplete(text) { return text } // one call per step, so stop here

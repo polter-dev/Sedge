@@ -74,6 +74,20 @@ struct QuickCheck: Codable {
 
 // MARK: - The screen
 
+/// The Ask screen's chat and the question it is working out. SwiftUI keeps a screen's state through tab
+/// switches, but drops it when picking other data rebuilds the tabs, and this goes with it: the question still
+/// running stops, so it holds no GPU or memory, and the screen it kept awake may lock again.
+final class AskScreenState {
+    let session = ChatSession()
+    var question: Task<Void, Never>?
+
+    isolated deinit {
+        question?.cancel()
+        if session.status == .thinking { UIApplication.shared.isIdleTimerDisabled = false }
+        session.startNewSession() // a quick check still waiting takes "Later", so the question can end
+    }
+}
+
 /// Ask a question about the chosen data, as a chat. The on-device model answers each question on
 /// its own (as in the benchmark) while the thinking row shows; the first question asks to download
 /// the model, and asking waits until it is here. Debug builds launched with `-sampleChat YES` show
@@ -90,7 +104,8 @@ struct AskView: View {
     var newChatRequests = 0
     /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
-    @State private var session = ChatSession()
+    @State private var screen = AskScreenState()
+    private var session: ChatSession { screen.session }
     /// True when the turns are demo content, which is never saved.
     @State private var isDemo = false
     /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
@@ -374,7 +389,8 @@ struct AskView: View {
             return await session.ask(QuickCheck(question: clarification.question, details: [], options: clarification.options,
                                          factKey: clarification.factKey))
         }
-        Task {
+        // The question captures only what it needs, not this view, so the screen's state can go while it runs.
+        screen.question = Task { [session, database, onDevice] in
             let outcome: Assistant.Outcome?
             do {
                 outcome = await Assistant.run(text, database: database, model: try await onDevice.model(for: text), askPerson: askPerson)

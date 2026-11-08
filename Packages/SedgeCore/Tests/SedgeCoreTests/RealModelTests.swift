@@ -67,6 +67,19 @@ struct RealModel {
         }
     }
 
+    /// A question dropped mid-step (Ask went away when other data was picked) stops at the next token
+    /// (once the prompt has been read) instead of running its steps out on the GPU.
+    @Test func aCancelledQuestionStopsMidStep() async throws {
+        let model = try await QwenModel.load(from: cachedWeights)
+        let daniel = try organizedPersona("daniel")
+        let question = Task { await Assistant.run("How much did I spend on gas this year?", database: daniel, model: model, askPerson: nil) }
+        try await Task.sleep(for: .milliseconds(500)) // the first step takes a few seconds
+        let cancelled = Date.now
+        question.cancel()
+        #expect(await question.value == .crashed("\(CancellationError())"))
+        #expect(Date.now.timeIntervalSince(cancelled) < 1)
+    }
+
     /// Every number in a tool's JSON result.
     func numbers(_ json: String) -> [Double] {
         func walk(_ value: Any) -> [Double] {
