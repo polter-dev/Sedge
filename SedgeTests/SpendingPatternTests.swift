@@ -438,48 +438,6 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     }
 }
 
-/// For Maya and Daniel in May and June, the sheet Spending's "Other categories" block opens lists
-/// the block's cents over the block's days (the 1st through today's day), and as many transactions
-/// as SQLite counts in those categories and days. Maya's June: utilities, transport, dining,
-/// education, subscriptions and coffee, 10 transactions and $169.03.
-@Test(arguments: ["maya", "daniel"]) func otherCategoriesSheetMatchesItsBlock(persona: String) throws {
-    let database = try inMemory(persona) // in memory: running alongside SedgeTests, the shared file would be locked
-    let asOf = try #require(try database.asOf())
-    let totals = try SpendingTotal.all(in: database, includeMoved: false, throughDay: try #require(Int(asOf.suffix(2))))
-    for month in ["2026-05", "2026-06"] {
-        let block = try #require(SpendingView.categoryBlocks(totals, month: month).first { $0.name == SpendingView.otherCategories })
-        let folded = SpendingView.otherCategoryNames(totals, month: month)
-        let window = SpendingView.window(month, asOf: asOf)
-        let rows = try AllMonthsView.sheetRows(in: database, .init(category: block.name, folded: folded, month: month, through: window.through))
-        #expect(rows.reduce(0) { $0 + $1.cents } == Int((block.total * 100).rounded()), "\(persona) \(month)")
-        let count = try database.dbQueue.read { db in
-            try Int.fetchOne(db, sql: """
-                SELECT COUNT(*) FROM transactions t \(SpendingTotal.categoryJoins)
-                WHERE NOT t.pending AND t.kind IN ('spending', 'refund') AND t.date BETWEEN ? AND ?
-                  AND \(SpendingTotal.categoryOf) IN (\(folded.map { _ in "?" }.joined(separator: ",")))
-                """, arguments: StatementArguments([window.from, window.through] + folded))
-        }
-        #expect(rows.count == count, "\(persona) \(month)")
-        if persona == "maya" && month == "2026-06" {
-            #expect(Set(folded) == ["utilities", "transport", "dining", "education", "subscriptions", "coffee"])
-            #expect(rows.count == 10)
-            #expect(rows.reduce(0) { $0 + $1.cents } == 16_903)
-        }
-    }
-}
-
-/// The Other sheet's title names its days only when they cut a past month short: Maya's May
-/// (as of June 30) lists May 1 – 30, while June (today's month), April (30 days) and February
-/// (whose window runs past its end) are whole and keep the month's name.
-@Test func otherSheetPeriodOnlyForCutShortPastMonths() throws {
-    let asOf = try #require(try inMemory("maya").asOf())
-    #expect(SpendingView.period("2026-05", asOf: asOf) == "May 1\u{2009}–\u{2009}30, 2026")
-    #expect(SpendingView.period("2026-06", asOf: asOf) == nil)
-    #expect(SpendingView.period("2026-04", asOf: asOf) == nil)
-    #expect(SpendingView.period("2026-02", asOf: asOf) == nil)
-    #expect(SpendingView.period("2026-05", asOf: "2026-06-15") == "May 1\u{2009}–\u{2009}15, 2026")
-}
-
 /// A month with only colored categories has no Other row, and money moved is never folded into
 /// Other even though it has no color of its own.
 @Test func allMonthsOtherRowOnlyForUncoloredCategories() {

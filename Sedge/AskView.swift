@@ -87,6 +87,8 @@ struct AskView: View {
     @Binding var question: String
     /// Tells the tabs whether an older chat is on screen, so its title doesn't offer the data's Rename menu.
     @Binding var reopened: Bool
+    /// Goes up by one each time Trends hands Ask a question; each time, a chat in use makes way for an empty one.
+    var newChatRequests = 0
     /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
     @State private var session = ChatSession()
@@ -189,6 +191,8 @@ struct AskView: View {
             }
         }
         .onChange(of: session.reopenedTitle) { reopened = $1 != nil }
+        // An empty chat is reused, so the handed question doesn't leave a blank chat behind.
+        .onChange(of: newChatRequests) { if !session.turns.isEmpty || session.status != .idle { newChat() } }
         // A turn is saved once it settles: its answer came in, or the chat hit its limit. Watching
         // the status means whatever answers questions only has to report it.
         .onChange(of: session.status) { old, _ in
