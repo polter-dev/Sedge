@@ -219,8 +219,10 @@ struct AskView: View {
         .onChange(of: newChatRequests) { if !session.turns.isEmpty || session.status != .idle { newChat() } }
         // A turn is saved once it settles: its answer came in, or the chat hit its limit. Watching
         // the status means whatever answers questions only has to report it.
-        .onChange(of: session.status) { old, _ in
+        .onChange(of: session.status) { old, new in
             if old == .thinking { saveNewestTurn() }
+            // iOS allows no GPU work once the phone locks, so the screen stays on while the model works.
+            UIApplication.shared.isIdleTimerDisabled = new == .thinking
             // Covers sending (the thinking row appears) and the answer coming in.
             position.scrollTo(edge: .bottom)
         }

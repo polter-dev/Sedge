@@ -48,6 +48,25 @@ struct RealModel {
         }
     }
 
+    /// The two questions that ended the app on an iPhone (daniel): a question, then the vague
+    /// follow-up "is that a lot?", in one chat, through one loaded model, the way Ask runs them.
+    /// Prints the memory footprint after loading and after each question.
+    @Test func vagueFollowUpOnDaniel() async throws {
+        let model = Logged(inner: try await QwenModel.load(from: cachedWeights))
+        print("REAL MODEL | loaded | footprint \(footprint())")
+        let daniel = try organizedPersona("daniel")
+        let askPerson: AskPerson = { clarification in
+            print("REAL MODEL |   ask_user:", clarification.question, clarification.options)
+            return nil
+        }
+        for question in ["how much did i spend on gas this year?", "is that a lot?"] {
+            let started = Date.now
+            let outcome = await Assistant.run(question, database: daniel, model: model, askPerson: askPerson)
+            print("REAL MODEL | \(question) | \(outcome) | \(Int(Date.now.timeIntervalSince(started))) s | footprint \(footprint())")
+            guard case .answer = outcome else { Issue.record("No answer for \(question): \(outcome)"); continue }
+        }
+    }
+
     /// Every number in a tool's JSON result.
     func numbers(_ json: String) -> [Double] {
         func walk(_ value: Any) -> [Double] {
@@ -77,4 +96,14 @@ final class Logged: AssistantModel {
         print("REAL MODEL |   step:", text.replacingOccurrences(of: "\n", with: " "))
         return text
     }
+}
+
+/// This process's physical memory footprint now and at its highest, in MB: the figure iOS ends an app on.
+func footprint() -> (now: Int64, peak: Int64) {
+    var info = task_vm_info_data_t()
+    var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+    _ = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+    }
+    return (Int64(info.phys_footprint) >> 20, info.ledger_phys_footprint_peak >> 20)
 }

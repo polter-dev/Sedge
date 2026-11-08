@@ -159,6 +159,36 @@ func fixtureHistory() -> [Assistant.Step] {
         #expect(await lastMessage(skipped, turn: 1).hasPrefix(#"{"note": "The person didn't answer."#))
     }
 
+    /// The follow-up "is that a lot?" on its own, as the real model handled it on daniel: an ask_user
+    /// with too many options, one the person skips, a bad category, then the answer.
+    @Test func aVagueFollowUpAsksThenAnswers() async throws {
+        let daniel = try organizedPersona("daniel")
+        let model = ScriptedModel([
+            ScriptedModel.call("ask_user", ["fact_key": "context", "question": "What do you mean?",
+                                            "options": #"["What?", "Spending", "Savings", "Balance", "Something else"]"#]),
+            ScriptedModel.call("ask_user", ["fact_key": "context", "question": "What do you mean?",
+                                            "options": #"["Spending", "Savings", "Balance", "Other"]"#]),
+            ScriptedModel.call("total_spent", ["category": "all", "start_date": "2026-05-16", "end_date": "2026-06-30"]),
+            ScriptedModel.call("total_spent", ["start_date": "2026-05-16", "end_date": "2026-06-30"]),
+            finalAnswer,
+        ])
+        let person = Person(nil)
+        #expect(await Assistant.run("is that a lot?", database: daniel, model: model, askPerson: person.ask) == answer)
+        #expect(person.asked.withLock { $0 } == 1) // the five-option call never reached the person
+        #expect(await lastMessage(model, turn: 1).hasPrefix(#"{"error": "Bad value for \"options\".""#))
+        #expect(await lastMessage(model, turn: 2).hasPrefix(#"{"note": "The person didn't answer."#))
+        #expect(await lastMessage(model, turn: 3).hasPrefix(#"{"error": "Bad value for \"category\".""#))
+    }
+
+    @Test func noMemoryForATurnEndsTheQuestion() async {
+        let model = ScriptedModel([ScriptedModel.call("account_balances"), .failure(.memory)])
+        #expect(await Assistant.run("Q", database: maya, model: model, askPerson: nil) == .crashed("memory"))
+        // A 3,300-token turn needs about 1.4 GB; a turn near the 16,384-token cap about 1.8 GB.
+        #expect(QwenModel.fits(3_313, available: 1_500 << 20))
+        #expect(!QwenModel.fits(3_313, available: 1 << 30))
+        #expect(!QwenModel.fits(16_000, available: 1_700 << 20))
+    }
+
     @Test func aContextOverflowIsCompactedOnceThenReportsTheLimit() async {
         // First overflow: start again from the question and only the latest step.
         let model = ScriptedModel([ScriptedModel.call("get_profile"), ScriptedModel.call("account_balances"),

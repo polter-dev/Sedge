@@ -1,5 +1,8 @@
 import Foundation
 import Jinja
+#if os(iOS)
+import os // os_proc_available_memory
+#endif
 import MLX
 import MLXLLM
 import MLXLMCommon
@@ -41,7 +44,7 @@ public final class QwenModel: AssistantModel {
     public static func load(from folder: URL) async throws -> QwenModel {
         // A small buffer cache keeps memory down on a phone; MLX would otherwise hold freed buffers for reuse.
         Memory.cacheLimit = 20 * 1024 * 1024
-        let container = try await loadModelContainer(from: folder, using: TokenizerLoader())
+        let container = try await withError { try await loadModelContainer(from: folder, using: TokenizerLoader()) }
         let source = try String(contentsOf: folder.appending(path: "chat_template.jinja"), encoding: .utf8)
         return QwenModel(container: container, template: try template(source))
     }
@@ -65,22 +68,48 @@ public final class QwenModel: AssistantModel {
     public func reply(to messages: [Value], tools: [Value]) async throws -> String {
         let prompt = try Self.render(template, messages: messages, tools: tools)
         return try await container.perform { context in
-            let tokens = context.tokenizer.encode(text: prompt, addSpecialTokens: true)
-            guard tokens.count + Self.maxTokens <= Self.contextLimit else { throw ModelCrash.context }
-            // mlx_lm stops at the tokenizer's end token (<|im_end|>) only.
-            let stop = context.tokenizer.eosToken.flatMap(context.tokenizer.convertTokenToId)
-            var iterator = try TokenIterator(input: LMInput(tokens: MLXArray(tokens)), model: context.model,
-                                             parameters: GenerateParameters(maxTokens: Self.maxTokens, temperature: Self.temperature))
-            var output: [Int] = []
-            var text = ""
-            while let token = iterator.next(), token != stop {
-                output.append(token)
-                text = context.tokenizer.decode(tokenIds: output, skipSpecialTokens: false)
-                if Assistant.isComplete(text) { return text } // one call per step, so stop here
+            // MLX's own answer to a failure (a GPU error, or GPU work while the app is in the background)
+            // is to end the app. Inside withError it throws instead, so the question just ends.
+            try withError { error in
+                defer { Memory.clearCache() } // hand this turn's spare buffers back before the next one
+                let tokens = context.tokenizer.encode(text: prompt, addSpecialTokens: true)
+                guard tokens.count + Self.maxTokens <= Self.contextLimit else { throw ModelCrash.context }
+                guard Self.fits(tokens.count, available: Self.availableMemory()) else { throw ModelCrash.memory }
+                // mlx_lm stops at the tokenizer's end token (<|im_end|>) only.
+                let stop = context.tokenizer.eosToken.flatMap(context.tokenizer.convertTokenToId)
+                var iterator = try TokenIterator(input: LMInput(tokens: MLXArray(tokens)), model: context.model,
+                                                 parameters: GenerateParameters(maxTokens: Self.maxTokens, temperature: Self.temperature))
+                try error.check()
+                var output: [Int] = []
+                var text = ""
+                while let token = iterator.next(), token != stop {
+                    try error.check()
+                    output.append(token)
+                    text = context.tokenizer.decode(tokenIds: output, skipSpecialTokens: false)
+                    if Assistant.isComplete(text) { return text } // one call per step, so stop here
+                }
+                if output.count >= Self.maxTokens { throw ModelCrash.maxTokens }
+                return text
             }
-            if output.count >= Self.maxTokens { throw ModelCrash.maxTokens }
-            return text
         }
+    }
+
+    /// True when a turn on a prompt of `promptTokens` fits in `available` bytes: 32 KB of attention
+    /// cache per token (8 full-attention layers, keys and values, 4 heads of 256, 2 bytes each) for the
+    /// prompt and the longest reply, plus 1.25 GB of working buffers (reading a long prompt, 512 tokens at
+    /// a time, took up to 1.1 GB above the weights on a Mac).
+    static func fits(_ promptTokens: Int, available: Int) -> Bool {
+        (promptTokens + maxTokens) * 32 * 1024 + 1_280 * 1024 * 1024 <= available
+    }
+
+    /// The memory iOS still lets this app take before it ends it; unlimited elsewhere (and where iOS says 0, no limit).
+    static func availableMemory() -> Int {
+        #if os(iOS)
+        let available = os_proc_available_memory()
+        return available == 0 ? .max : available
+        #else
+        return .max
+        #endif
     }
 }
 

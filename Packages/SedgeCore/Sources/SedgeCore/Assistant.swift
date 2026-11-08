@@ -14,6 +14,8 @@ public enum ModelCrash: Error, Equatable {
     case context
     /// The model wrote its whole output allowance without finishing a tool call.
     case maxTokens
+    /// The device doesn't have the memory left for this turn, so it isn't started.
+    case memory
 }
 
 /// The question-answering loop, ported from the benchmark notebook (`benchmarks/benchmark.ipynb`,
