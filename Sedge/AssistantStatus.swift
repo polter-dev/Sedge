@@ -23,7 +23,7 @@ enum AssistantStatus: Equatable {
     /// The saved chat (`Chats`) these turns belong to, or nil until its first turn is saved.
     var chatID: Int64?
     /// The title of an older chat opened from Previous chats, or nil for a chat started here.
-    /// While it is set, the screen shows the "answers best in a new chat" banner.
+    /// While it is set, the screen's title is the chat's.
     private(set) var reopenedTitle: String?
     private(set) var status = AssistantStatus.idle
     /// The words next to the thinking row's sprout, picked when thinking starts and changed

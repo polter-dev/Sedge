@@ -28,9 +28,9 @@ struct ChatAnswer: Codable {
     var lead: String
     /// The main point, shown in bold after the lead.
     var point: String?
-    /// A smaller line with the figures behind the answer.
+    /// The model's note behind the figure. Kept in saved chats, but no longer shown: the figure alone is the answer.
     var detail: String?
-    /// A spending card, shown above the question as in the design.
+    /// A spending card, shown under the answer.
     var breakdown: Breakdown?
     /// A small bar chart, e.g. one bar per month.
     var chart: [ChatBar]?
@@ -116,8 +116,8 @@ struct AskView: View {
     @State private var showingChats = false
     /// Where the chat is scrolled to, so a new turn or a reopened chat can jump to its end.
     @State private var position = ScrollPosition()
-    /// True while the "needs its on-device model" question is up.
-    @State private var askingToDownload = false
+    /// Lets the thinking bubble's sprout travel to the answer's when the answer comes in.
+    @Namespace private var sprout
     private let onDevice = OnDeviceModel.shared
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
@@ -129,6 +129,10 @@ struct AskView: View {
     private var canSend: Bool { !blank && session.status == .idle && !needsModel }
 
     private var reduceMotion: Bool { Self.reducesMotion(system: systemReduceMotion) }
+    /// How the chat moves: sending, a new chat, an opened chat and the empty screen all share it.
+    private var motion: Animation { .sedge(reduceMotion: reduceMotion) }
+    /// A new turn rises in a little; with Reduce Motion it only fades.
+    private var arrival: AnyTransition { reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)) }
 
     /// The person's Reduce Motion setting (`system`). Debug builds launched with
     /// `-reduceMotion YES` act as if it were on, because a UI test can't switch the setting itself.
@@ -144,28 +148,28 @@ struct AskView: View {
         ScrollView {
             // Not lazy: jumping to the end needs every turn's real height, and a chat is short.
             VStack(alignment: .leading, spacing: 0) {
-                if session.reopenedTitle != nil {
-                    NewChatBanner(newChat: newChat)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
+                ForEach(session.turns) {
+                    TurnView(turn: $0, database: database, open: open, sprout: sprout, reduceMotion: reduceMotion)
+                        .padding(.top, 20)
+                        .transition(arrival)
                 }
-                ForEach(session.turns) { TurnView(turn: $0, database: database, open: open) }
-                // Both fade in over 0.25 seconds like any answer; Reduce Motion keeps the fade.
-                // While the model waits on an `ask_user` question, its quick check stands in for the thinking row.
+                // Both sit close under their question, like the answer will; Reduce Motion keeps the fade.
+                // While the model waits on an `ask_user` question, its quick check stands in for the thinking bubble.
                 if session.status == .thinking, let pending = session.pendingCheck {
                     QuickCheckCard(check: pending.check) { reply in
                         session.answerCheck(reply)
                         return "Saving…"
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 14)
+                    .padding(.top, 8)
                     .transition(.opacity)
                 } else if session.status == .thinking {
-                    ThinkingRow(phrase: session.phrase, moves: !reduceMotion)
-                        // Changes the phrase every 2.2 seconds; ends when the row goes away.
+                    // The sprout is matched by the turn it thinks for, so it travels to that turn's answer.
+                    ThinkingRow(phrase: session.phrase, moves: !reduceMotion, turn: session.turns.last?.id, sprout: sprout)
+                        // Changes the phrase every 2.2 seconds; ends when the bubble goes away.
                         .task { await session.cyclePhrases() }
                         .padding(.horizontal, 20)
-                        .padding(.top, 14)
+                        .padding(.top, 8)
                         .transition(.opacity)
                 }
                 if limited {
@@ -175,7 +179,8 @@ struct AskView: View {
                         .transition(.opacity)
                 }
             }
-            .animation(.easeOut(duration: 0.25), value: session.status)
+            .animation(reduceMotion ? .easeInOut(duration: 0.25) : .spring(duration: 0.4, bounce: 0.15), value: session.status)
+            .animation(motion, value: session.turns.count)
             // A plain VStack is only as wide as its widest line and the ScrollView centers it, so
             // a chat of short lines sat right of the margin. Full width keeps every chat at the left.
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -188,18 +193,28 @@ struct AskView: View {
         // travel down past the question box to reach the keyboard.
         .scrollDismissesKeyboard(.immediately)
         .overlay {
-            if needsModel {
-                // Covers the chat: nothing can be asked until the model is here.
-                ModelScreen(state: onDevice.state, gigabytes: onDevice.gigabytes, download: onDevice.download)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.background)
-            } else if session.turns.isEmpty && session.status == .idle {
-                ContentUnavailableView {
-                    Label("Ask about your money", image: "tab-ask")
-                } description: {
-                    ExampleQuestion(rotates: !reduceMotion, ask: ask).foregroundStyle(Color.muted)
+            // Both fade in and out: the model screen as the model's state changes, the empty
+            // screen on the first send, New chat and an opened chat.
+            ZStack {
+                if needsModel {
+                    // Covers the chat: nothing can be asked until the model is here.
+                    ModelScreen(state: onDevice.state, gigabytes: onDevice.gigabytes, download: onDevice.download,
+                                notNow: onDevice.dismiss, stop: onDevice.cancel)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.background)
+                        .transition(.opacity)
+                } else if session.turns.isEmpty && session.status == .idle {
+                    // The example question alone, under the tab's glyph; the question box already says what to do.
+                    ContentUnavailableView {
+                        Image("tab-ask").foregroundStyle(Color.muted)
+                    } description: {
+                        ExampleQuestion(rotates: !reduceMotion, ask: ask).foregroundStyle(Color.muted)
+                    }
+                    .transition(.opacity)
                 }
             }
+            .animation(motion, value: needsModel)
+            .animation(motion, value: session.turns.isEmpty)
         }
         .safeAreaInset(edge: .bottom) { composer }
         .background(Color.background)
@@ -211,19 +226,14 @@ struct AskView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Previous chats", systemImage: "clock.arrow.circlepath", action: showChats)
                     .symbolRenderingMode(.monochrome)
-                    // Opening another chat mid-answer would save that answer into the wrong chat.
-                    .disabled(session.status == .thinking)
+                    // Opening another chat mid-answer would save that answer into the wrong chat, and
+                    // one opened under the model screen would be out of sight.
+                    .disabled(session.status == .thinking || needsModel)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("New chat", systemImage: "square.and.pencil", action: newChat)
                     .symbolRenderingMode(.monochrome)
             }
-        }
-        .alert("Sedge needs its on-device model", isPresented: $askingToDownload) {
-            Button("Download") { onDevice.download() }
-            Button("Not now", role: .cancel) { onDevice.decline() }
-        } message: {
-            Text("About \(onDevice.gigabytes) GB, downloaded once.")
         }
         .fullScreenCover(isPresented: $showingChats) {
             // Deleting the chat on screen starts a new one, so the next question isn't saved
@@ -241,8 +251,8 @@ struct AskView: View {
             if old == .thinking { saveNewestTurn() }
             // iOS allows no GPU work once the phone locks, so the screen stays on while the model works.
             UIApplication.shared.isIdleTimerDisabled = new == .thinking
-            // Covers sending (the thinking row appears) and the answer coming in.
-            position.scrollTo(edge: .bottom)
+            // Covers sending (the thinking bubble appears) and the answer coming in.
+            withAnimation(motion) { position.scrollTo(edge: .bottom) }
         }
         .task {
             #if DEBUG
@@ -275,9 +285,9 @@ struct AskView: View {
     /// The question box with its send button.
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 2) {
+            // At the limit the box stays, empty: the limit turn above it says what to do.
             TextField("Question", text: $question,
-                      prompt: Text(limited ? "Start a new session to keep asking" : "Ask about your money…")
-                          .foregroundStyle(Color.muted),
+                      prompt: limited ? nil : Text("Ask about your money…").foregroundStyle(Color.muted),
                       axis: .vertical)
                 .font(.subheadline)
                 .lineLimit(1...5)
@@ -324,10 +334,12 @@ struct AskView: View {
         .background(Color.background)
     }
 
-    /// New chat (toolbar, banner and "Start new session"): an empty screen, ready for a question.
+    /// New chat (toolbar and "Start new session"): an empty screen, ready for a question.
     private func newChat() {
-        session.startNewSession()
-        isDemo = false
+        withAnimation(motion) {
+            session.startNewSession()
+            isDemo = false
+        }
     }
 
     /// Shows the Previous chats panel. The cover appears without the system's slide-up, so the
@@ -359,9 +371,11 @@ struct AskView: View {
                 ChatTurn(question: saved.question,
                          answer: saved.answer.flatMap { try? JSONDecoder().decode(ChatAnswer.self, from: Data($0.utf8)) })
             }
-            session.open(chat.id, titled: chat.title, turns: turns)
-            isDemo = false
-            position.scrollTo(edge: .bottom)
+            withAnimation(motion) {
+                session.open(chat.id, titled: chat.title, turns: turns)
+                isDemo = false
+                position.scrollTo(edge: .bottom)
+            }
         } catch {
             print("Could not open the chat:", error)
         }
@@ -376,9 +390,9 @@ struct AskView: View {
     private func send() {
         let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canSend else { return }
-        // The first question asks before downloading; the question stays in the box.
+        // Without the model, the screen that offers it comes up; the question stays in the box.
         guard onDevice.state == .ready else {
-            askingToDownload = true
+            onDevice.offer()
             return
         }
         let turn = ChatTurn(question: text, answer: nil)
@@ -445,8 +459,8 @@ private struct ExampleQuestion: View {
                 ForEach(Self.questions, id: \.self) { chip($0).hidden() }
                 // A new id makes this a new view, so the old question fades out as the new one fades in.
                 chip(Self.questions[index])
-                    .background(Color.surface, in: RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.line))
+                    .background(Color.surface, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.line))
                     .id(index)
                     .transition(.asymmetric(insertion: .opacity.animation(.easeIn(duration: 0.3)),
                                             removal: .opacity.animation(.easeOut(duration: 0.3))))
@@ -471,55 +485,9 @@ private struct ExampleQuestion: View {
     }
 }
 
-/// The card at the top of an older chat: it can be continued, but a new chat answers best.
-/// Side by side as in the design; at the largest text sizes the button goes under the words.
-private struct NewChatBanner: View {
-    let newChat: () -> Void
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { words; Spacer(minLength: 0); button }
-            VStack(alignment: .leading, spacing: 0) { words.padding(.top, 12); button }
-        }
-        .padding(.leading, 13)
-        .padding(.trailing, 3)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.group, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var words: some View {
-        Text("Sedge answers best in a new chat.").font(.footnote)
-    }
-
-    private var button: some View {
-        Button(action: newChat) {
-            Text("New chat")
-                .font(.link)
-                .padding(.horizontal, 10)
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.accent)
-        // The toolbar has a "New chat" button too, so UI tests find this one by its id.
-        .accessibilityIdentifier("bannerNewChat")
-    }
-}
-
-/// "Sedge" with its sprout, above each of Sedge's replies.
-private struct SedgeHeader: View {
-    var body: some View {
-        HStack(spacing: 7) {
-            Image(.chatSedge).accessibilityHidden(true)
-            Text("Sedge").font(.row.weight(.semibold))
-        }
-        .foregroundStyle(Color.chartNow)
-    }
-}
-
-/// Shown while an answer is worked out: the sprout drawing itself next to a phrase that a light
-/// band sweeps across, with a new phrase pushing up every 2.2 seconds. Side by side as in the
-/// design; when the phrase doesn't fit beside it (largest text sizes) it wraps underneath.
+/// Shown while an answer is worked out: Sedge's bubble holding the sprout drawing itself next to a
+/// phrase that a light band sweeps across, with a new phrase pushing up every 2.2 seconds. Side by
+/// side as in the design; when the phrase doesn't fit beside it (largest text sizes) it wraps underneath.
 struct ThinkingRow: View {
     /// Seconds for the light band to cross the phrase once, as in the design.
     static let shimmerSeconds = 1.9
@@ -527,16 +495,23 @@ struct ThinkingRow: View {
     let phrase: String
     /// False with Reduce Motion: the sprout stays still, nothing sweeps, and phrases cross-fade.
     let moves: Bool
+    /// The turn being thought about and Ask's namespace: the sprout travels to that turn's answer.
+    var turn: UUID?
+    var sprout: Namespace.ID
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { sprout; words }
-            VStack(alignment: .leading, spacing: 4) { sprout; words }
+            HStack(spacing: 8) { mark; words }
+            VStack(alignment: .leading, spacing: 4) { mark; words }
         }
         .frame(minHeight: 28)
+        .chatBubble(Color.group)
+        .foregroundStyle(Color.ink)
     }
 
-    private var sprout: some View { ThinkingSprout(draws: moves) }
+    private var mark: some View {
+        ThinkingSprout(draws: moves).sproutMatched(turn, in: sprout, reduceMotion: !moves)
+    }
 
     private var words: some View {
         ZStack(alignment: .leading) {
@@ -583,12 +558,9 @@ private struct LimitTurn: View {
                 Image(.chatSedge).resizable().frame(width: 20, height: 20)
                     .foregroundStyle(Color.amountNow)
                     .accessibilityHidden(true)
-                Text("This chat is full").font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink)
+                Text("This chat is full").font(.cardTitle).foregroundStyle(Color.ink)
             }
-            Text("Sedge has reached its limit for this chat. Start a new session to keep asking; this one stays in Previous chats.")
-                .font(.footnote)
-                .foregroundStyle(Color.muted)
-                .padding(.bottom, 4)
+            .padding(.bottom, 4)
             button("Start new session", weight: .semibold, fill: Color.nodeStore, action: startNewSession)
             button("Open previous chats", weight: .medium, fill: Color.amountNow.opacity(0.1), action: openChats)
         }
@@ -611,53 +583,57 @@ private struct LimitTurn: View {
     }
 }
 
-/// One turn as the design draws it: the breakdown card, the question, the answer, then the quick check.
+/// One turn as a text-message chat: the question in a filled bubble at the right, then Sedge's
+/// sprout and its answer in a `group` bubble at the left, with the breakdown card, chart, link and
+/// quick check stacked under it.
 private struct TurnView: View {
     let turn: ChatTurn
     let database: SedgeDatabase
     let open: (MainTab) -> Void
-    /// Paper and Carbon Soft rule the breakdown card differently.
-    @Environment(\.colorScheme) private var colorScheme
+    /// Ask's namespace: the answer's sprout is where the thinking bubble's one travels to.
+    let sprout: Namespace.ID
+    let reduceMotion: Bool
+    /// False until the answer is on screen, so its parts can rise in one after another.
+    @State private var shown = false
 
     /// The design's label and amount columns, grown with the reader's text size.
     @ScaledMetric(relativeTo: .caption) private var labelWidth = 70.0
     @ScaledMetric(relativeTo: .caption) private var amountWidth = 45.0
 
-    private var dark: Bool { colorScheme == .dark }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let breakdown = turn.answer?.breakdown {
-                breakdownCard(breakdown)
-                    .padding(.horizontal, 18)
-                    .padding(.top, 15)
-                    // Carbon Soft rules the card off from the chat; Paper leaves it open.
-                    .overlay(alignment: .bottom) {
-                        if dark { Color.line.frame(height: 1) }
-                    }
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text(turn.question)
+                .font(.answer)
+                .foregroundStyle(Color.onNodeCategory)
+                .chatBubble(Color.nodeCategory)
+                // At most three quarters of the screen, hugging the right edge like a sent message.
+                .containerRelativeFrame(.horizontal, alignment: .trailing) { width, _ in width * 0.75 }
+                .frame(maxWidth: .infinity, alignment: .trailing)
 
-            Text("You · \(turn.question)")
-                .font(.row)
-                .foregroundStyle(Color.muted)
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-
-            // Until the answer is in, the screen shows the thinking row below the question instead.
+            // Until the answer is in, the screen shows the thinking bubble below the question instead.
             if let answer = turn.answer {
-                VStack(alignment: .leading, spacing: 0) {
-                    SedgeHeader().padding(.bottom, 10)
-
-                    if let point = answer.point {
-                        Text("\(answer.lead) \(Text(point).fontWeight(.semibold))").font(.answer)
-                    } else {
-                        Text(answer.lead).font(.answer)
+                Image(.chatSedge)
+                    .foregroundStyle(Color.accent)
+                    .accessibilityHidden(true)
+                    .sproutMatched(turn.id, in: sprout, reduceMotion: reduceMotion)
+                VStack(alignment: .leading, spacing: 14) {
+                    Group {
+                        if let point = answer.point {
+                            Text("\(answer.lead) \(Text(point).fontWeight(.semibold))")
+                        } else {
+                            Text(answer.lead)
+                        }
                     }
-                    if let detail = answer.detail {
-                        Text(detail)
-                            .font(.row)
-                            .foregroundStyle(Color.muted)
-                            .padding(.top, 14)
+                    .font(.answer)
+                    .foregroundStyle(Color.ink)
+                    .chatBubble(Color.group)
+                    .rising(0, shown: shown, reduceMotion: reduceMotion)
+                    if let breakdown = answer.breakdown {
+                        breakdownCard(breakdown)
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.group, in: RoundedRectangle(cornerRadius: 14))
+                            .rising(1, shown: shown, reduceMotion: reduceMotion)
                     }
                     if let chart = answer.chart {
                         Chart(chart) { BarMark(x: .value("Label", $0.label), y: .value("Amount", $0.amount)) }
@@ -665,7 +641,7 @@ private struct TurnView: View {
                             .foregroundStyle(Color.second)
                             .chartYAxis { AxisMarks(format: .currency(code: "USD").precision(.fractionLength(0))) }
                             .frame(height: 120)
-                            .padding(.top, 14)
+                            .rising(2, shown: shown, reduceMotion: reduceMotion)
                     }
                     if let link = answer.whatIfLink {
                         NavigationLink {
@@ -673,19 +649,17 @@ private struct TurnView: View {
                         } label: {
                             Text(link).font(.link).frame(minHeight: 44)
                         }
-                        .padding(.top, 4)
+                        .rising(3, shown: shown, reduceMotion: reduceMotion)
+                    }
+                    if let check = answer.quickCheck {
+                        QuickCheckCard(check: check) { await save(check, $0) }
+                            .rising(4, shown: shown, reduceMotion: reduceMotion)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 29)
-
-                if let check = answer.quickCheck {
-                    QuickCheckCard(check: check) { await save(check, $0) }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 14)
-                }
+                .onAppear { shown = true }
             }
         }
+        .padding(.horizontal, 20)
     }
 
     private func breakdownCard(_ card: Breakdown) -> some View {
@@ -806,12 +780,37 @@ struct QuickCheckCard: View {
     }
 }
 
+extension View {
+    /// A chat bubble: this view's words on `fill`, with the rounded corners of a text message.
+    func chatBubble(_ fill: Color) -> some View {
+        padding(.horizontal, 14).padding(.vertical, 10)
+            .background(fill, in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    /// One part of an answer coming in: hidden until `shown`, then fading in (and, with motion,
+    /// rising 6 points) `step` × 0.08 seconds after the bubble.
+    func rising(_ step: Int, shown: Bool, reduceMotion: Bool) -> some View {
+        opacity(shown ? 1 : 0)
+            .offset(y: shown || reduceMotion ? 0 : 6)
+            .animation(.sedge(reduceMotion: reduceMotion).delay(0.08 * Double(step)), value: shown)
+    }
+
+    /// Pairs this sprout with the one of the same turn, so it travels from the thinking bubble to
+    /// the answer. With Reduce Motion nothing is paired, and the sprout fades like the rest.
+    func sproutMatched(_ turn: UUID?, in namespace: Namespace.ID, reduceMotion: Bool) -> some View {
+        matchedGeometryEffect(id: turn, in: namespace, properties: reduceMotion ? [] : .frame)
+    }
+}
+
 /// What Ask shows instead of the chat while the on-device model isn't here: the offer to download
-/// it (after "Not now"), the download's progress, or a stopped download with Try again.
+/// it, the download's progress with Stop, or a stopped download with Try again. "Not now" goes back
+/// to the chat.
 private struct ModelScreen: View {
     let state: OnDeviceModel.State
     let gigabytes: Int
     let download: () -> Void
+    let notNow: () -> Void
+    let stop: () -> Void
 
     var body: some View {
         switch state {
@@ -821,17 +820,20 @@ private struct ModelScreen: View {
             } description: {
                 VStack(spacing: 8) {
                     ProgressView(value: fraction).frame(maxWidth: 220)
+                        // Each progress report moves the bar, instead of stepping it.
+                        .animation(.linear(duration: 0.3), value: fraction)
                     Text(fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit()
                 }
                 .foregroundStyle(Color.muted)
+            } actions: {
+                Button("Stop", action: stop)
             }
         case .failed:
             ContentUnavailableView {
                 Label("The download stopped", image: "tab-ask")
-            } description: {
-                Text("Sedge needs its on-device model to answer.").foregroundStyle(Color.muted)
             } actions: {
                 Button("Try again", action: download)
+                Button("Not now", action: notNow)
             }
         default:
             ContentUnavailableView {
@@ -840,6 +842,7 @@ private struct ModelScreen: View {
                 Text("About \(gigabytes) GB, downloaded once.").foregroundStyle(Color.muted)
             } actions: {
                 Button("Download", action: download)
+                Button("Not now", action: notNow)
             }
         }
     }
@@ -889,7 +892,6 @@ extension ChatTurn {
             answer: ChatAnswer(
                 lead: gap >= 0 ? "More than usual." : "Less than usual.",
                 point: "\(mostly) accounts for most of the difference.",
-                detail: "You’re \(gapText) \(word) the average for the same \(days) days of the last three months.",
                 breakdown: Breakdown(title: "Food & dining",
                                      period: "\(now.start.displayDate(.dateTime.month(.abbreviated).day()))–\(days)",
                                      total: total, comparison: "\(gapText) \(word) your usual pace", bars: bars),
@@ -913,8 +915,7 @@ extension ChatTurn {
         let what = move.kind == "card_payment" ? "card payment" : "transfer"
         return QuickCheck(
             question: "Was this \(move.amount.formatted(.currency(code: "USD"))) \(what) between your accounts?",
-            details: ["\(move.store) · \(move.date.displayDate(.dateTime.month(.abbreviated).day()))",
-                      "It may be excluded from spending."],
+            details: ["\(move.store) · \(move.date.displayDate(.dateTime.month(.abbreviated).day()))"],
             options: ["Yes, mine", "No"],
             factKey: "own_transfer_\(move.date)")
     }

@@ -17,7 +17,7 @@ import SedgeCore
     enum State: Equatable {
         /// Not on this device, and the person hasn't been asked yet.
         case missing
-        /// The person picked "Not now". Ask shows the screen that offers the download.
+        /// Asked for but not downloading: the screen that offers the download covers the chat.
         case declined
         /// Downloading; the fraction done, 0 to 1.
         case downloading(Double)
@@ -34,6 +34,10 @@ import SedgeCore
     /// Bytes written so far for each file being downloaded.
     @ObservationIgnored private var written: [String: Int64] = [:]
     @ObservationIgnored private var loading: Task<QwenModel, Error>?
+    #if DEBUG
+    /// The stubbed download's steps, so Stop can end them.
+    @ObservationIgnored private var stubbedDownload: Task<Void, Never>?
+    #endif
     @ObservationIgnored private lazy var downloader = Downloader(folder: Self.folder, progress: { [weak self] name, bytes in
         Task { @MainActor in self?.wrote(bytes, of: name) }
     }, finished: { [weak self] name, ok in
@@ -53,7 +57,21 @@ import SedgeCore
         QwenModel.files.map(\.key).filter { !FileManager.default.fileExists(atPath: folder.appending(path: $0).path(percentEncoded: false)) }
     }
 
-    func decline() { state = .declined }
+    /// A question was sent without the model: Ask shows the screen that offers the download.
+    func offer() { state = .declined }
+
+    /// "Not now" on that screen: back to the chat. The next question offers the download again.
+    func dismiss() { state = .missing }
+
+    /// "Stop" while downloading: ends every file's download and goes back to offering it. The files
+    /// that arrived whole stay, so a later download has less to fetch.
+    func cancel() {
+        #if DEBUG
+        stubbedDownload?.cancel()
+        #endif
+        downloader.session.getAllTasks { tasks in tasks.forEach { $0.cancel() } }
+        state = .declined
+    }
 
     /// Starts (or, after a failure, restarts) downloading every file that isn't here yet.
     func download() {
@@ -62,9 +80,10 @@ import SedgeCore
         #if DEBUG
         // UI tests launch with `-stubDownload ok` or `fail` to see the download without fetching 3 GB.
         if let stub = UserDefaults.standard.string(forKey: "stubDownload") {
-            Task {
+            stubbedDownload = Task {
                 for step in 1...4 {
                     try? await Task.sleep(for: .seconds(0.5))
+                    guard !Task.isCancelled else { return } // Stop was tapped
                     state = .downloading(Double(step) / 5)
                 }
                 state = stub == "ok" ? .ready : .failed

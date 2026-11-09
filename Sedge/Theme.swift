@@ -18,8 +18,8 @@ import SwiftUI
 //   takes the category colors); the screens below still use them.
 // - `graphLine`: the chart's zero line.
 // - `moneySpent` and `moneyBack`: Trends' biggest change when spending rose (red) or fell (green).
-// The Ask screen reuses them: `chartNow` for the breakdown bars and the "Sedge" label, `nodeStore`
-// for the bar tracks, and `nodeCategory` with `onNodeCategory` text for the first quick-check button.
+// The Ask screen reuses them: `chartNow` for the breakdown bars, `nodeStore` for the bar tracks, and
+// `nodeCategory` with `onNodeCategory` text for the person's question bubble and the first quick-check button.
 //
 // About you adds its own sets: a fill per kind of tile (`tileIncome`, `tileHousing`, `tileLoan`,
 // `tileTuition`, `tileAccounts`), money back and spent (`moneyBack`, `moneySpent`), a fill per
@@ -66,6 +66,16 @@ extension Font {
     static let row = Font.caption
     /// Captions under a figure and other fine print (11 pt).
     static let note = Font.caption2
+}
+
+/// The app's two motions, so every screen moves the same way. `quick` is for things that change
+/// in place (a turn arriving, a panel closing); `settle` has a little bounce, for things that come
+/// in to stay (a panel opening). Springs are given as a duration and a bounce, like the design.
+extension Animation {
+    static let quick = Animation.spring(duration: 0.3, bounce: 0)
+    static let settle = Animation.spring(duration: 0.45, bounce: 0.18)
+    /// `quick`, or a short fade when the person has Reduce Motion on (`AskView.reducesMotion`).
+    static func sedge(reduceMotion: Bool) -> Animation { reduceMotion ? .easeInOut(duration: 0.2) : .quick }
 }
 
 extension View {
