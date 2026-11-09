@@ -3,40 +3,31 @@
 //  SedgeTests
 //
 
-import SedgeCore
 import SwiftUI
 import Testing
 @testable import Sedge
 
-/// The screen stays awake while a question is worked out. Picking other data mid-answer rebuilds the
-/// tabs, and the Ask screen that kept it awake goes; the screen must be allowed to lock again.
+/// Picking other data ends Ask's question (`AskScreenState.end()`); the UI test
+/// `testChangingDataMidQuestionLetsTheScreenLock` covers the screen itself.
 @MainActor @Suite(.serialized) struct AskKeepAwake {
-    /// Waits up to 5 seconds for `done`.
-    private func wait(until done: () -> Bool) async {
-        for _ in 0..<100 where !done() { try? await Task.sleep(for: .milliseconds(50)) }
-    }
-
-    @Test func theScreenMayLockAgainWhenAskGoesMidAnswer() async throws {
-        // A question held at the thinking row, as in the Debug demo.
-        UserDefaults.standard.set(true, forKey: "demoThinking")
-        defer { UserDefaults.standard.removeObject(forKey: "demoThinking"); UIApplication.shared.isIdleTimerDisabled = false }
-        let database = try SedgeDatabase()
-        let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let window = UIWindow(windowScene: scene)
-        // A new id is a new Ask screen, as when MainView is rebuilt for other data.
-        func ask(_ id: Int) -> UIViewController {
-            UIHostingController(rootView: NavigationStack {
-                AskView(database: database, question: .constant(""), reopened: .constant(false))
-            }.id(id))
+    @Test func endingAskStopsTheQuestionAndLetsTheScreenLock() async {
+        let screen = AskScreenState()
+        screen.session.report(.thinking)
+        UIApplication.shared.isIdleTimerDisabled = true
+        defer { UIApplication.shared.isIdleTimerDisabled = false }
+        screen.question = Task { try? await Task.sleep(for: .seconds(60)) }
+        // The question waits on a quick check.
+        let reply = Task {
+            await screen.session.ask(QuickCheck(question: "Should food include groceries?", details: [],
+                                                options: ["Groceries too", "Eating out only"], factKey: "food_includes_groceries"))
         }
-        window.rootViewController = ask(1)
-        window.makeKeyAndVisible()
-        await wait { UIApplication.shared.isIdleTimerDisabled }
-        #expect(UIApplication.shared.isIdleTimerDisabled == true, "the first screen never reached thinking")
-        UserDefaults.standard.removeObject(forKey: "demoThinking")
-        window.rootViewController = ask(2)
-        await wait { !UIApplication.shared.isIdleTimerDisabled }
-        window.isHidden = true
+        while screen.session.pendingCheck == nil { await Task.yield() }
+
+        screen.end()
+
+        #expect(await reply.value == nil, "the quick check should take Later")
+        #expect(screen.question?.isCancelled == true)
         #expect(UIApplication.shared.isIdleTimerDisabled == false)
+        #expect(screen.session.status == .idle)
     }
 }

@@ -156,6 +156,33 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Should food include groceries?"].exists, "The quick check stayed")
     }
 
+    /// The screen stays awake while a question is worked out. Picking other data mid-question (here, a
+    /// typed question waiting on its quick check) ends it, so the screen may lock again on the new data.
+    /// `-showKeepAwake` puts the flag on screen, since a UI test can't read it. Maya is picked from Welcome
+    /// (`-firstLaunch`), because a `-persona` launch argument would win over picking Daniel.
+    @MainActor
+    func testChangingDataMidQuestionLetsTheScreenLock() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-firstLaunch", "YES", "-reduceMotion", "YES", "-modelReady", "YES", "-showKeepAwake", "YES"]
+        app.launch()
+        app.buttons["Explore sample data"].tap()
+        app.buttons["Maya"].tap()
+        app.tabBars.buttons["Ask"].tap()
+        ask(app, "How much do I spend on food?")
+        XCTAssertTrue(app.staticTexts["Should food include groceries?"].waitForExistence(timeout: 5), "No quick check")
+        let keepAwake = app.staticTexts["keepAwake"]
+        XCTAssertEqual(keepAwake.label, "awake")
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.navigationBars.buttons["Change data"].tap()
+        app.buttons["Daniel"].tap()
+        XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 5), "Daniel's Ask isn't empty")
+        // The readout refreshes every half second.
+        XCTAssertTrue(app.staticTexts["may lock"].waitForExistence(timeout: 2), "Still kept awake: \(keepAwake.label)")
+    }
+
     /// `-demoThinking` holds a question at the thinking row, with one of the design's phrases.
     @MainActor
     func testDemoThinkingShowsTheThinkingRow() throws {

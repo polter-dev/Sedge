@@ -74,16 +74,18 @@ struct QuickCheck: Codable {
 
 // MARK: - The screen
 
-/// The Ask screen's chat and the question it is working out. SwiftUI keeps a screen's state through tab
-/// switches, but drops it when picking other data rebuilds the tabs, and this goes with it: the question still
-/// running stops, so it holds no GPU or memory, and the screen it kept awake may lock again.
+/// The Ask screen's chat and the question it is working out. ContentView owns it, so it lasts through tab
+/// switches, and ends it when other data is picked.
 final class AskScreenState {
     let session = ChatSession()
     var question: Task<Void, Never>?
 
-    isolated deinit {
+    /// Stops the question still running, so it holds no GPU or memory, and lets the screen it kept awake lock again.
+    /// Called directly rather than from a deinit: once the question box was typed in, the window's scroll edge effect
+    /// keeps the old box alive after the screen goes, and the box's SwiftUI settings hold this state, so a deinit never ran.
+    func end() {
         question?.cancel()
-        if session.status == .thinking { UIApplication.shared.isIdleTimerDisabled = false }
+        UIApplication.shared.isIdleTimerDisabled = false
         session.startNewSession() // a quick check still waiting takes "Later", so the question can end
     }
 }
@@ -96,6 +98,8 @@ final class AskScreenState {
 /// to the dataset's own file (`Chats`), so Previous chats can reopen it; the model never sees saved turns.
 struct AskView: View {
     let database: SedgeDatabase
+    /// The chat and its running question, owned by ContentView (see `AskScreenState`).
+    let screen: AskScreenState
     /// The question box's text, owned by the tabs so Trends can type a question in for the person.
     @Binding var question: String
     /// Tells the tabs whether an older chat is on screen, so its title doesn't offer the data's Rename menu.
@@ -104,7 +108,6 @@ struct AskView: View {
     var newChatRequests = 0
     /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
-    @State private var screen = AskScreenState()
     private var session: ChatSession { screen.session }
     /// True when the turns are demo content, which is never saved.
     @State private var isDemo = false
@@ -937,7 +940,7 @@ extension ChatTurn {
 
 #Preview {
     NavigationStack {
-        AskView(database: try! SedgeDatabase(), question: .constant(""), reopened: .constant(false))
+        AskView(database: try! SedgeDatabase(), screen: AskScreenState(), question: .constant(""), reopened: .constant(false))
             .navigationBarTitleDisplayMode(.inline)
     }
 }

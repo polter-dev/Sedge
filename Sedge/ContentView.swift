@@ -23,6 +23,9 @@ struct ContentView: View {
     /// True while the data picker is shown over the main tabs.
     @State private var picking = false
     @State private var tab = MainTab.ask
+    /// Ask's chat and running question. It lives here, above the rebuild for each choice, so picking other
+    /// data can end it: a question still running stops, and the screen it kept awake may lock again.
+    @State private var ask = AskScreenState()
 
     var body: some View {
         Group {
@@ -36,7 +39,7 @@ struct ContentView: View {
             } else if let opened, opened.choice == choice {
                 // A new identity per choice: without it SwiftUI reuses the old tabs, and they
                 // keep showing the previous data's transactions under the new name.
-                MainView(database: opened.database, choice: choice, tab: $tab) { picking = true }
+                MainView(database: opened.database, choice: choice, ask: ask, tab: $tab) { picking = true }
                     .id(choice)
             } else if let error {
                 ContentUnavailableView {
@@ -53,6 +56,23 @@ struct ContentView: View {
         // Fills the screen behind the loading and error states; the tabs paint their own.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.background)
+        .onChange(of: choice) {
+            ask.end()
+            ask = AskScreenState()
+        }
+        #if DEBUG
+        // UI tests launch with `-showKeepAwake YES` to read whether the screen is kept awake, which they can't see.
+        .overlay(alignment: .bottomLeading) {
+            if UserDefaults.standard.bool(forKey: "showKeepAwake") {
+                TimelineView(.periodic(from: .now, by: 0.5)) { _ in
+                    Text(UIApplication.shared.isIdleTimerDisabled ? "awake" : "may lock")
+                        .font(.caption2)
+                        .accessibilityIdentifier("keepAwake")
+                }
+                .allowsHitTesting(false)
+            }
+        }
+        #endif
         // Runs at launch and again whenever the choice changes.
         .task(id: choice) {
             opened = nil
@@ -137,6 +157,8 @@ struct MainView: View {
     /// The open tab. It lives in ContentView, so picking other data from Accounts comes back to Accounts.
     @Binding var tab: MainTab
     let changeData: () -> Void
+    /// Ask's chat, owned by ContentView so it can be ended when other data is picked.
+    let ask: AskScreenState
     /// The Ask box's text. It lives here so a typed question stays when the tab changes.
     @State private var question = ""
     /// Counts the questions handed to Ask from Trends; each one asks Ask for an empty chat.
@@ -149,9 +171,10 @@ struct MainView: View {
     @State private var renaming = false
     @State private var draft = ""
 
-    init(database: SedgeDatabase, choice: String, tab: Binding<MainTab>, changeData: @escaping () -> Void) {
+    init(database: SedgeDatabase, choice: String, ask: AskScreenState, tab: Binding<MainTab>, changeData: @escaping () -> Void) {
         self.database = database
         self.choice = choice
+        self.ask = ask
         _tab = tab
         self.changeData = changeData
         // The settings key depends on the choice, so it is set here rather than on the property.
@@ -182,7 +205,7 @@ struct MainView: View {
         TabView(selection: $tab) {
             Tab("Ask", image: "tab-ask", value: .ask) {
                 NavigationStack {
-                    AskView(database: database, question: $question, reopened: $chatReopened, newChatRequests: handedQuestions) { tab = $0 }
+                    AskView(database: database, screen: ask, question: $question, reopened: $chatReopened, newChatRequests: handedQuestions) { tab = $0 }
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)
                         // Left out, chevron and all, while an older chat is shown. It hangs off a background
