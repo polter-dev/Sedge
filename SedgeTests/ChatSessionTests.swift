@@ -124,7 +124,26 @@ private struct FakeStatusSource {
     #expect(AskView.reducesMotion(system: false))
 }
 
-/// Opening an older chat shows its turns with the banner's title and keeps its id, so new
+/// Stop during a (stubbed) download goes back to offering the model, and the stopped download
+/// never carries on to ready. "Not now" then goes back to missing, so the next question asks again.
+@MainActor @Test func stopDuringADownloadGoesBackToTheOffer() async throws {
+    let saved = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    defer { UserDefaults.standard.setVolatileDomain(saved, forName: UserDefaults.argumentDomain) }
+    UserDefaults.standard.setVolatileDomain(["stubDownload": "ok"], forName: UserDefaults.argumentDomain)
+    let model = OnDeviceModel.shared
+    defer { model.dismiss() }
+    model.download()
+    #expect(model.state == .downloading(0))
+    model.cancel()
+    #expect(model.state == .declined)
+    // The stub steps every 0.5 s; a stopped one must not step again or finish.
+    try await Task.sleep(for: .seconds(0.7))
+    #expect(model.state == .declined)
+    model.dismiss()
+    #expect(model.state == .missing)
+}
+
+/// Opening an older chat shows its turns under its title and keeps its id, so new
 /// questions are added to it; a new chat clears all three.
 @MainActor @Test func openingAnOlderChatAndStartingANewOne() {
     let session = ChatSession()
