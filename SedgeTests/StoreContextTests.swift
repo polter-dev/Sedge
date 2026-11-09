@@ -15,20 +15,21 @@ struct StoreContextTests {
     @Test func comparesWithTheLastThreeVisits() {
         let earlier = [8.0, 14.0, 11.0]
         #expect(StoreContext.compare(48, earlier: earlier) == StoreContext(headline: "Higher than your last three visits.", range: "Those were $8.00–$14.00."))
-        #expect(StoreContext.compare(5.5, earlier: earlier).headline == "Lower than your last three visits.")
-        #expect(StoreContext.compare(11, earlier: earlier).headline == "In line with your last three visits.")
+        #expect(StoreContext.compare(5.5, earlier: earlier)?.headline == "Lower than your last three visits.")
+        #expect(StoreContext.compare(11, earlier: earlier)?.headline == "In line with your last three visits.")
         // Equal to the highest or lowest is still in line, not higher or lower.
-        #expect(StoreContext.compare(14, earlier: earlier).headline == "In line with your last three visits.")
-        #expect(StoreContext.compare(8, earlier: earlier).headline == "In line with your last three visits.")
+        #expect(StoreContext.compare(14, earlier: earlier)?.headline == "In line with your last three visits.")
+        #expect(StoreContext.compare(8, earlier: earlier)?.headline == "In line with your last three visits.")
         // Float sums like 0.1 + 0.2 still compare equal to 0.30 once in cents.
         #expect(StoreContext.compare(0.1 + 0.2, earlier: [0.3, 0.3, 0.3]) == StoreContext(headline: "In line with your last three visits.", range: "Those were all $0.30."))
         // Only the three newest earlier visits count: a $100 fourth one doesn't widen the range.
-        #expect(StoreContext.compare(48, earlier: earlier + [100]).range == "Those were $8.00–$14.00.")
+        #expect(StoreContext.compare(48, earlier: earlier + [100])?.range == "Those were $8.00–$14.00.")
     }
 
-    /// With fewer than three earlier visits there is nothing to compare, and it says so.
-    @Test(arguments: [[], [8.0], [8.0, 14.0]]) func fewerThanThreeSaysSo(earlier: [Double]) {
-        #expect(StoreContext.compare(48, earlier: earlier) == StoreContext(headline: "Fewer than three earlier visits here, so there’s nothing to compare yet.", range: nil))
+    /// With fewer than three earlier visits there is nothing to compare, so there is no context
+    /// and the transaction screen leaves the whole block out.
+    @Test(arguments: [[], [8.0], [8.0, 14.0]]) func fewerThanThreeHasNoContext(earlier: [Double]) {
+        #expect(StoreContext.compare(48, earlier: earlier) == nil)
     }
 
     /// The earlier visits come from the same store, before this one, newest first, and leave out
@@ -68,5 +69,6 @@ struct StoreContextTests {
         // The second visit has only one before it.
         let second = try #require(try TransactionDetail.load("t2", in: database))
         #expect(try second.earlierCharges(in: database) == [9])
+        #expect(StoreContext.compare(second.amount, earlier: try second.earlierCharges(in: database)) == nil)
     }
 }

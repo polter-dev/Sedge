@@ -96,20 +96,12 @@ struct SavedAnswersView: View {
                             .foregroundStyle(Color.contrast)
                     }
                 }
-            } footer: {
-                if !entries.isEmpty {
-                    Text("Sedge uses these instead of asking, so a wrong one gives a wrong answer. Tap to change one, or swipe to remove it and be asked again next time.")
-                        .foregroundStyle(.secondary)
-                }
             }
             .listRowBackground(Color.group)
         }
         .themedBackground()
         .overlay {
-            if entries.isEmpty {
-                ContentUnavailableView("No saved answers", systemImage: "tray",
-                                       description: Text("Replies to quick questions and your profile corrections show here."))
-            }
+            if entries.isEmpty { ContentUnavailableView("No saved answers", systemImage: "tray") }
         }
         .alert("Change answer", isPresented: Binding { changing != nil } set: { if !$0 { changing = nil } }, presenting: changing) { entry in
             TextField("Answer", text: $draft)

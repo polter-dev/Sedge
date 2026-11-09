@@ -93,7 +93,7 @@ Bank sign-in (optional, simulator only):
 
 - `Secrets.xcconfig` holds local settings and is not included. The build reads it only if it
   exists, so the app builds and runs without it.
-- **Connect with Plaid** (Welcome) and **Connect bank** (in the data picker) use Plaid Sandbox through
+- **Connect bank** (on Welcome and in the data picker) uses Plaid Sandbox through
   the small server in `plaid-server/` (based on Plaid's quickstart) on `localhost:8000`. It needs your own
   Plaid Sandbox keys, which are not included. To run it (Node 20 or later):
 

@@ -50,6 +50,29 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
     #expect(InOut(week.rows) == money)
 }
 
+/// A pending charge is marked pending in the list's rows, and money in and out still count it
+/// like a posted one, so showing it as pending changes no sum.
+@Test func pendingRowsAreMarkedAndStillCounted() throws {
+    let database = try SedgeDatabase()
+    let accounts = #"[{"account_id": "a", "name": "Checking", "mask": "4821", "type": "depository", "balances": {"current": 500}}]"#
+    let transactions = #"""
+        [{"transaction_id": "t1", "account_id": "a", "date": "2026-06-01", "name": "ACME CORP PAYROLL", "amount": -500, "pending": false},
+         {"transaction_id": "t2", "account_id": "a", "date": "2026-06-02", "name": "VALUE MART", "amount": 40, "pending": false},
+         {"transaction_id": "t3", "account_id": "a", "date": "2026-06-03", "name": "VALUE MART", "amount": 25.5, "pending": true}]
+        """#
+    try database.save(accounts: JSONDecoder().decode([Account].self, from: Data(accounts.utf8)),
+                      transactions: JSONDecoder().decode([Transaction].self, from: Data(transactions.utf8)),
+                      asOf: "2026-06-30")
+    try Organizer.organize(database)
+
+    let rows = try ListedTransaction.all(in: database)
+    #expect(rows.map(\.id) == ["t3", "t2", "t1"])
+    #expect(rows.map(\.pending) == [true, false, false])
+    // $40.00 + $25.50 out, the pending charge included; $500.00 in.
+    #expect(InOut(rows) == InOut(rows.map { ListedTransaction(transaction_id: $0.transaction_id, date: $0.date, store: $0.store, name: $0.name, amount: $0.amount, kind: $0.kind) }))
+    #expect(InOut(rows).moneyOut == 6550 && InOut(rows).moneyIn == 50000)
+}
+
 /// For maya and daniel and every month: the in/out card and each week header's in and out equal
 /// the database's own sums of those rows (income in, spending and refunds out, transfers and card
 /// payments in neither), the weeks add up to the month, and every row is listed once, in its week.

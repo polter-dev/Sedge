@@ -17,7 +17,7 @@ struct LinkTokenResponse: Decodable {
     let link_token: String
 }
 
-/// What the local quickstart server's /api/all_transactions route returns.
+/// What the local Plaid server's /api/all_transactions route returns.
 /// The module name is spelled out because LinkKit also has an `Account` type
 /// and SwiftUI also has a `Transaction` type.
 struct AllTransactionsResponse: Decodable {
@@ -67,7 +67,7 @@ func exchangePublicToken(_ publicToken: String) async throws {
     _ = try await URLSession.shared.data(for: request)
 }
 
-/// Downloads every transaction and account from the quickstart server, saves them into
+/// Downloads every transaction and account from the Plaid server, saves them into
 /// `database` (always the bank file, never a persona's) and rebuilds the store names.
 /// Safe to run again: the database updates rows it already has instead of adding copies.
 // shortcut: a transaction Plaid later drops entirely (e.g. a cancelled pending charge)
@@ -91,7 +91,7 @@ let bankSyncFailedMessage = "Your bank connected, but its transactions couldn't 
 /// Runs after Plaid Link succeeds: swaps the public token on the server, downloads, then saves
 /// the bank's name (`institution`, from Link) so accounts read "<bank> ••<last 4>".
 /// Returns nil when it worked, or the line to show on screen when it didn't. The two steps
-/// are parameters so a test can make one fail without the quickstart server.
+/// are parameters so a test can make one fail without the Plaid server.
 // shortcut: one name per file, so after a second bank connects the first bank's accounts (still
 // in the file) take the new name too; store it per account if the app ever keeps two connections.
 func finishConnecting(
@@ -122,7 +122,7 @@ func finishConnecting(
     }
 }
 
-/// Gets a link token from the quickstart server, then shows the Connect button. If the server
+/// Gets a link token from the Plaid server, then shows the Connect button. If the server
 /// can't be reached, says so in one plain line and offers the sample people instead.
 struct ConnectBankScreen: View {
     let database: SedgeDatabase
@@ -139,7 +139,7 @@ struct ConnectBankScreen: View {
             ContentUnavailableView {
                 Label("Bank server not running", systemImage: "network.slash")
             } description: {
-                Text("The Plaid quickstart server isn't running, so a bank can't be connected.")
+                Text("Start the Plaid server, then try again.")
             } actions: {
                 Button(action: useSample) {
                     // The button's fill is the accent, so its text takes the color made to sit on it.
@@ -180,15 +180,33 @@ struct ConnectBankView: View
     @State private var isReady = false
     /// The plain line shown under the button when the download after connecting failed.
     @State private var syncFailure: String?
+    /// True when LinkKit couldn't make a session, so no button could open Plaid.
+    @State private var startFailed = false
 
     var body: some View
     {
         VStack(spacing: 12) {
-            Button("Connect Account")
-            {
-                isPresentingLink = true
+            if startFailed {
+                Text("Plaid couldn't start. Try again.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if isReady {
+                // The same button as Welcome's.
+                Button {
+                    isPresentingLink = true
+                } label: {
+                    Text("Connect bank")
+                        .font(.subheadline.weight(.semibold))
+                        // The button's fill is the accent, so its text takes the color made to sit on it.
+                        .foregroundStyle(Color.contrast)
+                        .frame(maxWidth: .infinity, minHeight: 32)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 10))
+            } else {
+                // Plaid's sheet is still loading, and a button now would do nothing.
+                ProgressView()
             }
-            .disabled(!isReady)
             if let syncFailure {
                 Text(syncFailure)
                     .font(.footnote)
@@ -197,6 +215,7 @@ struct ConnectBankView: View
                     .padding(.horizontal)
             }
         }
+        .padding(.horizontal, 20)
         .onAppear(perform: createSession)
         .sheet(isPresented: $isPresentingLink)
         {
@@ -239,6 +258,7 @@ struct ConnectBankView: View
                 // Only the error's type: LinkKit's invalid-token error carries a message
                 // that may quote the link token.
                 print("Link session error:", type(of: error))
+                startFailed = true
             }
         }
     }

@@ -498,7 +498,8 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The correction wasn't removed")
     }
 
-    /// Reset asks first: Cancel leaves the saved answers alone, and only Delete clears them.
+    /// Reset asks first, and both Cancel and Delete close the question. What Delete removes is
+    /// checked by AskUserTests in SedgeCore.
     @MainActor
     func testResetAsksBeforeDeleting() throws {
         let app = XCUIApplication()
@@ -507,7 +508,6 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         let reset = app.buttons["Reset saved questions"]
-        let cleared = app.staticTexts["Saved answers cleared."]
 
         reset.tap()
         let question = app.alerts["Delete all saved answers?"]
@@ -515,12 +515,12 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(question.staticTexts["This can't be undone."].exists)
         attachScreenshot(app, "reset-confirm")
         question.buttons["Cancel"].tap()
-        XCTAssertFalse(cleared.waitForExistence(timeout: 2), "Cancel cleared the saved answers")
+        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Cancel didn't close the question")
 
         reset.tap()
         XCTAssertTrue(question.waitForExistence(timeout: 5))
         question.buttons["Delete"].tap()
-        XCTAssertTrue(cleared.waitForExistence(timeout: 5), "Delete didn't clear the saved answers")
+        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Delete didn't close the question")
     }
 
     /// A fresh install shows Welcome, Explore sample data opens the picker, and after picking the
@@ -538,7 +538,6 @@ final class SedgeUITests: XCTestCase {
         // The headline has a line break in it, so it is found by its start.
         let welcome = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'A clearer view'")).firstMatch
         XCTAssertTrue(welcome.waitForExistence(timeout: 10), "No Welcome on first launch")
-        XCTAssertTrue(app.staticTexts["A preview of what you can explore"].exists)
         XCTAssertFalse(app.tabBars.firstMatch.exists)
         attachScreenshot(app, "welcome")
         app.buttons["Explore sample data"].tap()
@@ -561,23 +560,27 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Connect bank"].tap()
         app.buttons["Transactions"].tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
+        // The connect screen is named for what it does, not "Transactions".
+        XCTAssertTrue(app.navigationBars.staticTexts["Connect bank"].exists)
         attachScreenshot(app, "demo-bank-server-not-running")
         app.buttons["Use a sample person"].tap()
         app.buttons["Maya"].tap()
         XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
     }
 
-    /// On Welcome, Connect with Plaid opens the bank screen, which with no quickstart server says
-    /// so and leads to the sample people. Needs the quickstart server off. Ends on Maya.
+    /// On Welcome, Connect bank opens the Connect bank screen, which with no Plaid server says
+    /// so and leads to the sample people. Needs the Plaid server off. Ends on Maya.
     @MainActor
-    func testWelcomeConnectWithPlaidOpensBankFlow() throws {
+    func testWelcomeConnectBankOpensBankFlow() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-emptyBank", "YES", "-firstLaunch", "YES"]
         app.launch()
-        let connect = app.buttons["Connect with Plaid"]
+        let connect = app.buttons["Connect bank"]
         XCTAssertTrue(connect.waitForExistence(timeout: 10))
         connect.tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["Start the Plaid server, then try again."].exists)
+        XCTAssertTrue(app.navigationBars.staticTexts["Connect bank"].exists)
         attachScreenshot(app, "welcome-bank-server-not-running")
         app.buttons["Use a sample person"].tap()
         app.buttons["Maya"].tap()
@@ -1402,7 +1405,7 @@ final class SedgeUITests: XCTestCase {
         app.tabBars.buttons["Accounts"].tap()
         let row = app.collectionViews.buttons["Accounts"]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
-        XCTAssertEqual(row.value as? String, "2 still to answer")
+        XCTAssertEqual(row.value as? String, "2 unanswered")
         attachScreenshot(app, "accounts-tab")
         row.tap()
         XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: 5))
@@ -1434,7 +1437,7 @@ final class SedgeUITests: XCTestCase {
         // Back on the tab, the row counts the one still to answer.
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        XCTAssertEqual(row.value as? String, "1 still to answer")
+        XCTAssertEqual(row.value as? String, "1 unanswered")
 
         // The app has no way to take an owner answer back, so a debug launch argument clears them.
         app.terminate()

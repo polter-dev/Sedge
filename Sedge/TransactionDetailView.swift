@@ -68,17 +68,15 @@ struct TransactionDetail: Decodable, FetchableRecord {
 /// "Sedge's context": how a purchase compares with the same store's three purchases before it.
 /// Computed from the data only, never written by a model.
 struct StoreContext: Equatable {
-    /// "Higher than your last three visits.", "Lower …", "In line …", or a plain line when
-    /// there aren't three earlier visits to compare with.
+    /// "Higher than your last three visits.", "Lower …" or "In line …".
     let headline: String
-    /// "Those were $8.00–$14.00.", or nil when there is nothing to compare.
-    let range: String?
+    /// "Those were $8.00–$14.00."
+    let range: String
 
     /// `earlier` is the store's earlier purchase amounts, newest first (only the first three count).
-    static func compare(_ amount: Double, earlier: [Double]) -> StoreContext {
-        guard earlier.count >= 3 else {
-            return StoreContext(headline: "Fewer than three earlier visits here, so there’s nothing to compare yet.", range: nil)
-        }
+    /// Nil with fewer than three, since there is nothing to compare; the screen then leaves the block out.
+    static func compare(_ amount: Double, earlier: [Double]) -> StoreContext? {
+        guard earlier.count >= 3 else { return nil }
         // Whole cents, so float noise (14.000000001) never turns "in line" into "higher".
         let cents = { (dollars: Double) in (dollars * 100).rounded() }
         let last = earlier.prefix(3).map(cents)
@@ -97,9 +95,6 @@ struct StoreContext: Equatable {
 struct TransactionDetailView: View {
     let database: SedgeDatabase
     let id: String
-    /// The open data's name, the same saved choice ContentView opens, so the source line can say
-    /// whether this came from a sample person's file or the linked bank.
-    @AppStorage("persona") private var choice = "maya"
     @State private var detail: TransactionDetail?
     @State private var context: StoreContext?
     /// The organizer's categories found in this data, offered when changing the category.
@@ -181,7 +176,7 @@ struct TransactionDetailView: View {
 
     private func content(_ detail: TransactionDetail) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("\(detail.pending ? "Pending" : "Posted") · \(detail.date.displayDate(.dateTime.month(.wide).day().year()))")
+            Text("\(detail.pending ? "Pending" : "Posted") · \(detail.date.displayDate())")
                 .font(.note)
                 .foregroundStyle(.secondary)
             Text(detail.store)
@@ -250,13 +245,10 @@ struct TransactionDetailView: View {
                 noteRow
             }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Bank description: \(detail.name)")
-                Text(choice == SedgeDatabase.bankChoice ? "Source: linked bank via Plaid" : "Source: sample data, \(choice.capitalized)’s file")
-            }
-            .font(.note)
-            .foregroundStyle(.secondary)
-            .padding(.top, 18)
+            Text("Bank description: \(detail.name)")
+                .font(.note)
+                .foregroundStyle(.secondary)
+                .padding(.top, 18)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -277,12 +269,10 @@ struct TransactionDetailView: View {
             Text(context.headline)
                 .font(.answer)
                 .padding(.top, 10)
-            if let range = context.range {
-                Text(range)
-                    .font(.row)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 14)
-            }
+            Text(context.range)
+                .font(.row)
+                .foregroundStyle(.secondary)
+                .padding(.top, 14)
         }
     }
 
