@@ -44,3 +44,7 @@ CLAUDE.md
 
 # SwiftPM build output (Packages/SedgeCore)
 .build/
+
+# Benchmark notebook and portable benchmark: they ship in the code zip instead
+benchmarks/
+benchmarks-portable/
