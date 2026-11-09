@@ -505,6 +505,8 @@ struct CorrectFactView: View {
                             remove()
                             dismiss()
                         }
+                        // The app's ink tint would otherwise hide that this one deletes.
+                        .foregroundStyle(.red)
                     }
                     .listRowBackground(Color.group)
                 }

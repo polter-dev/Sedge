@@ -105,6 +105,8 @@ struct SavedAnswersView: View {
         }
         .toolbar {
             Button("Delete all", role: .destructive) { confirmingDeleteAll = true }
+                // The app's ink tint would otherwise hide that this one deletes.
+                .foregroundStyle(entries.isEmpty ? Color.muted : .red)
                 .disabled(entries.isEmpty)
         }
         // Deleting can't be undone, so ask first. An alert always shows its Cancel button.
