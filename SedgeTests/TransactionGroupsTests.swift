@@ -140,8 +140,8 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
                 row("5", "2026-06-15", 3.99), row("4", "2026-06-09", 2.32), row("3", "2026-05-28", 3.51),
                 row("2", "2026-05-04", 3.80), row("1", "2026-05-01", -520, "income")]
     let bars = zip(["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"], [0, 0, 0, 0, 731, 1271]).map { StoreSummary.Bar(month: $0, cents: $1) }
-    #expect(StoreSummary(rows, asOf: "2026-06-30") == StoreSummary(cents: 1271, visits: 4, range: "$2.32–$3.99", allVisits: 6, allCents: 2002,
-                                                                   first: "2026-05-04", bars: bars))
+    #expect(StoreSummary(rows, asOf: "2026-06-30") == StoreSummary(month: "2026-06", cents: 1271, visits: 4, range: "$2.32–$3.99", allVisits: 6,
+                                                                   allCents: 2002, first: "2026-05-04", bars: bars, before: 731))
     #expect(StoreSummary(rows, asOf: "2026-06-30")?.change == 540)
     let july = try #require(StoreSummary(rows, asOf: "2026-07-15"))
     #expect(july.cents == 0 && july.visits == 0 && july.range == "–" && july.change == -1271)
@@ -150,6 +150,23 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
     #expect(StoreSummary(rows, asOf: "2027-02-01")?.bars.map(\.month) == ["2026-09", "2026-10", "2026-11", "2026-12", "2027-01", "2027-02"])
     #expect(StoreSummary([row("1", "2026-06-01", 5)], asOf: "2026-06-30")?.range == "$5.00")
     #expect(StoreSummary([row("1", "2026-06-01", -520, "income")], asOf: "2026-06-30") == nil)
+}
+
+/// A tapped bar's month: May's two visits against April's none, March with no visits ($0, compared
+/// with an empty February), and January, the chart's oldest month, with nothing before it to compare.
+/// The bars and the all-time line stay as they were.
+@Test func storeSummaryForAPickedMonth() throws {
+    let rows = [row("4", "2026-06-15", 3.99), row("3", "2026-05-28", 3.51), row("2", "2026-05-04", 3.80), row("1", "2026-05-01", -520, "income")]
+    let june = try #require(StoreSummary(rows, asOf: "2026-06-30"))
+    let may = try #require(StoreSummary(rows, asOf: "2026-06-30", month: "2026-05"))
+    #expect(may.month == "2026-05" && may.cents == 731 && may.visits == 2 && may.range == "$3.51–$3.80" && may.change == 731)
+    #expect(may.bars == june.bars && may.allVisits == 3 && may.allCents == 1130 && may.first == "2026-05-04")
+    let march = try #require(StoreSummary(rows, asOf: "2026-06-30", month: "2026-03"))
+    #expect(march.cents == 0 && march.visits == 0 && march.range == "–" && march.change == 0)
+    #expect(StoreSummary(rows, asOf: "2026-06-30", month: "2026-01")?.change == nil)
+    // An oldest month whose store has earlier purchases still compares with the month before.
+    let older = rows + [row("0", "2025-12-20", 4.10)]
+    #expect(StoreSummary(older, asOf: "2026-06-30", month: "2026-01")?.change == -410)
 }
 
 /// Merchant history's change reads as Trends' (`SpendingView.changeText`), with "(so far)" only
@@ -178,6 +195,11 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
     #expect(summary.change == -426)
     #expect(summary.bars.map(\.cents) == [1025, 1066, 1396, 1202, 1697, 1271])
     #expect(summary.allCents == 7657 && summary.allVisits == 26)
+    // April's bar, tapped: its four visits ($3.27, $2.92, $3.37, $2.46; the $2.92 refund and the
+    // pay left out) total $12.02, $1.94 less than March's $13.96, read as Trends reads a change.
+    let april = try #require(StoreSummary(try ListedTransaction.all(in: database, merchant: id), asOf: asOf, month: "2026-04"))
+    #expect(april.cents == 1202 && april.visits == 4 && april.range == "$2.46–$3.37" && april.change == -194)
+    #expect(SpendingView.changeText(-194, before: "2026-03") == "-$2 vs Mar")
 }
 
 /// For every store maya and daniel bought from: the big total is the store's purchases in the
@@ -189,11 +211,13 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
     // The database's own purchase sums, in whole cents, by store and month.
     let sums = try database.dbQueue.read { db in
         try Row.fetchAll(db, sql: """
-            SELECT merchant_id, substr(date, 1, 7) AS month, SUM(CAST(ROUND(amount * 100) AS INTEGER)) AS cents
+            SELECT merchant_id, substr(date, 1, 7) AS month, SUM(CAST(ROUND(amount * 100) AS INTEGER)) AS cents, COUNT(*) AS visits,
+                   MIN(ABS(CAST(ROUND(amount * 100) AS INTEGER))) AS low, MAX(ABS(CAST(ROUND(amount * 100) AS INTEGER))) AS high
             FROM transactions WHERE kind = 'spending' AND merchant_id IS NOT NULL GROUP BY 1, 2
             """)
     }
-    let sum = { (store: String, month: String) -> Int in sums.first { $0["merchant_id"] == store && $0["month"] == month }?["cents"] ?? 0 }
+    let found = { (store: String, month: String) in sums.first { $0["merchant_id"] == store && $0["month"] == month } }
+    let sum = { (store: String, month: String) -> Int in found(store, month)?["cents"] ?? 0 }
     let stores = Set(sums.map { $0["merchant_id"] as String })
     #expect(stores.count >= 2)
     for store in stores {
@@ -204,6 +228,24 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
         #expect(summary.cents == sum(store, String(asOf.prefix(7))), "\(persona) \(store)")
         #expect(summary.change == sum(store, months[5]) - sum(store, months[4]))
         #expect(summary.bars.map(\.cents) == months.map { sum(store, $0) })
+        // Each bar, when tapped: that month's sum, count and range, and the change from the month
+        // before (none for the oldest month when the store has nothing earlier).
+        let money = { (cents: Int) in (Double(cents) / 100).formatted(.currency(code: "USD")) }
+        for (index, month) in months.enumerated() {
+            let picked = try #require(StoreSummary(rows, asOf: asOf, month: month))
+            let found = found(store, month)
+            let visits: Int = found?["visits"] ?? 0, low: Int? = found?["low"], high: Int? = found?["high"]
+            #expect(picked.cents == sum(store, month) && picked.visits == visits, "\(persona) \(store) \(month)")
+            if let low, let high {
+                #expect(picked.range == (low == high ? money(low) : "\(money(low))–\(money(high))"))
+            } else {
+                #expect(picked.range == "–")
+            }
+            let previous = SpendingView.monthBefore(month)
+            let comparable = index > 0 || sums.contains { $0["merchant_id"] == store && ($0["month"] as String) <= previous }
+            #expect(picked.change == (comparable ? sum(store, month) - sum(store, previous) : nil), "\(persona) \(store) \(month)")
+            #expect(picked.bars == summary.bars)
+        }
         let purchases = rows.filter { $0.kind == "spending" }
         var listed = 0
         for (month, weeks) in TransactionGroups.monthWeeks(purchases) {

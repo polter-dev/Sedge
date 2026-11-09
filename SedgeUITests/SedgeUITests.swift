@@ -1717,6 +1717,47 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "merchant-history")
     }
 
+    /// Tapping April's bar on Maya's Bean Street history shows April at the store: $12.02 over four
+    /// visits from $2.46 to $3.37, and the list scrolls to April's section. The screenshot is light,
+    /// or dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testMerchantHistoryTapsAnEarlierMonth() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let row = app.buttons["Bean Street Coffee, $2.68"]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 10))
+        for _ in 0..<5 where !history.isHittable { app.swipeUp() }
+        history.tap()
+
+        let april = app.buttons["April, $12.02"]
+        XCTAssertTrue(april.waitForExistence(timeout: 10))
+        april.tap()
+        let any = app.descendants(matching: .any)
+        let header = any.matching(NSPredicate(format: "label == 'April · 4 visits · $12.02'")).firstMatch
+        XCTAssertTrue(header.waitForExistence(timeout: 5))
+        // The scroll animation takes about a third of a second.
+        sleep(1)
+        XCTAssertTrue(header.isHittable, "April's section isn't on screen")
+        attachScreenshot(app, "merchant-history-april-list")
+
+        // Back at the top, the card still shows April, with April's bar picked.
+        let card = any.matching(NSPredicate(format: "label BEGINSWITH '$12.02' AND label CONTAINS '4 visits in April · $2.46–$3.37 each'")).firstMatch
+        for _ in 0..<10 where !(card.exists && card.isHittable) { app.swipeDown() }
+        XCTAssertTrue(card.isHittable, "the card doesn't show April")
+        XCTAssertFalse(card.label.contains("so far"))
+        XCTAssertTrue(any.matching(NSPredicate(format: "label == '-$2 vs Mar'")).firstMatch.exists)
+        XCTAssertTrue(april.isSelected)
+        sleep(1)
+        attachScreenshot(app, "merchant-history-april-card")
+    }
+
     /// The Transaction screen's "Merchant history" subtitle counts the rows the history lists:
     /// Maya's Bean Street history lists 26 visits, so the subtitle says 26, not every row there (41).
     @MainActor
