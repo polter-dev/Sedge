@@ -156,6 +156,47 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Should food include groceries?"].exists, "The quick check stayed")
     }
 
+    /// A model question with five long replies shows them as a list, top to bottom in the order given,
+    /// then "Later": each row sits below the one before and all span the card. `-demoCheck` holds the
+    /// question on screen. The same rows at the largest text size, since a long reply wraps there.
+    @MainActor
+    func testModelQuestionRepliesStackVertically() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-modelReady", "YES", "-demoCheck", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        assertRepliesStacked(app)
+        attachScreenshot(app, "quick-check-5-options")
+
+        app.terminate()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        assertRepliesStacked(app)
+        attachScreenshot(app, "quick-check-5-options-large-text")
+    }
+
+    /// Checks the five replies and "Later" of `-demoCheck` are one column of rows at least 44 points tall.
+    private func assertRepliesStacked(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let labels = ["Restaurants, cafés and coffee shops, including delivery orders",
+                      "Restaurants and cafés only, not coffee shops",
+                      "Only sit-down restaurants",
+                      "Everything except groceries",
+                      "Delivery and takeout only",
+                      "Later"]
+        XCTAssertTrue(app.buttons[labels[0]].waitForExistence(timeout: 5), "No quick check", file: file, line: line)
+        let frames = labels.map { app.buttons[$0].frame }
+        for (index, frame) in frames.enumerated() {
+            // Layout sometimes reports 44 as 43.99…, so allow half a point.
+            XCTAssertGreaterThan(frame.height, 43.5, "\(labels[index]) is too short", file: file, line: line)
+            // The card is the screen minus its margins, so a row that spans it is most of the screen wide.
+            XCTAssertGreaterThan(frame.width, app.frame.width * 0.75, "\(labels[index]) doesn't span the card", file: file, line: line)
+            guard index > 0 else { continue }
+            XCTAssertGreaterThanOrEqual(frame.minY, frames[index - 1].maxY, "\(labels[index]) isn't below the row before", file: file, line: line)
+            XCTAssertEqual(frame.minX, frames[0].minX, accuracy: 1, "\(labels[index]) isn't in the same column", file: file, line: line)
+        }
+    }
+
     /// The screen stays awake while a question is worked out. Picking other data mid-question (here, a
     /// typed question waiting on its quick check) ends it, so the screen may lock again on the new data.
     /// `-showKeepAwake` puts the flag on screen, since a UI test can't read it. Maya is picked from Welcome
@@ -488,7 +529,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["You · Have I been overspending on food?"].exists)
         let answer = app.staticTexts.containing(NSPredicate(format: "label ENDSWITH 'accounts for most of the difference.'")).firstMatch
         XCTAssertTrue(answer.exists, "No answer")
-        XCTAssertTrue(app.staticTexts["A quick check"].exists, "No quick check")
+        XCTAssertTrue(app.buttons["Yes, mine"].exists, "No quick check")
         attachScreenshot(app, "ask-sample")
         // The quick check's buttons sit below the fold on a phone, so scroll to show them too.
         app.scrollViews.firstMatch.swipeUp()
@@ -520,7 +561,7 @@ final class SedgeUITests: XCTestCase {
 
         app.launch()
         app.tabBars.buttons["Ask"].tap()
-        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Yes, mine"].waitForExistence(timeout: 10), "No quick check")
         app.scrollViews.firstMatch.swipeUp()
         app.buttons["Yes, mine"].tap()
         firstSaved = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5)
@@ -528,7 +569,7 @@ final class SedgeUITests: XCTestCase {
 
         app.launch()
         app.tabBars.buttons["Ask"].tap()
-        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Yes, mine"].waitForExistence(timeout: 10), "No quick check")
         app.scrollViews.firstMatch.swipeUp()
         app.buttons["No"].tap()
         let any = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved:' OR label BEGINSWITH 'Not saved'")).firstMatch
