@@ -409,7 +409,7 @@ final class SedgeUITests: XCTestCase {
             app.buttons["Send"].tap()
             XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 5))
             app.navigationBars.buttons["New chat"].tap()
-            XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "New chat didn't clear")
+            XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2), "New chat didn't clear")
         }
 
         let title = app.staticTexts["Chats"]
@@ -432,7 +432,7 @@ final class SedgeUITests: XCTestCase {
         // A 120-point swipe closes it.
         header.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.08)))
         XCTAssertTrue(title.waitForNonExistence(timeout: 2), "The swipe didn't close the panel")
-        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2))
 
         // Edit, delete the first chat, Done: the second is still listed.
         app.navigationBars.buttons["Previous chats"].tap()
@@ -456,7 +456,7 @@ final class SedgeUITests: XCTestCase {
         confirm.tap()
         XCTAssertTrue(second.waitForNonExistence(timeout: 2))
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
-        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2))
     }
 
     /// The empty Ask screen's example question changes every few seconds, and typing brings up
@@ -778,7 +778,7 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
         app.launch()
         app.tabBars.buttons["Ask"].tap()
-        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Yes, mine"].waitForExistence(timeout: 10), "No quick check")
         app.scrollViews.firstMatch.swipeUp()
         app.buttons["Yes, mine"].tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5))
