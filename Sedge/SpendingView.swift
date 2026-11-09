@@ -167,6 +167,38 @@ struct SpendingView: View {
         (month + "-01", month + "-" + asOf.suffix(2))
     }
 
+    /// Whether a "YYYY-MM-DD" day is its month's last day or past it: a day past the end rolls into
+    /// the next month ("2026-04-31" reads as May 1), so the day after it isn't in the month.
+    static func endsMonth(_ day: String) -> Bool {
+        let format = Date.ISO8601FormatStyle().year().month().day()
+        guard let date = try? Date(day, strategy: format) else { return true }
+        return !(date + 86_400).formatted(format).hasPrefix(day.prefix(7))
+    }
+
+    /// The month as Trends names it, over the days its bar covers: "June so far" for today's month,
+    /// its days when they cut a past month short, e.g. "May 1 – 30", else its name, e.g. "April".
+    static func monthLabel(_ month: String, asOf: String) -> String {
+        let name = (month + "-01").displayDate(.dateTime.month(.wide))
+        if month == asOf.prefix(7) { return "\(name) so far" }
+        let through = window(month, asOf: asOf).through
+        let day = Date.ISO8601FormatStyle().year().month().day()
+        guard !endsMonth(through), let start = try? Date(month + "-01", strategy: day),
+              let last = try? Date(through, strategy: day) else { return name }
+        // The dates are midnight UTC, so they're shown in UTC too, as `span` does.
+        return (start..<last).formatted(Date.IntervalFormatStyle(timeZone: .gmt).month(.abbreviated).day())
+    }
+
+    /// The cash-flow card's title, e.g. "Cash flow · May 1 – 30".
+    static func cashFlowTitle(_ month: String, asOf: String) -> String { "Cash flow · " + monthLabel(month, asOf: asOf) }
+
+    /// The mosaic's line for a month with no spending: "No spending May 1 – 30." for a cut-short
+    /// month, "No spending in April." for a whole one.
+    static func noSpendingLine(_ month: String, asOf: String) -> String {
+        if month == asOf.prefix(7) { return "No spending so far this month." }
+        let label = monthLabel(month, asOf: asOf)
+        return label == (month + "-01").displayDate(.dateTime.month(.wide)) ? "No spending in \(label)." : "No spending \(label)."
+    }
+
     /// The pages of four months over the whole history, each by its last month, oldest first.
     /// The last page ends at `asOf`'s month and each one before ends four months earlier, until a
     /// page holds the first month with spending. With no spending there is still the last page.
@@ -361,8 +393,6 @@ struct SpendingView: View {
 
     /// The page dots, 6 pt in the design, grow with the text.
     @ScaledMetric(relativeTo: .caption2) private var dotSize: CGFloat = 6
-    /// The Worth a look count badge, 20 pt in the design, grows with its number.
-    @ScaledMetric(relativeTo: .caption2) private var badgeSize: CGFloat = 20
     /// The mosaic's height, 132 pt in the design; it grows with the text so labels still fit.
     @ScaledMetric(relativeTo: .caption) private var mosaicHeight: CGFloat = 132
     /// The shortest and narrowest a mosaic block gets (56 and 80 pt in the design), so its two lines fit.
@@ -594,10 +624,9 @@ struct SpendingView: View {
     private var cashFlowCard: some View {
         let isNow = shownMonth == thisMonth
         let opens = isNow && cashFlow != nil
-        let name = (shownMonth + "-01").displayDate(.dateTime.month(.wide))
         let content = VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Text("Cash flow · " + (isNow ? "\(name) so far" : name)).font(.cardTitle).foregroundStyle(Color.ink)
+                Text(Self.cashFlowTitle(shownMonth, asOf: asOf ?? "")).font(.cardTitle).foregroundStyle(Color.ink)
                 Spacer(minLength: 8)
                 if opens {
                     Image(systemName: "chevron.right")
@@ -731,21 +760,15 @@ struct SpendingView: View {
         .accessibilityIdentifier("biggestChange")
     }
 
-    /// "1 purchase worth a look →" with the count in a small badge, opening the Worth a look sheet.
+    /// "1 purchase worth a look" and a chevron, as on Biggest change, opening the Worth a look sheet.
     private var worthALookRow: some View {
         Button { showingWorthALook = true } label: {
             HStack(spacing: 8) {
-                Text("\(worthALook)")
-                    .font(.note.weight(.semibold))
-                    .foregroundStyle(Color.contrast)
-                    .frame(minWidth: badgeSize, minHeight: badgeSize)
-                    .background(Color.accent, in: .capsule)
-                    .accessibilityHidden(true)
                 Text(worthALook == 1 ? "1 purchase worth a look" : "\(worthALook) purchases worth a look")
+                    .font(.row.weight(.medium))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("→").accessibilityHidden(true)
+                Image(systemName: "chevron.right").font(.row).accessibilityHidden(true)
             }
-            .font(.row.weight(.medium))
             .foregroundStyle(Color.muted)
             .frame(minHeight: 44)
             .contentShape(.rect)
@@ -776,17 +799,15 @@ struct SpendingView: View {
         }
     }
 
-    /// The page's month ("June", or "June so far" for today's) as a mosaic, a block per category
-    /// sized by its amount. The blocks add up to the page's total.
+    /// The page's month (`monthLabel`: "June so far", "May 1 – 30" or "April") as a mosaic, a block
+    /// per category sized by its amount. The blocks add up to the page's total.
     @ViewBuilder
     private var connected: some View {
-        let name = (shownMonth + "-01").displayDate(.dateTime.month(.wide))
         let blocks = Self.categoryBlocks(totals, month: shownMonth)
-        Text(shownMonth == thisMonth ? "\(name) so far" : name).font(.headline).foregroundStyle(Color.ink)
+        Text(Self.monthLabel(shownMonth, asOf: asOf ?? "")).font(.headline).foregroundStyle(Color.ink)
             .padding(.top, 10)
         if blocks.isEmpty {
-            Text(shownMonth == thisMonth ? "No spending so far this month."
-                                         : "No spending in the first \(day) days of \(name).")
+            Text(Self.noSpendingLine(shownMonth, asOf: asOf ?? ""))
                 .font(.row)
                 .foregroundStyle(Color.muted)
         } else {
@@ -800,8 +821,8 @@ struct SpendingView: View {
                     mosaic(blocks)
                 }
             }
-            // The new month's blocks fade in once they load, a little after the tap.
-            .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.25), value: blocks.map(\.name))
+            // A new month's blocks settle into their names and sizes once they load; Reduce Motion just swaps them.
+            .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0), value: blocks.map { "\($0.name)=\($0.total)" })
         }
     }
 
@@ -872,6 +893,6 @@ struct SpendingView: View {
     // Maya's fake data, loaded the same way the app loads it.
     NavigationStack {
         SpendingView(database: try! .open("maya"))
-            .navigationTitle("Spending")
+            .navigationTitle("Trends")
     }
 }

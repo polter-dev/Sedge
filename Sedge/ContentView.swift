@@ -198,7 +198,7 @@ struct MainView: View {
                         handedQuestions += 1
                         tab = .ask
                     }
-                        .navigationTitle("Spending")
+                        .navigationTitle("Trends")
                         // Inline because iOS shows the title menu only on an inline title.
                         .navigationBarTitleDisplayMode(.inline)
                         .navigationSubtitle(dataName)

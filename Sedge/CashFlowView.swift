@@ -163,9 +163,6 @@ struct CashFlowView: View {
         ScrollView {
             if let result {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("\(result.accountName) · updated \(asOf.displayDate(.dateTime.month(.abbreviated).day()))")
-                        .font(.row)
-                        .foregroundStyle(Color.muted)
                     Picker("Projection length", selection: $days) {
                         ForEach([30, 60, 90], id: \.self) { Text("\($0) days").tag($0) }
                     }
@@ -431,7 +428,7 @@ struct CashFlowView: View {
         .padding(.horizontal, 17)
         .padding(.top, 24)
         .padding(.bottom, 12)
-        .background(Color.group, in: .rect(cornerRadius: 22))
+        .background(Color.group, in: .rect(cornerRadius: 14))
     }
 
     /// One scenario: its name and what it does, with its switch.

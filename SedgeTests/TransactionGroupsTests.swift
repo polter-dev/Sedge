@@ -152,6 +152,20 @@ private func row(_ id: String, _ date: String, _ amount: Double, _ kind: String?
     #expect(StoreSummary([row("1", "2026-06-01", -520, "income")], asOf: "2026-06-30") == nil)
 }
 
+/// Merchant history's change reads as Trends' (`SpendingView.changeText`), with "(so far)" only
+/// while the data's today isn't its month's last day.
+@MainActor @Test func storeChangeTextMatchesTrends() {
+    for cents in [-426, 540, -5, 0] {
+        #expect(MerchantHistoryView.changeText(cents, lastMonth: "2026-05", asOf: "2026-06-30") == SpendingView.changeText(cents, before: "2026-05"))
+        #expect(MerchantHistoryView.changeText(cents, lastMonth: "2026-05", asOf: "2026-06-15") == SpendingView.changeText(cents, before: "2026-05") + " (so far)")
+    }
+    #expect(MerchantHistoryView.changeText(-426, lastMonth: "2026-05", asOf: "2026-06-29") == "-$4 vs May (so far)")
+    // February's last day is the 28th in 2026; July's is the 31st.
+    #expect(!MerchantHistoryView.changeText(100, lastMonth: "2026-01", asOf: "2026-02-28").contains("so far"))
+    #expect(MerchantHistoryView.changeText(100, lastMonth: "2026-06", asOf: "2026-07-30").hasSuffix("(so far)"))
+    #expect(!MerchantHistoryView.changeText(100, lastMonth: "2026-06", asOf: "2026-07-31").contains("so far"))
+}
+
 /// Maya's Bean Street Coffee, the design's example: $12.71 in June, $4.26 less than May, and the
 /// six bars $10.25, $10.66, $13.96, $12.02, $16.97 and $12.71 ($76.57 in all over 26 visits).
 /// Her pay from the café and its two refunds are left out.
