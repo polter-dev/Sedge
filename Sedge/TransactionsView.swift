@@ -428,7 +428,7 @@ struct MerchantHistoryView: View {
         List {
             // A store with no purchases has no visits to sum up.
             if let asOf, let summary = StoreSummary(rows, asOf: asOf) {
-                Section { card(summary) }
+                Section { card(summary, asOf: asOf) }
                     .listRowBackground(Color.group)
             }
             ForEach(TransactionGroups.monthWeeks(shown), id: \.month) { month, weeks in
@@ -469,14 +469,14 @@ struct MerchantHistoryView: View {
         return "\(month)-01".displayDate(sameYear ? .dateTime.month(.wide) : .dateTime.month(.wide).year())
     }
 
-    /// "JUNE · 4 visits · $12.71".
+    /// "June · 4 visits · $12.71".
     private func monthHeader(_ month: String, weeks: [WeekGroup]) -> some View {
         let rows = weeks.reduce(0) { $0 + $1.rows.count }
         let cents = weeks.reduce(0) { $0 + $1.cents }
-        return Text("\(monthName(month).uppercased()) · \(count(rows)) · \(amountText(cents: cents))")
+        return Text("\(monthName(month)) · \(count(rows)) · \(amountText(cents: cents))")
             .font(.footnote)
             .foregroundStyle(Color.muted)
-            // Shown as written: only the month is in capitals.
+            // Shown as written, since a list's section header would otherwise be in capitals.
             .textCase(nil)
             .accessibilityAddTraits(.isHeader)
     }
@@ -496,12 +496,18 @@ struct MerchantHistoryView: View {
         .accessibilityAddTraits(.isHeader)
     }
 
+    /// The card's change from last month, as Trends writes one ("-$4 vs May"), marked "(so far)"
+    /// while this month hasn't ended: only its first days are in, against the whole of last month.
+    static func changeText(_ cents: Int, lastMonth: String, asOf: String) -> String {
+        SpendingView.changeText(cents, before: lastMonth) + (SpendingView.endsMonth(asOf) ? "" : " (so far)")
+    }
+
     /// This month's total with its change from last month, the six-month chart, and every visit's count and total.
-    private func card(_ summary: StoreSummary) -> some View {
+    private func card(_ summary: StoreSummary, asOf: String) -> some View {
         let stacked = dynamicTypeSize.isAccessibilitySize
         let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
-        let month = monthName(summary.bars[summary.bars.count - 1].month)
-        let lastMonth = monthName(summary.bars[summary.bars.count - 2].month)
+        // "June", or "June so far" until the month's last day.
+        let month = monthName(summary.bars[summary.bars.count - 1].month) + (SpendingView.endsMonth(asOf) ? "" : " so far")
         let change = summary.change
         let money = { (cents: Int) in (Double(cents) / 100).formatted(.currency(code: "USD")) }
         return VStack(alignment: .leading, spacing: 12) {
@@ -509,23 +515,17 @@ struct MerchantHistoryView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(money(summary.cents))
                         .font(.bigValue)
-                        .foregroundStyle(Color.amountNow)
+                        .foregroundStyle(Color.ink)
                     Text(summary.visits == 0 ? "No visits in \(month)" : "\(count(summary.visits)) in \(month) · \(summary.range) each")
                         .font(.row)
                         .foregroundStyle(Color.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
-                VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
-                    // Green when less went to the store than last month, red when more.
-                    Text(change == 0 ? "Same" : "\(money(abs(change))) \(change < 0 ? "less" : "more")")
-                        .font(.row.weight(.medium))
-                        .foregroundStyle(change < 0 ? Color.moneyBack : change > 0 ? Color.moneySpent : Color.muted)
-                    Text("\(change == 0 ? "as" : "than") \(lastMonth)")
-                        .font(.note)
-                        .foregroundStyle(Color.muted)
-                }
-                .accessibilityElement(children: .combine)
+                // Green when less went to the store than last month, red when more.
+                Text(Self.changeText(change, lastMonth: summary.bars[summary.bars.count - 2].month, asOf: asOf))
+                    .font(.row.weight(.medium))
+                    .foregroundStyle(change < 0 ? Color.moneyBack : change > 0 ? Color.moneySpent : Color.muted)
             }
             chart(summary)
             Text("\(count(summary.allVisits)) since \(summary.first.displayDate(.dateTime.month(.abbreviated).day())) · \(money(summary.allCents)) in all")
@@ -535,7 +535,8 @@ struct MerchantHistoryView: View {
         .padding(.vertical, 4)
     }
 
-    /// One bar per month, the latest in `chartNow`, each with its total above and its letter below.
+    /// One bar per month, the latest in `chartNow`, each with its letter below and, but for the
+    /// latest (the card's big figure already says it), its total above.
     private func chart(_ summary: StoreSummary) -> some View {
         // The tallest bar is 64 pt; `max(…, 1)` keeps six empty months from dividing by zero.
         let top = CGFloat(max(summary.bars.map(\.cents).max() ?? 0, 1))
@@ -544,10 +545,8 @@ struct MerchantHistoryView: View {
                 let now = index == summary.bars.count - 1
                 VStack(spacing: 4) {
                     // At the largest text sizes the totals would overlap, so only the letters stay.
-                    if !dynamicTypeSize.isAccessibilitySize {
-                        Text(amountText(cents: bar.cents))
-                            .font(now ? .note.weight(.medium) : .note)
-                            .foregroundStyle(now ? Color.ink : Color.muted)
+                    if !dynamicTypeSize.isAccessibilitySize && !now {
+                        Text(amountText(cents: bar.cents)).font(.note).foregroundStyle(Color.muted)
                     }
                     RoundedRectangle(cornerRadius: 4)
                         .fill(now ? Color.chartNow : Color.chartPast)
