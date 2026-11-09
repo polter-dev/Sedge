@@ -700,7 +700,7 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// The Cash flow screen keeps only the toolbar's info button: no shading sentence and no second
-    /// "What's included?" link. The bill change reads "None chosen" while off.
+    /// "What's included" link. The bill change reads "None chosen" while off.
     @MainActor
     func testCashFlowScreenDropsExtraText() throws {
         let app = XCUIApplication()
@@ -712,13 +712,68 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
         attachScreenshot(app, "cash-flow-screen")
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Shading shows'")).firstMatch.exists)
-        XCTAssertTrue(app.navigationBars.buttons["What’s included?"].exists)
+        XCTAssertTrue(app.navigationBars.buttons["What’s included"].exists)
         XCTAssertFalse(app.buttons["What’s included? →"].exists)
+        // With no scenario on there is one line, so no legend.
+        XCTAssertFalse(app.staticTexts["Current plan"].exists)
         let bill = app.switches["bill"]
         XCTAssertTrue(bill.waitForExistence(timeout: 5))
         XCTAssertTrue(bill.label.contains("None chosen"), bill.label)
         for _ in 0..<3 where !app.staticTexts["Preview only"].isHittable { app.swipeUp() }
         attachScreenshot(app, "cash-flow-screen-scenarios")
+    }
+
+    /// Without a bank account to project from, today's cash flow card still shows the month's figures
+    /// but has no chevron and opens nothing, rather than a "No bank account" screen.
+    @MainActor
+    func testCashFlowCardWithoutABankAccountIsNotALink() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-noBankBalance", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let card = app.descendants(matching: .any)["cashFlow"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(card.label.hasPrefix("Cash flow · June so far") && card.label.contains("Money out"), card.label)
+        XCTAssertFalse(card.label.contains("Low point"), card.label)
+        XCTAssertFalse(app.buttons["cashFlow"].exists)
+        card.tap()
+        XCTAssertFalse(app.staticTexts["projected"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["No bank account"].exists)
+    }
+
+    /// January, Maya's first month, has no month before it in the data, so neither Trends nor the
+    /// Groceries page shows a Biggest change against December, and December's bar, on the same
+    /// page, can't be picked. The screenshots are light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testFirstDataMonthHasNoBiggestChange() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(app.staticTexts["June so far"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["biggestChange"].exists)
+        app.scrollViews["months"].swipeRight()
+        XCTAssertTrue(app.staticTexts["February"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["biggestChange"].exists)
+        app.otherElements["January"].tap()
+        XCTAssertTrue(app.staticTexts["January"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["biggestChange"].exists)
+        attachScreenshot(app, "first-data-month")
+        app.otherElements["December"].tap()
+        XCTAssertFalse(app.staticTexts["December"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
+
+        let blocks = app.buttons.matching(identifier: "categoryBlock")
+        let groceries = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Groceries, '")).firstMatch
+        XCTAssertTrue(groceries.waitForExistence(timeout: 5))
+        groceries.tap()
+        XCTAssertTrue(app.staticTexts["Stores"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["categoryChange"].exists)
+        Thread.sleep(forTimeInterval: 0.5) // the push's slide
+        attachScreenshot(app, "category-page-first-month")
     }
 
     /// Maya's Spending screen opens on the March to June page with June picked; one swipe right

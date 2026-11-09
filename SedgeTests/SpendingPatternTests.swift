@@ -437,3 +437,24 @@ func earlierPageBarsMatchTheMonthTotals(persona: String) throws {
         }
     }
 }
+
+/// Maya's data starts in January 2026, so January has no month before it to compare with: no
+/// Biggest change on Trends or for a category's stores, while February still compares. December,
+/// before the data, can't be picked, though it shares January's page.
+@Test func firstDataMonthHasNoBiggestChange() throws {
+    let database = try inMemory("maya")
+    let asOf = "2026-06-30"
+    let totals = try SpendingTotal.all(in: database, throughDay: 30)
+    let first = try #require(totals.map(\.month).min())
+    #expect(first == "2026-01")
+    #expect(SpendingView.categoryChange(totals, asOf: asOf, month: first) == nil)
+    #expect(SpendingView.categoryChange(totals, asOf: asOf, month: "2026-02") != nil)
+    let rows = try CategoryView.rows(in: database, category: "groceries", month: first, asOf: asOf)
+    let before = try CategoryView.rows(in: database, category: "groceries", month: "2025-12", asOf: asOf)
+    // Without the rule every January store would read as new against an empty December.
+    #expect(!rows.isEmpty && SpendingView.biggestChange(now: SpendingView.cents(rows), before: SpendingView.cents(before)) != nil)
+    #expect(CategoryView.storeChange(totals, month: first, rows: rows, before: before) == nil)
+    #expect(SpendingView.reaches(totals, back: first))
+    #expect(!SpendingView.reaches(totals, back: "2025-12"))
+    #expect(SpendingView.months(endingAt: SpendingView.pages(totals, asOf: asOf)[0]).contains("2025-12"))
+}

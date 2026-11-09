@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import GRDB
 import SedgeCore
 import SwiftUI
 
@@ -76,6 +77,13 @@ extension SedgeDatabase {
         // answers, which the app itself never clears. Debug builds only.
         if UserDefaults.standard.bool(forKey: "clearOwnerAnswers") {
             for account in try ListedAccount.all(in: database) { try Answers.setOwner(nil, account: account.id, in: database) }
+        }
+        // UI tests launch with `-noBankBalance YES` to see a persona with no bank account to project
+        // from. Only a persona's file: its next launch reloads the balances. Debug builds only.
+        if UserDefaults.standard.bool(forKey: "noBankBalance") && choice != bankChoice {
+            try database.dbQueue.write { db in
+                try db.execute(sql: "UPDATE accounts SET balances = json_remove(balances, '$.current') WHERE type = 'depository'")
+            }
         }
         #endif
         return database
