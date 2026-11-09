@@ -83,7 +83,7 @@ struct SedgeTests {
                   "Housing, Oakwood Apartments Rent, rent, $650.00 a month, Next Jul 1",
                   "Accounts, Credit Card, credit card", "Accounts, Checking, checking"]),
         ("daniel", ["Income, $5,200.00, A month from Northpoint Services Payroll, Next Jul 30",
-                    "Loans, Auto Loan Payment, auto, $325.00, Next Jul 7",
+                    "Loans, Auto Loan Payment, auto, $325.00 a month, Next Jul 7",
                     "Housing, Home Mortgage, mortgage, $1,850.00 a month, Next Jul 1",
                     "Accounts, Card A, credit card", "Accounts, Card B, credit card",
                     "Accounts, Checking, checking", "Accounts, Savings, savings"]),
