@@ -295,6 +295,45 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(field.isEnabled)
     }
 
+    /// One tap anywhere on the question pill gives the field the keyboard: near its leading edge,
+    /// and near its trailing edge just left of Send, both outside the field's one text line.
+    @MainActor
+    func testAskPillTapFocusesTheField() throws {
+        // Leading: in the pill's left padding, low in the pill. Trailing: just left of Send, high in the pill.
+        for (name, spot) in [("leading", { (field: CGRect, send: CGRect) in CGPoint(x: field.minX - 8, y: send.maxY - 5) }),
+                             ("trailing", { (field: CGRect, send: CGRect) in CGPoint(x: send.minX - 6, y: send.minY + 5) })] {
+            let app = XCUIApplication()
+            app.launchArguments = ["-persona", "maya"]
+            app.launch()
+            app.tabBars.buttons["Ask"].tap()
+            let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+            XCTAssertTrue(field.waitForExistence(timeout: 5))
+            let point = spot(field.frame, app.buttons["Send"].frame)
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).tap()
+            let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
+            XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 3), .completed, "\(name): the first tap did not focus the field")
+            app.terminate()
+        }
+    }
+
+    /// In a full chat the question box is off, so a tap on its pill brings up no keyboard.
+    @MainActor
+    func testAskPillTapLeavesADisabledFieldAlone() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-demoTokenLimit", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["This chat is full"].waitForExistence(timeout: 5))
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let send = app.buttons["Send"].frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: send.minX - 6, dy: send.minY + 5)).tap()
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertFalse(NSPredicate(format: "hasKeyboardFocus == true").evaluate(with: field), "A disabled field took focus")
+        XCTAssertFalse(app.keyboards.firstMatch.exists && app.keyboards.firstMatch.frame.intersects(app.windows.firstMatch.frame),
+                       "The keyboard came up for a disabled field")
+    }
+
     /// A question is saved as a chat: New chat clears the screen and the Previous chats panel
     /// lists it, while New chat on an empty chat adds nothing. Opening it shows its turn under its
     /// own title, with no Rename there until New chat. A
