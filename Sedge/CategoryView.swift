@@ -71,13 +71,15 @@ struct CategoryView: View {
 
     /// The question chip's words: why the category was higher or lower than the month before, or
     /// what was spent on it when nothing changed or the data has no month before to compare with.
+    /// "other" reads as "other things", so its questions aren't "spend on other in June".
     static func question(_ totals: [SpendingTotal], category: String, month: String) -> String {
-        let name = SpendingView.title(category).lowercased()
+        let isOther = category == "other"
+        let name = isOther ? "other things" : SpendingView.title(category).lowercased()
         let before = SpendingView.monthBefore(month)
         let spent = { SpendingView.cents(totals, month: $0)[category] ?? 0 }
         let monthName = { ($0 + "-01").displayDate(.dateTime.month(.wide)) }
         guard SpendingView.reaches(totals, back: before), spent(month) != spent(before) else { return "What did I spend on \(name) in \(monthName(month))?" }
-        return "Why was \(name) \(spent(month) > spent(before) ? "higher" : "lower") in \(monthName(month)) than \(monthName(before))?"
+        return "Why was \(isOther ? "spending on other things" : name) \(spent(month) > spent(before) ? "higher" : "lower") in \(monthName(month)) than \(monthName(before))?"
     }
 
     var body: some View {
@@ -98,14 +100,10 @@ struct CategoryView: View {
                     } else {
                         heading("Stores")
                         ForEach(stores) { storeRow($0, share: cents > 0 ? $0.total * 100 / Double(cents) : 0) }
-                        if let change = Self.storeChange(totals, month: shown, rows: rows, before: rowsBefore) { changeRow(change) }
-                        heading("Transactions")
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("^[\(rows.count) transaction](inflect: true)").foregroundStyle(Color.muted)
-                            Spacer(minLength: 8)
-                            Text(Double(cents) / 100, format: .currency(code: "USD")).fontWeight(.semibold).foregroundStyle(Color.ink)
-                        }
-                        .font(.footnote)
+                        // With one store the change row would only repeat that store's row above it.
+                        if stores.count > 1, let change = Self.storeChange(totals, month: shown, rows: rows, before: rowsBefore) { changeRow(change) }
+                        // Only the count: the header above already gives the amount.
+                        heading(MerchantHistoryView.count(rows.count, visits: false))
                         ForEach(rows) { transactionRow($0) }
                     }
                     questionChip.padding(.top, 14)
@@ -136,7 +134,6 @@ struct CategoryView: View {
             // match by merchant id if the organizer ever gives two stores one name.
             MerchantHistoryView(rows: ((try? ListedTransaction.all(in: database)) ?? []).filter { $0.store == store }, database: database)
                 .navigationTitle(store)
-                .navigationSubtitle("Merchant history")
         }
     }
 
@@ -300,8 +297,8 @@ struct CategoryView: View {
         Image(systemName: "chevron.right").font(.row).foregroundStyle(Color.muted).accessibilityHidden(true)
     }
 
-    /// The question about the shown month in a tinted chip (design B4: `amountNow` on a 10 % fill),
-    /// as Ask's example questions; tapping it opens Ask with the question typed in.
+    /// The question about the shown month in a chip that looks like Ask's example questions (muted
+    /// text on `surface` with a `line` edge, hugging its text); tapping it opens Ask with it typed in.
     private var questionChip: some View {
         let text = Self.question(totals, category: category, month: shown)
         return Button { ask(text) } label: {
@@ -310,12 +307,13 @@ struct CategoryView: View {
                 .multilineTextAlignment(.leading)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .frame(minHeight: 44)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.amountNow)
-        .background(Color.amountNow.opacity(0.1), in: .rect(cornerRadius: 10))
+        .foregroundStyle(Color.muted)
+        .background(Color.surface, in: .rect(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.line))
         .accessibilityIdentifier("categoryQuestion")
     }
 }
@@ -340,21 +338,6 @@ struct MonthCategoriesSheet: View {
         return zip(spent, wholeDollars(spent.map(\.value))).map { ($0.key, $0.value, $1) }
     }
 
-    /// The sheet's title: "June so far" for today's month; the days counted when they cut a past
-    /// month short, e.g. "May 1 – 30, 2026"; else the month's name, e.g. "April".
-    static func title(month: String, asOf: String) -> String {
-        let name = (month + "-01").displayDate(.dateTime.month(.wide))
-        if month == asOf.prefix(7) { return "\(name) so far" }
-        let day = Date.ISO8601FormatStyle().year().month().day()
-        // A day past the month's end rolls into the next month ("2026-04-31" reads as May 1), so the
-        // window is the whole month exactly when the day after its last day isn't in the month.
-        guard let start = try? Date(month + "-01", strategy: day),
-              let last = try? Date(SpendingView.window(month, asOf: asOf).through, strategy: day),
-              (last + 86_400).formatted(day).hasPrefix(month) else { return name }
-        // The dates are midnight UTC, so they're shown in UTC too, as `SpendingView.span` does.
-        return (start..<last).formatted(Date.IntervalFormatStyle(timeZone: .gmt).month(.abbreviated).day().year())
-    }
-
     /// Cents rounded to the nearest whole dollar, 50 cents to the even dollar, as the bars' dollar
     /// format rounds, so Total always reads the same as its month's bar.
     static func rounded(_ cents: Int) -> Int { Int((Double(cents) / 100).rounded(.toNearestOrEven)) }
@@ -374,35 +357,38 @@ struct MonthCategoriesSheet: View {
     var body: some View {
         let rows = Self.rows(totals, month: month)
         let total = rows.reduce(0) { $0 + $1.cents }
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(Self.title(month: month, asOf: asOf)).font(.title3.bold()).foregroundStyle(Color.ink)
-                    Spacer(minLength: 8)
-                    Button("Done") { dismiss() }.font(.headline).frame(minHeight: 44)
-                }
-                ShareRow(name: "Total", dollars: Self.rounded(total), share: 1, color: .chartPast, bold: true)
-                    .padding(.top, 12)
-                    .padding(.bottom, 6)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Total")
-                    .accessibilityValue(Self.rounded(total).formatted(.currency(code: "USD")))
-                ForEach(rows, id: \.category) { row in
-                    let title = SpendingView.title(row.category)
-                    Button { open(row.category) } label: {
-                        ShareRow(name: title, dollars: row.dollars, share: total > 0 ? Double(row.cents) / Double(total) : 0,
-                                 color: SpendingView.color(row.category))
-                            .frame(minHeight: 44)
-                            .contentShape(.rect)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ShareRow(name: "Total", dollars: Self.rounded(total), share: 1, color: .chartPast, bold: true)
+                        .padding(.bottom, 6)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Total")
+                        .accessibilityValue(Self.rounded(total).formatted(.currency(code: "USD")))
+                    ForEach(rows, id: \.category) { row in
+                        let title = SpendingView.title(row.category)
+                        Button { open(row.category) } label: {
+                            ShareRow(name: title, dollars: row.dollars, share: total > 0 ? Double(row.cents) / Double(total) : 0,
+                                     color: SpendingView.color(row.category))
+                                .frame(minHeight: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(title)
+                        .accessibilityValue(row.dollars.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                        .accessibilityIdentifier("monthCategory")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(title)
-                    .accessibilityValue(row.dollars.formatted(.currency(code: "USD").precision(.fractionLength(0))))
-                    .accessibilityIdentifier("monthCategory")
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .background(Color.background)
+            // The system's inline title and toolbar Done, as on the Worth a look sheet.
+            .navigationTitle(SpendingView.monthLabel(month, asOf: asOf))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
