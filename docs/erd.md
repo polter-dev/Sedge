@@ -151,7 +151,7 @@ erDiagram
   then profile_corrections (a correction whose kind starts the key, e.g. `housing` for
   `housing_type`, or whose id in key form, `factKey(id)`, is the key: lowercased, with each run of non-letters/digits
   turned into `_` between words and dropped at the ends). Nothing rebuilds the table; the Saved answers
-  screen changes or removes one answer, and the Accounts screen's "Reset saved questions"
+  screen changes or removes one answer, and its "Delete all" (which also removes every profile correction)
   clears it.
 - **accounts.owner**, **transactions.familiar** and **transactions.category_override** are the
   person's answers about one account or transaction, set and cleared by `Answers`. A category
