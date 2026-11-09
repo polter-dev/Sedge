@@ -1,0 +1,163 @@
+import Foundation
+import Jinja
+#if os(iOS)
+import os // os_proc_available_memory
+#endif
+import MLX
+import MLXLLM
+import MLXLMCommon
+import Synchronization
+import Tokenizers
+
+/// Qwen3.5-4B (4-bit), the on-device model, run with MLX the way the benchmark notebook's
+/// `mlx_turn` runs it: the model's own chat template with thinking off, greedy sampling
+/// (temperature 0), at most 512 new tokens, stopping as soon as one tool call is complete.
+/// Everything runs on the device: once the files are in the folder, nothing goes over the network.
+public final class QwenModel: AssistantModel {
+    /// The weights the benchmark measured, pinned to the commit in its Hugging Face cache.
+    public static let repo = "mlx-community/Qwen3.5-4B-MLX-4bit"
+    public static let revision = "32f3e8ecf65426fc3306969496342d504bfa13f3"
+    /// The files the model needs, with their sizes in bytes (for the download's percent).
+    public static let files: KeyValuePairs<String, Int64> = [
+        "config.json": 3_366,
+        "tokenizer_config.json": 1_139,
+        "chat_template.jinja": 7_756,
+        "tokenizer.json": 19_989_343,
+        "model.safetensors": 3_034_300_695,
+    ]
+    /// The notebook's `LOCAL_MAX_TOKENS`.
+    static let maxTokens = 512
+    /// The notebook's `TEST_TEMPERATURE`: greedy, so the same question gets the same answer.
+    static let temperature: Float = 0
+    /// The longest prompt plus reply this app lets the model take on. The notebook set none (its Mac
+    /// never ran out); a phone has far less memory, so a longer chat counts as a context overflow.
+    static let contextLimit = 16_384
+
+    let container: ModelContainer
+    let template: Template
+
+    private init(container: ModelContainer, template: Template) {
+        self.container = container
+        self.template = template
+    }
+
+    /// Loads the model from a folder holding `files`.
+    public static func load(from folder: URL) async throws -> QwenModel {
+        // A small buffer cache keeps memory down on a phone; MLX would otherwise hold freed buffers for reuse.
+        Memory.cacheLimit = 20 * 1024 * 1024
+        let container = try await catchingLoadErrors { try await loadModelContainer(from: folder, using: TokenizerLoader()) }
+        let source = try String(contentsOf: folder.appending(path: "chat_template.jinja"), encoding: .utf8)
+        return QwenModel(container: container, template: try template(source))
+    }
+
+    /// The first MLX error raised while the weights load, or nil.
+    private static let loadError = Mutex<String?>(nil)
+
+    /// Runs `body` (the load) with MLX errors (such as a failed allocation on a phone short of memory) turned
+    /// into a thrown error instead of MLX's default, which ends the app. withError can't do it here: its handler
+    /// only covers the calling task, and mlx-swift-lm reads the weights on a global dispatch queue. So a
+    /// process-wide handler collects the errors while the load runs (one load at a time: OnDeviceModel shares
+    /// it, and nothing else uses MLX then).
+    /// shortcut: a few mlx-swift functions read their result right after an error and trap whatever the handler
+    /// does (e.g. `quantized` with a group size the weights can't divide by, which the pinned config rules out);
+    /// revisit if mlx-swift stops reading failed results.
+    private static func catchingLoadErrors<R>(_ body: () async throws -> R) async throws -> R {
+        loadError.withLock { $0 = nil }
+        // A C function can't capture anything, so it writes to the static above.
+        setErrorHandler { message, _ in
+            let text = message.map { String(cString: $0) } ?? ""
+            QwenModel.loadError.withLock { if $0 == nil { $0 = text } }
+        }
+        defer { setErrorHandler(nil) } // back to MLX's default once the load is over
+        let result = try await body()
+        if let message = loadError.withLock({ $0 }) { throw MLXError.caught(message) }
+        return result
+    }
+
+    /// The chat template compiled with the settings Hugging Face's transformers uses.
+    static func template(_ source: String) throws -> Template {
+        try Template(source, with: .init(lstripBlocks: true, trimBlocks: true))
+    }
+
+    /// The prompt text, as `tokenizer.apply_chat_template(..., add_generation_prompt=True, enable_thinking=False)`.
+    static func render(_ template: Template, messages: [Value], tools: [Value]) throws -> String {
+        try template.render(["messages": .array(messages), "tools": .array(tools),
+                             "add_generation_prompt": .boolean(true), "enable_thinking": .boolean(false)])
+    }
+
+    /// The tokens a prompt becomes, so a test can compare them with the notebook's tokenizer.
+    func tokens(_ prompt: String) async -> [Int] {
+        await container.perform { $0.tokenizer.encode(text: prompt, addSpecialTokens: true) }
+    }
+
+    public func reply(to messages: [Value], tools: [Value]) async throws -> String {
+        try Task.checkCancellation() // the question was dropped (its chat screen is gone): start no new step
+        let prompt = try Self.render(template, messages: messages, tools: tools)
+        return try await container.perform { context in
+            // MLX's own answer to a failure (a GPU error, or GPU work while the app is in the background)
+            // is to end the app. Inside withError it throws instead, so the question just ends.
+            try withError { error in
+                defer { Memory.clearCache() } // hand this turn's spare buffers back before the next one
+                let tokens = context.tokenizer.encode(text: prompt, addSpecialTokens: true)
+                guard tokens.count + Self.maxTokens <= Self.contextLimit else { throw ModelCrash.context }
+                guard Self.fits(tokens.count, available: Self.availableMemory()) else { throw ModelCrash.memory }
+                // mlx_lm stops at the tokenizer's end token (<|im_end|>) only.
+                let stop = context.tokenizer.eosToken.flatMap(context.tokenizer.convertTokenToId)
+                var iterator = try TokenIterator(input: LMInput(tokens: MLXArray(tokens)), model: context.model,
+                                                 parameters: GenerateParameters(maxTokens: Self.maxTokens, temperature: Self.temperature))
+                try error.check()
+                var output: [Int] = []
+                var text = ""
+                while let token = iterator.next(), token != stop {
+                    try error.check()
+                    try Task.checkCancellation() // and free the GPU mid-step
+                    output.append(token)
+                    text = context.tokenizer.decode(tokenIds: output, skipSpecialTokens: false)
+                    if Assistant.isComplete(text) { return text } // one call per step, so stop here
+                }
+                if output.count >= Self.maxTokens { throw ModelCrash.maxTokens }
+                return text
+            }
+        }
+    }
+
+    /// True when a turn on a prompt of `promptTokens` fits in `available` bytes: 32 KB of attention
+    /// cache per token (8 full-attention layers, keys and values, 4 heads of 256, 2 bytes each) for the
+    /// prompt and the longest reply, plus 1.25 GB of working buffers (reading a long prompt, 512 tokens at
+    /// a time, took up to 1.1 GB above the weights on a Mac).
+    static func fits(_ promptTokens: Int, available: Int) -> Bool {
+        (promptTokens + maxTokens) * 32 * 1024 + 1_280 * 1024 * 1024 <= available
+    }
+
+    /// The memory iOS still lets this app take before it ends it; unlimited elsewhere (and where iOS says 0, no limit).
+    static func availableMemory() -> Int {
+        #if os(iOS)
+        let available = os_proc_available_memory()
+        return available == 0 ? .max : available
+        #else
+        return .max
+        #endif
+    }
+}
+
+/// Loads the tokenizer with swift-transformers and hands it to MLX in MLX's own tokenizer shape.
+private struct TokenizerLoader: MLXLMCommon.TokenizerLoader {
+    func load(from directory: URL) async throws -> any MLXLMCommon.Tokenizer {
+        Bridge(upstream: try await AutoTokenizer.from(modelFolder: directory))
+    }
+
+    struct Bridge: MLXLMCommon.Tokenizer {
+        let upstream: any Tokenizers.Tokenizer
+        func encode(text: String, addSpecialTokens: Bool) -> [Int] { upstream.encode(text: text, addSpecialTokens: addSpecialTokens) }
+        func decode(tokenIds: [Int], skipSpecialTokens: Bool) -> String { upstream.decode(tokens: tokenIds, skipSpecialTokens: skipSpecialTokens) }
+        func convertTokenToId(_ token: String) -> Int? { upstream.convertTokenToId(token) }
+        func convertIdToToken(_ id: Int) -> String? { upstream.convertIdToToken(id) }
+        var bosToken: String? { upstream.bosToken }
+        var eosToken: String? { upstream.eosToken }
+        var unknownToken: String? { upstream.unknownToken }
+        func applyChatTemplate(messages: [[String: any Sendable]], tools: [[String: any Sendable]]?,
+                               additionalContext: [String: any Sendable]?) throws -> [Int] {
+            try upstream.applyChatTemplate(messages: messages, tools: tools, additionalContext: additionalContext)
+        }
+    }
+}

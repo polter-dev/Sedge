@@ -1,2 +1,5 @@
 // Build settings for Release builds of the Sedge app target. App Store use comes in Phase 2.
 // Release never includes Secrets.xcconfig, so nothing local can leak into a shipped app.
+
+// The on-device model takes about 3 GB of memory, more than iOS gives an app by default.
+CODE_SIGN_ENTITLEMENTS = Config/Sedge.entitlements

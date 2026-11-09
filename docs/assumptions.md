@@ -151,7 +151,20 @@ To add a rule, add one line under its area in the same shape as the others: the 
 
 - The Debug sample conversation counts food as groceries, dining and coffee, and its "usual pace" is the average of the same days (1st through today's day, or the month's end) of the last three months. — `Sedge/AskView.swift` `ChatTurn.sample`, `monthToDate`
 - The sample's quick check asks about the month's largest transfer or card payment with a positive amount, the latest one on a tie. — `Sedge/AskView.swift` `ChatTurn.transferCheck`
-- A quick-check tap is saved through `ask_user` and replaces an answer already saved for that fact; "Later" saves nothing and keeps any earlier answer, so it may be asked again. — `Sedge/AskView.swift` `TurnView.answer`
+- A quick-check tap is saved through `ask_user` and replaces an answer already saved for that fact; "Later" saves nothing and keeps any earlier answer, so it may be asked again. — `Sedge/AskView.swift` `TurnView.save`
+
+## Ask answers
+
+- Ask answers with `mlx-community/Qwen3.5-4B-MLX-4bit` at one pinned revision, run on the device; nothing is sent to a server. — `Qwen.swift` `QwenModel.repo`, `QwenModel.revision`
+- The answer loop is the benchmark notebook's Qwen loop with Jev off: its system prompt, the 10 Sedge tools plus `final_answer`, temperature 0, at most 512 new tokens a step, over the app's data as organized with the graph and reconciliation on (the notebook's default). — `Assistant.swift` `Assistant.run`, `Assistant.tools`; `Qwen.swift` `QwenModel`
+- A question gets at most 8 model steps; a reply with no tool call gets one repair turn, which may go past the 8; a second one, a cut-off or a malformed call ends the question without an answer. — `Assistant.swift` `Assistant.run`, `parseCall`
+- When the prompt doesn't fit, the history is cut to the last step once; when it still doesn't fit, the chat is full. The app counts a prompt that needs more than 16,384 tokens (with room for the reply) as not fitting. — `Assistant.swift` `Assistant.run`; `Qwen.swift` `QwenModel.contextLimit`
+- On iOS a model step only starts when the app still has room for it: 32 KB per prompt and reply token plus 1.25 GB of working memory; otherwise, or when the model itself fails, the question ends without an answer. — `Qwen.swift` `QwenModel.fits`, `QwenModel.reply`
+- Each question starts fresh: earlier turns of the chat aren't sent to the model, as in the benchmark. — `Sedge/AskView.swift` `send`
+- A question still being worked out when other data is picked is dropped: the model stops at its next token, a waiting quick check counts as "Later", and nothing is saved. — `Sedge/AskView.swift` `AskScreenState`; `Qwen.swift` `QwenModel.reply`
+- An answer's value is the answer line and its note the line under it; an answer with no value shows its note alone. — `Sedge/AskView.swift` `send`
+- The model's weights (about 3 GB) download once, only after the person agrees, into Application Support, left out of backups; a file only counts once it arrived whole, and a failed download keeps the whole files and fetches the rest on Try again. — `Sedge/OnDeviceModel.swift` `download`, `Downloader`
+- The iOS Simulator can't run the model, so it answers with a scripted test model that always gives the same line. — `Sedge/OnDeviceModel.swift` `model(for:)`, `fake(for:)`
 
 ## Spending screen
 

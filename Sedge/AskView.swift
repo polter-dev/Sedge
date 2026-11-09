@@ -10,8 +10,7 @@ import SwiftUI
 
 // MARK: - What a conversation shows
 
-// These types only say what the Ask screen draws. Whatever answers questions fills them in;
-// until something does, every question gets the same "not connected" reply.
+// These types only say what the Ask screen draws. The on-device model's answers fill them in.
 
 /// One question from the person and Sedge's answer to it.
 struct ChatTurn: Identifiable {
@@ -75,14 +74,32 @@ struct QuickCheck: Codable {
 
 // MARK: - The screen
 
-/// Ask a question about the chosen data, as a chat. No model is wired in yet, so a typed
-/// question shows the thinking row briefly, then "The assistant isn't connected yet." Debug
-/// builds launched with `-sampleChat YES` show the design's sample conversation, worked out from
-/// this data; `-demoThinking YES` and `-demoTokenLimit YES` show the thinking row and the limit turn.
-/// Each settled question is saved to the dataset's own file (`Chats`), so Previous chats can
-/// reopen it; nothing hands the saved turns to whatever answers questions.
+/// The Ask screen's chat and the question it is working out. ContentView owns it, so it lasts through tab
+/// switches, and ends it when other data is picked.
+final class AskScreenState {
+    let session = ChatSession()
+    var question: Task<Void, Never>?
+
+    /// Stops the question still running, so it holds no GPU or memory, and lets the screen it kept awake lock again.
+    /// Called directly rather than from a deinit: once the question box was typed in, the window's scroll edge effect
+    /// keeps the old box alive after the screen goes, and the box's SwiftUI settings hold this state, so a deinit never ran.
+    func end() {
+        question?.cancel()
+        UIApplication.shared.isIdleTimerDisabled = false
+        session.startNewSession() // a quick check still waiting takes "Later", so the question can end
+    }
+}
+
+/// Ask a question about the chosen data, as a chat. The on-device model answers each question on
+/// its own (as in the benchmark) while the thinking row shows; the first question asks to download
+/// the model, and asking waits until it is here. Debug builds launched with `-sampleChat YES` show
+/// the design's sample conversation, worked out from this data; `-demoThinking YES` and
+/// `-demoTokenLimit YES` show the thinking row and the limit turn. Each settled question is saved
+/// to the dataset's own file (`Chats`), so Previous chats can reopen it; the model never sees saved turns.
 struct AskView: View {
     let database: SedgeDatabase
+    /// The chat and its running question, owned by ContentView (see `AskScreenState`).
+    let screen: AskScreenState
     /// The question box's text, owned by the tabs so Trends can type a question in for the person.
     @Binding var question: String
     /// Tells the tabs whether an older chat is on screen, so its title doesn't offer the data's Rename menu.
@@ -91,7 +108,7 @@ struct AskView: View {
     var newChatRequests = 0
     /// Switches the main tab, for the card's trends link.
     var open: (MainTab) -> Void = { _ in }
-    @State private var session = ChatSession()
+    private var session: ChatSession { screen.session }
     /// True when the turns are demo content, which is never saved.
     @State private var isDemo = false
     /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
@@ -99,12 +116,17 @@ struct AskView: View {
     @State private var showingChats = false
     /// Where the chat is scrolled to, so a new turn or a reopened chat can jump to its end.
     @State private var position = ScrollPosition()
+    /// True while the "needs its on-device model" question is up.
+    @State private var askingToDownload = false
+    private let onDevice = OnDeviceModel.shared
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private var blank: Bool { question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var limited: Bool { session.status == .tokenLimitReached }
-    /// One question at a time: sending waits until the last answer is in.
-    private var canSend: Bool { !blank && session.status == .idle }
+    /// True while Ask shows the model's screen (declined, downloading or failed) instead of the chat.
+    private var needsModel: Bool { onDevice.state != .ready && onDevice.state != .missing }
+    /// One question at a time: sending waits until the last answer is in, and until the model is here.
+    private var canSend: Bool { !blank && session.status == .idle && !needsModel }
 
     private var reduceMotion: Bool { Self.reducesMotion(system: systemReduceMotion) }
 
@@ -129,7 +151,16 @@ struct AskView: View {
                 }
                 ForEach(session.turns) { TurnView(turn: $0, database: database, open: open) }
                 // Both fade in over 0.25 seconds like any answer; Reduce Motion keeps the fade.
-                if session.status == .thinking {
+                // While the model waits on an `ask_user` question, its quick check stands in for the thinking row.
+                if session.status == .thinking, let pending = session.pendingCheck {
+                    QuickCheckCard(check: pending.check) { reply in
+                        session.answerCheck(reply)
+                        return "Saving…"
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .transition(.opacity)
+                } else if session.status == .thinking {
                     ThinkingRow(phrase: session.phrase, moves: !reduceMotion)
                         // Changes the phrase every 2.2 seconds; ends when the row goes away.
                         .task { await session.cyclePhrases() }
@@ -157,7 +188,12 @@ struct AskView: View {
         // travel down past the question box to reach the keyboard.
         .scrollDismissesKeyboard(.immediately)
         .overlay {
-            if session.turns.isEmpty && session.status == .idle {
+            if needsModel {
+                // Covers the chat: nothing can be asked until the model is here.
+                ModelScreen(state: onDevice.state, gigabytes: onDevice.gigabytes, download: onDevice.download)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.background)
+            } else if session.turns.isEmpty && session.status == .idle {
                 ContentUnavailableView {
                     Label("Ask about your money", image: "tab-ask")
                 } description: {
@@ -183,6 +219,12 @@ struct AskView: View {
                     .symbolRenderingMode(.monochrome)
             }
         }
+        .alert("Sedge needs its on-device model", isPresented: $askingToDownload) {
+            Button("Download") { onDevice.download() }
+            Button("Not now", role: .cancel) { onDevice.decline() }
+        } message: {
+            Text("About \(onDevice.gigabytes) GB, downloaded once.")
+        }
         .fullScreenCover(isPresented: $showingChats) {
             // Deleting the chat on screen starts a new one, so the next question isn't saved
             // into a chat that is gone.
@@ -195,8 +237,10 @@ struct AskView: View {
         .onChange(of: newChatRequests) { if !session.turns.isEmpty || session.status != .idle { newChat() } }
         // A turn is saved once it settles: its answer came in, or the chat hit its limit. Watching
         // the status means whatever answers questions only has to report it.
-        .onChange(of: session.status) { old, _ in
+        .onChange(of: session.status) { old, new in
             if old == .thinking { saveNewestTurn() }
+            // iOS allows no GPU work once the phone locks, so the screen stays on while the model works.
+            UIApplication.shared.isIdleTimerDisabled = new == .thinking
             // Covers sending (the thinking row appears) and the answer coming in.
             position.scrollTo(edge: .bottom)
         }
@@ -239,8 +283,8 @@ struct AskView: View {
                 .lineLimit(1...5)
                 .padding(.vertical, 12)
                 .onSubmit(send)
-                // At the limit the box stays in place but takes no typing until a new session.
-                .disabled(limited)
+                // At the limit, or without the model, the box stays in place but takes no typing.
+                .disabled(limited || needsModel)
             Button("Send", image: .chatSend, action: send)
                 .labelStyle(.iconOnly)
                 .foregroundStyle(canSend ? Color.contrast : Color.muted)
@@ -332,22 +376,46 @@ struct AskView: View {
     private func send() {
         let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canSend else { return }
+        // The first question asks before downloading; the question stays in the box.
+        guard onDevice.state == .ready else {
+            askingToDownload = true
+            return
+        }
         let turn = ChatTurn(question: text, answer: nil)
         session.turns.append(turn)
         session.report(.thinking)
         question = ""
-        // Nothing answers yet, so show the thinking row briefly, then say so.
-        var wait = 1.5
-        #if DEBUG
-        // A UI test on a busy machine can miss a 1.5 s row, so `-slowThinking YES` holds it longer.
-        if UserDefaults.standard.bool(forKey: "slowThinking") { wait = 6 }
-        #endif
-        Task {
-            try? await Task.sleep(for: .seconds(wait))
+        // `ask_user` shows its question as a quick check and waits for the tap.
+        let askPerson: AskPerson = { [session, id = turn.id] clarification in
+            // After New chat the old question carries on unseen; it takes "Later" rather than show its card in the new chat.
+            guard await session.turns.contains(where: { $0.id == id }) else { return nil }
+            return await session.ask(QuickCheck(question: clarification.question, details: [], options: clarification.options,
+                                         factKey: clarification.factKey))
+        }
+        // The question captures only what it needs, not this view, so the screen's state can go while it runs.
+        screen.question = Task { [session, database, onDevice] in
+            let outcome: Assistant.Outcome?
+            do {
+                outcome = await Assistant.run(text, database: database, model: try await onDevice.model(for: text), askPerson: askPerson)
+            } catch {
+                print("Could not load the on-device model:", error)
+                outcome = nil
+            }
             // The turn is gone if "Start new session" cleared the chat in the meantime.
             guard let index = session.turns.firstIndex(where: { $0.id == turn.id }) else { return }
-            session.turns[index].answer = ChatAnswer(lead: "The assistant isn't connected yet.")
-            session.report(.idle)
+            switch outcome {
+            case .answer(let answer):
+                // The value leads (a figure, a date, a name); the note is the plain sentence under it.
+                session.turns[index].answer = answer.value.isEmpty
+                    ? ChatAnswer(lead: answer.note)
+                    : ChatAnswer(lead: answer.value, detail: answer.note.isEmpty ? nil : answer.note)
+                session.report(.idle)
+            case .contextFull:
+                session.report(.tokenLimitReached)
+            case .stepLimit, .crashed, nil:
+                session.turns[index].answer = ChatAnswer(lead: "Sedge couldn't work that one out.")
+                session.report(.idle)
+            }
         }
     }
 }
@@ -548,9 +616,7 @@ private struct TurnView: View {
     let turn: ChatTurn
     let database: SedgeDatabase
     let open: (MainTab) -> Void
-    /// What the quick check got back, shown in place of its buttons once tapped.
-    @State private var reply: String?
-    /// Paper and Carbon Soft use different tokens for a few pieces (button fills, the card's rule).
+    /// Paper and Carbon Soft rule the breakdown card differently.
     @Environment(\.colorScheme) private var colorScheme
 
     /// The design's label and amount columns, grown with the reader's text size.
@@ -614,7 +680,7 @@ private struct TurnView: View {
                 .padding(.top, 29)
 
                 if let check = answer.quickCheck {
-                    quickCheckCard(check)
+                    QuickCheckCard(check: check) { await save(check, $0) }
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
                 }
@@ -657,7 +723,41 @@ private struct TurnView: View {
         }
     }
 
-    private func quickCheckCard(_ check: QuickCheck) -> some View {
+    /// Sends the tap through `ask_user`, which saves a reply and skips saving "Later" (nil), and
+    /// returns the line the card shows in place of its buttons.
+    private func save(_ check: QuickCheck, _ option: String?) async -> String {
+        let input = try? JSONSerialization.data(withJSONObject: [
+            "question": check.question, "options": check.options, "fact_key": check.factKey,
+        ])
+        var result = await AskUser.run(input ?? Data(), database: database) { _ in option }
+        // `ask_user` hands back a saved answer without asking. A tap is the person answering
+        // again, so forget the old answer and save the tapped one. "Later" keeps the old one.
+        if option != nil, let old = result.clarification, old.answeredFromMemory {
+            try? AskUser.forget(old.factKey, in: database)
+            result = await AskUser.run(input ?? Data(), database: database) { _ in option }
+        }
+        if let saved = result.clarification?.answer {
+            return "Saved: \(saved). Change it in Accounts › Saved answers."
+        } else if result.clarification != nil {
+            return "Not saved. It may be asked again."
+        } else {
+            return "Couldn't save the answer."
+        }
+    }
+}
+
+/// A short question for the person with a button per reply and "Later" (design: a quick check).
+/// A tap goes to `choose`, and the line it returns replaces the buttons. Used for an answer's
+/// quick check and for a question the model asks with `ask_user` while its answer waits.
+struct QuickCheckCard: View {
+    let check: QuickCheck
+    let choose: (String?) async -> String
+    /// What the tap got back, shown in place of the buttons.
+    @State private var reply: String?
+    /// Paper and Carbon Soft use different fills for the other buttons.
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("A quick check").font(.footnote.bold())
@@ -673,8 +773,8 @@ private struct TurnView: View {
             } else {
                 // Side by side as in the design; stacked when large text doesn't fit.
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 6) { buttons(check) }
-                    VStack(spacing: 6) { buttons(check) }
+                    HStack(spacing: 6) { buttons }
+                    VStack(spacing: 6) { buttons }
                 }
             }
         }
@@ -683,11 +783,15 @@ private struct TurnView: View {
         .background(Color.group, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    /// The saved replies (the first filled in, as the likely one), then "Later".
-    @ViewBuilder private func buttons(_ check: QuickCheck) -> some View {
+    /// The replies (the first filled in, as the likely one), then "Later".
+    @ViewBuilder private var buttons: some View {
         let choices: [String?] = check.options + [nil]
         ForEach(Array(choices.enumerated()), id: \.offset) { index, option in
-            Button { Task { await answer(check, option) } } label: {
+            Button {
+                // Hides the buttons at once, so a second quick tap can't send a different reply.
+                reply = "Saving…"
+                Task { reply = await choose(option) }
+            } label: {
                 Text(option ?? "Later")
                     .font(.row)
                     .padding(.horizontal, 8)
@@ -696,31 +800,47 @@ private struct TurnView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(index == 0 ? Color.onNodeCategory : Color.accent)
-            .background(index == 0 ? Color.nodeCategory : (dark ? Color.soft : Color.surface),
+            .background(index == 0 ? Color.nodeCategory : (colorScheme == .dark ? Color.soft : Color.surface),
                         in: RoundedRectangle(cornerRadius: 10))
         }
     }
+}
 
-    /// Sends the tap through `ask_user`, which saves a reply and skips saving "Later" (nil).
-    private func answer(_ check: QuickCheck, _ option: String?) async {
-        // Hides the buttons at once, so a second quick tap can't save a different reply.
-        reply = "Saving…"
-        let input = try? JSONSerialization.data(withJSONObject: [
-            "question": check.question, "options": check.options, "fact_key": check.factKey,
-        ])
-        var result = await AskUser.run(input ?? Data(), database: database) { _ in option }
-        // `ask_user` hands back a saved answer without asking. A tap is the person answering
-        // again, so forget the old answer and save the tapped one. "Later" keeps the old one.
-        if option != nil, let old = result.clarification, old.answeredFromMemory {
-            try? AskUser.forget(old.factKey, in: database)
-            result = await AskUser.run(input ?? Data(), database: database) { _ in option }
-        }
-        if let saved = result.clarification?.answer {
-            reply = "Saved: \(saved). Change it in Accounts › Saved answers."
-        } else if result.clarification != nil {
-            reply = "Not saved. It may be asked again."
-        } else {
-            reply = "Couldn't save the answer."
+/// What Ask shows instead of the chat while the on-device model isn't here: the offer to download
+/// it (after "Not now"), the download's progress, or a stopped download with Try again.
+private struct ModelScreen: View {
+    let state: OnDeviceModel.State
+    let gigabytes: Int
+    let download: () -> Void
+
+    var body: some View {
+        switch state {
+        case .downloading(let fraction):
+            ContentUnavailableView {
+                Label("Downloading the on-device model", image: "tab-ask")
+            } description: {
+                VStack(spacing: 8) {
+                    ProgressView(value: fraction).frame(maxWidth: 220)
+                    Text(fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit()
+                }
+                .foregroundStyle(Color.muted)
+            }
+        case .failed:
+            ContentUnavailableView {
+                Label("The download stopped", image: "tab-ask")
+            } description: {
+                Text("Sedge needs its on-device model to answer.").foregroundStyle(Color.muted)
+            } actions: {
+                Button("Try again", action: download)
+            }
+        default:
+            ContentUnavailableView {
+                Label("Sedge needs its on-device model", image: "tab-ask")
+            } description: {
+                Text("About \(gigabytes) GB, downloaded once.").foregroundStyle(Color.muted)
+            } actions: {
+                Button("Download", action: download)
+            }
         }
     }
 }
@@ -820,7 +940,7 @@ extension ChatTurn {
 
 #Preview {
     NavigationStack {
-        AskView(database: try! SedgeDatabase(), question: .constant(""), reopened: .constant(false))
+        AskView(database: try! SedgeDatabase(), screen: AskScreenState(), question: .constant(""), reopened: .constant(false))
             .navigationBarTitleDisplayMode(.inline)
     }
 }
