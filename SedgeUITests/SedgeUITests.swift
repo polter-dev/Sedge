@@ -625,29 +625,137 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The correction wasn't removed")
     }
 
-    /// Reset asks first, and both Cancel and Delete close the question. What Delete removes is
-    /// checked by AskUserTests in SedgeCore.
+    /// Saves one of each kind of saved answer for Maya, the sample chat's quick check ("Yes, mine")
+    /// and a profile correction (her income saved unchanged), then opens Saved answers.
     @MainActor
-    func testResetAsksBeforeDeleting() throws {
+    private func openSavedAnswersWithBothKinds(_ app: XCUIApplication) {
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["Yes, mine"].tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5))
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["About you"].tap()
+        let fact = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
+        XCTAssertTrue(fact.waitForExistence(timeout: 10))
+        fact.tap()
+        app.buttons["Save"].tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["Saved answers"].tap()
+    }
+
+    /// Delete all in Saved answers asks first. Cancel keeps every saved answer; Delete removes both
+    /// kinds and leaves the list empty, so Maya's file ends as it started.
+    @MainActor
+    func testSavedAnswersDeleteAllAsksThenEmptiesTheList() throws {
+        let app = XCUIApplication()
+        openSavedAnswersWithBothKinds(app)
+        let reply = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        let correction = app.staticTexts["Questions about income"]
+        XCTAssertTrue(reply.waitForExistence(timeout: 5), "The quick check isn't in Saved answers")
+        XCTAssertTrue(correction.exists, "The correction isn't in Saved answers")
+        XCTAssertFalse(app.buttons["Reset saved questions"].exists)
+
+        let deleteAll = app.navigationBars.buttons["Delete all"]
+        let question = app.alerts["Delete all saved answers?"]
+        deleteAll.tap()
+        XCTAssertTrue(question.waitForExistence(timeout: 5), "Delete all didn't ask first")
+        XCTAssertTrue(question.staticTexts["This can't be undone."].exists)
+        attachScreenshot(app, "saved-answers-delete-all")
+        question.buttons["Cancel"].tap()
+        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Cancel didn't close the question")
+        XCTAssertTrue(reply.exists && correction.exists, "Cancel removed a saved answer")
+
+        deleteAll.tap()
+        XCTAssertTrue(question.waitForExistence(timeout: 5))
+        question.buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["No saved answers"].waitForExistence(timeout: 5), "The list isn't empty")
+        XCTAssertFalse(reply.exists)
+        XCTAssertFalse(correction.exists)
+        XCTAssertFalse(deleteAll.isEnabled)
+    }
+
+    /// A saved reply and a profile correction both open the same "Change answer" sheet, with Save
+    /// and Remove, and both save. Deletes everything at the end, so Maya's file ends as it started.
+    @MainActor
+    func testSavedAnswersBothKindsEditInOneSheet() throws {
+        let app = XCUIApplication()
+        openSavedAnswersWithBothKinds(app)
+        let sheet = app.navigationBars["Change answer"]
+
+        let reply = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        XCTAssertTrue(reply.waitForExistence(timeout: 5))
+        attachScreenshot(app, "saved-answers")
+        reply.tap()
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "A saved reply didn't open the sheet")
+        XCTAssertTrue(app.buttons["Remove"].exists)
+        let field = app.textFields["Answer"]
+        XCTAssertEqual(field.value as? String, "Yes, mine")
+        attachScreenshot(app, "saved-answers-edit-reply")
+        // The text sits at the field's trailing edge, so a tap there puts the cursor after it.
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 9) + "Mine, edited")
+        sheet.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Mine, edited"].waitForExistence(timeout: 5), "The reply wasn't saved")
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+
+        let correction = app.staticTexts["Questions about income"]
+        correction.tap()
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "A correction didn't open the same sheet")
+        XCTAssertTrue(app.buttons["Remove"].exists)
+        XCTAssertTrue(app.textFields["Name"].exists)
+        attachScreenshot(app, "saved-answers-edit-correction")
+        sheet.buttons["Save"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Save didn't close the sheet")
+        XCTAssertTrue(correction.exists, "The correction is gone after saving it")
+
+        app.navigationBars.buttons["Delete all"].tap()
+        app.alerts["Delete all saved answers?"].buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["No saved answers"].waitForExistence(timeout: 5))
+    }
+
+    /// The data's name is the subtitle on the Accounts tab itself, but not on the screens pushed
+    /// from it: Transactions, About you, the Accounts list and a store's history.
+    @MainActor
+    func testDataNameSubtitleOnlyOnTabRoots() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya"]
         app.launch()
+        let name = app.navigationBars.staticTexts["Maya"]
 
         app.tabBars.buttons["Accounts"].tap()
-        let reset = app.buttons["Reset saved questions"]
+        XCTAssertTrue(name.waitForExistence(timeout: 10), "The Accounts tab lost its subtitle")
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(name.waitForExistence(timeout: 10), "The Trends tab lost its subtitle")
+        app.tabBars.buttons["Accounts"].tap()
 
-        reset.tap()
-        let question = app.alerts["Delete all saved answers?"]
-        XCTAssertTrue(question.waitForExistence(timeout: 5), "Reset didn't ask first")
-        XCTAssertTrue(question.staticTexts["This can't be undone."].exists)
-        attachScreenshot(app, "reset-confirm")
-        question.buttons["Cancel"].tap()
-        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Cancel didn't close the question")
+        app.buttons["About you"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5), "About you shows the data name")
+        app.navigationBars.buttons.firstMatch.tap()
 
-        reset.tap()
-        XCTAssertTrue(question.waitForExistence(timeout: 5))
-        question.buttons["Delete"].tap()
-        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Delete didn't close the question")
+        app.collectionViews.buttons["Accounts"].tap()
+        XCTAssertTrue(app.navigationBars["Accounts"].buttons.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5), "The Accounts list shows the data name")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        openTransaction(app, "Bean Street Coffee, $2.68")
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 10))
+        for _ in 0..<5 where !history.isHittable { app.swipeUp() }
+        history.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["storeChart"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars.staticTexts["Merchant history"].exists)
+        XCTAssertFalse(name.exists, "Store history shows the data name")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.navigationBars.buttons.firstMatch.tap()
+
+        XCTAssertTrue(app.buttons["Month"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars.staticTexts["Transactions · Maya"].exists)
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5), "Transactions shows the data name")
     }
 
     /// A fresh install shows Welcome, Explore sample data opens the picker, and after picking the
@@ -666,9 +774,13 @@ final class SedgeUITests: XCTestCase {
         let welcome = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'A clearer view'")).firstMatch
         XCTAssertTrue(welcome.waitForExistence(timeout: 10), "No Welcome on first launch")
         XCTAssertFalse(app.tabBars.firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Not financial advice."].exists)
         attachScreenshot(app, "welcome")
         app.buttons["Explore sample data"].tap()
-        XCTAssertTrue(app.staticTexts["Not financial advice. Demo data is made up."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Sample people"].waitForExistence(timeout: 5))
+        // Welcome's own Connect bank button is under the sheet, so the sheet doesn't list it again.
+        // The picker is the only list on screen.
+        XCTAssertFalse(app.collectionViews.buttons["Connect bank"].exists, "Welcome's sample sheet offers Connect bank")
         attachScreenshot(app, "demo-picker")
         app.buttons["Daniel"].tap()
         XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10))
@@ -684,7 +796,10 @@ final class SedgeUITests: XCTestCase {
         // Picking other data keeps the Accounts tab open, so the bank's transactions are one tap away.
         app.tabBars.buttons["Accounts"].tap()
         app.navigationBars.buttons["Change data"].tap()
-        app.buttons["Connect bank"].tap()
+        // The Accounts tab's picker still offers the bank.
+        let bankRow = app.collectionViews.buttons["Connect bank"]
+        XCTAssertTrue(bankRow.waitForExistence(timeout: 5), "The Accounts-tab picker lost Connect bank")
+        bankRow.tap()
         app.buttons["Transactions"].tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
         // The connect screen is named for what it does, not "Transactions".
@@ -819,7 +934,7 @@ final class SedgeUITests: XCTestCase {
         let past = app.descendants(matching: .any)["cashFlow"]
         XCTAssertTrue(past.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["cashFlow"].exists)
-        XCTAssertTrue(past.label.hasPrefix("Cash flow · May,") && past.label.contains("Money in") && past.label.contains("Money out")
+        XCTAssertTrue(past.label.hasPrefix("Cash flow · May 1\u{2009}–\u{2009}30,") && past.label.contains("Money in") && past.label.contains("Money out")
                       && past.label.contains("Left over") && past.label.contains("Checking · May 30, $"), past.label)
         XCTAssertFalse(past.label.contains("Low point"), past.label)
         for _ in 0..<3 where past.frame.maxY > app.tabBars.firstMatch.frame.minY { app.swipeUp() }
@@ -889,11 +1004,11 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["February"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["biggestChange"].exists)
         app.otherElements["January"].tap()
-        XCTAssertTrue(app.staticTexts["January"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Jan 1\u{2009}–\u{2009}30"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["biggestChange"].exists)
         attachScreenshot(app, "first-data-month")
         app.otherElements["December"].tap()
-        XCTAssertFalse(app.staticTexts["December"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Dec 1\u{2009}–\u{2009}30"].waitForExistence(timeout: 2))
         XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
 
         let blocks = app.buttons.matching(identifier: "categoryBlock")
@@ -939,7 +1054,7 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "month-earliest")
 
         app.otherElements["January"].tap()
-        XCTAssertTrue(app.staticTexts["January"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Jan 1\u{2009}–\u{2009}30"].waitForExistence(timeout: 5))
         XCTAssertEqual(shown.label, "January")
         XCTAssertEqual(app.staticTexts["total"].label, "$953")
         XCTAssertEqual(dots.identifier, "filledDot0")
@@ -1047,7 +1162,7 @@ final class SedgeUITests: XCTestCase {
         app.scrollViews["months"].swipeRight()
         XCTAssertTrue(app.staticTexts["February"].waitForExistence(timeout: 5))
         app.otherElements["January"].tap()
-        XCTAssertTrue(app.staticTexts["January"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Jan 1\u{2009}–\u{2009}30"].waitForExistence(timeout: 5))
         let earlier = "Nov 2025\u{2009}–\u{2009}Feb 2026"
         XCTAssertTrue(groceries.waitForExistence(timeout: 5))
         groceries.tap()
@@ -1063,7 +1178,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(bars.count, 6)
         XCTAssertTrue(bars.element(boundBy: 0).isSelected, "January isn't the picked bar")
         app.swipeUp()
-        XCTAssertTrue(app.staticTexts["Transactions"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["4 transactions"].waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
         app.swipeDown()
         attachScreenshot(app, "category-page-january")
@@ -1084,7 +1199,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["shownMonth"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
         XCTAssertEqual(app.otherElements["Months"].value as? String, earlier)
-        XCTAssertTrue(app.staticTexts["January"].exists)
+        XCTAssertTrue(app.staticTexts["Jan 1\u{2009}–\u{2009}30"].exists)
     }
 
     /// The question chip at the bottom of Maya's June Groceries page (down from May) opens Ask on
@@ -1330,7 +1445,6 @@ final class SedgeUITests: XCTestCase {
         row.tap()
         XCTAssertTrue(app.staticTexts["Higher than your last three visits."].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Those were $8.81–$9.29."].exists)
-        XCTAssertTrue(app.staticTexts["This is a spending observation, not a fraud determination."].exists)
         attachScreenshot(app, "transaction-detail")
 
         try pickCategory(app, "Groceries")
@@ -1677,109 +1791,27 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["Checking"].waitForExistence(timeout: 10))
     }
 
-    /// "Don’t show this again" in the spending note's row hides it on every transaction, not just
-    /// the one it was tapped on: the row counts down like the familiar prompt, then leaves the list.
-    /// The Accounts tab's "Show the spending note again" row brings it back. The note ends shown,
-    /// as it started. For dark screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    /// The Transaction screen has no spending note under Sedge's context, and the Accounts tab
+    /// nothing to bring one back. Also checks the Category row has no subtext under it: it is
+    /// shorter than the Merchant history row, which keeps its "N transactions" line.
     @MainActor
-    func testSpendingNoteHidesEverywhereAndComesBack() throws {
+    func testTransactionHasNoSpendingNote() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        let showAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch
-        // A run stopped halfway may have left the note hidden; start with it shown.
-        if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch.exists)
 
-        let corner = "Corner Cafe, $10.40"
-        let note = app.staticTexts["This is a spending observation, not a fraud determination."]
-        let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
-        let closing = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
-        openTransaction(app, corner)
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
-        attachScreenshot(app, "note-row")
-        app.buttons["Don’t show this again"].tap()
-        XCTAssertTrue(hiddenLine.waitForExistence(timeout: 2))
-        XCTAssertTrue(closing.exists)
-        XCTAssertTrue(app.buttons["Undo"].exists)
-        XCTAssertFalse(note.exists)
-        attachScreenshot(app, "note-row-hidden-undo")
-        // The row counts down 4 s, then leaves the list.
-        XCTAssertTrue(hiddenLine.waitForNonExistence(timeout: 7))
-        XCTAssertFalse(closing.exists)
-        XCTAssertFalse(note.exists)
-        attachScreenshot(app, "note-row-gone")
-
-        // Another purchase at the same store has Sedge's context too, and no note either.
-        app.navigationBars.buttons.firstMatch.tap()
-        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Corner Cafe, ' AND label != %@", corner)).firstMatch
-        for _ in 0..<10 where !(other.exists && other.isHittable) { app.swipeUp() }
-        other.tap()
+        openTransaction(app, "Corner Cafe, $10.40")
         XCTAssertTrue(app.staticTexts["Sedge’s context"].waitForExistence(timeout: 10))
-        XCTAssertFalse(note.exists)
+        XCTAssertFalse(app.staticTexts["This is a spending observation, not a fraud determination."].exists)
         XCTAssertFalse(app.buttons["Don’t show this again"].exists)
-
-        // Back on the Accounts tab, the row shows the note again and then goes away.
-        app.navigationBars.buttons.firstMatch.tap()
-        app.navigationBars.buttons.firstMatch.tap()
-        // At the largest text sizes the row is below the fold.
-        for _ in 0..<10 where !(showAgain.exists && showAgain.isHittable) { app.swipeUp() }
-        XCTAssertTrue(showAgain.isHittable)
-        attachScreenshot(app, "accounts-show-note-again")
-        showAgain.tap()
-        XCTAssertTrue(showAgain.waitForNonExistence(timeout: 5))
-        openTransaction(app, corner)
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
-    }
-
-    /// Undo in the spending note's row keeps the note: it is back in the row at once, stays after
-    /// the countdown would have ended, shows on another transaction, and the Accounts tab offers
-    /// nothing to bring back. Also checks the Category row has no subtext under it: it is shorter
-    /// than the Merchant history row, which keeps its "N transactions" line.
-    @MainActor
-    func testSpendingNoteUndoKeepsItShownEverywhere() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya"]
-        app.launch()
-        app.tabBars.buttons["Accounts"].tap()
-        let showAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch
-        // A run stopped halfway may have left the note hidden; start with it shown.
-        if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
-
-        let corner = "Corner Cafe, $10.40"
-        let note = app.staticTexts["This is a spending observation, not a fraud determination."]
-        let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
-        openTransaction(app, corner)
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
 
         // The Category row is one line tall; Merchant history keeps its count under the title.
         let category = app.buttons["Category"]
         let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
         XCTAssertTrue(category.exists && history.exists)
         XCTAssertLessThan(category.frame.height, history.frame.height, "The Category row still has a line under its title")
-
-        app.buttons["Don’t show this again"].tap()
-        XCTAssertTrue(hiddenLine.waitForExistence(timeout: 2))
-        app.buttons["Undo"].tap()
-        XCTAssertTrue(note.waitForExistence(timeout: 2))
-        XCTAssertFalse(hiddenLine.exists)
-        // Past the 4 s the countdown would have run, the note is still there.
-        Thread.sleep(forTimeInterval: 5)
-        XCTAssertTrue(note.exists)
-        XCTAssertTrue(app.buttons["Don’t show this again"].exists)
-
-        // Another purchase at the same store shows it too.
-        app.navigationBars.buttons.firstMatch.tap()
-        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Corner Cafe, ' AND label != %@", corner)).firstMatch
-        for _ in 0..<10 where !(other.exists && other.isHittable) { app.swipeUp() }
-        other.tap()
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
-
-        // Nothing to bring back on the Accounts tab.
-        app.navigationBars.buttons.firstMatch.tap()
-        app.navigationBars.buttons.firstMatch.tap()
-        XCTAssertTrue(app.buttons["Saved answers"].waitForExistence(timeout: 5))
-        XCTAssertFalse(showAgain.exists)
     }
 
     /// "Does this look familiar?" saves at once and counts down with Undo. Undo before 0 leaves the
@@ -1977,8 +2009,9 @@ final class SedgeUITests: XCTestCase {
         }
     }
 
-    /// Maya's June "Other categories" block opens the month's categories sheet, titled "June so far",
-    /// with every category of June, biggest first, and tapping Transport opens Transport's page. On
+    /// The Trends tab's screen is titled "Trends". Maya's June "Other categories" block opens the
+    /// month's categories sheet, with "June so far" as its inline nav bar title and Done in that bar,
+    /// every category of June, biggest first, and tapping Transport opens Transport's page. On
     /// May, cut short at the 30th, the sheet's title names its days. The screenshot is the sheet in
     /// light, or dark after `xcrun simctl ui <device> appearance dark`.
     @MainActor
@@ -1987,12 +2020,16 @@ final class SedgeUITests: XCTestCase {
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(app.navigationBars["Trends"].waitForExistence(timeout: 10), "the Trends tab isn't titled Trends")
+        XCTAssertFalse(app.navigationBars["Spending"].exists)
         let block = app.buttons["Other categories, $169"]
         XCTAssertTrue(block.waitForExistence(timeout: 10), "no Other categories block")
         block.tap()
         let rows = app.buttons.matching(identifier: "monthCategory")
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), "tapping Other categories opened nothing")
-        XCTAssertTrue(app.buttons["Done"].exists)
+        let sheetBar = app.navigationBars["June so far"]
+        XCTAssertTrue(sheetBar.exists, "the sheet has no nav bar title")
+        XCTAssertTrue(sheetBar.buttons["Done"].exists, "Done isn't in the sheet's nav bar")
         XCTAssertEqual(rows.allElementsBoundByIndex.map(\.label),
                        ["Housing", "Groceries", "Phone internet", "Utilities", "Transport", "Dining", "Education", "Subscriptions", "Coffee"])
         Thread.sleep(forTimeInterval: 0.5) // the sheet's slide
@@ -2008,7 +2045,77 @@ final class SedgeUITests: XCTestCase {
         let may = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Other categories, '")).firstMatch
         XCTAssertTrue(may.waitForExistence(timeout: 5))
         may.tap()
-        XCTAssertTrue(app.staticTexts["May 1\u{2009}–\u{2009}30, 2026"].waitForExistence(timeout: 5), "no day range on May's sheet")
+        XCTAssertTrue(app.navigationBars["May 1\u{2009}–\u{2009}30"].waitForExistence(timeout: 5), "no day range on May's sheet")
+        attachScreenshot(app, "month-categories-sheet-may")
+    }
+
+    /// Maya's May, cut short at the 30th, is headed "May 1 – 30" on Trends. June's Groceries has one
+    /// store (Value Mart), so its page has no Biggest change row and its transactions heading is only
+    /// the count; Phone internet's page lists its two stores. Moving the Jun 18 Corner Cafe
+    /// charge to Other gives June an Other page whose question reads "other things"; moving it back
+    /// leaves Maya's saved file as it was. The screenshots are light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testCategoryPagesForOneStoreManyStoresAndOther() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(app.staticTexts["June so far"].waitForExistence(timeout: 10))
+        app.otherElements["May"].tap()
+        XCTAssertTrue(app.staticTexts["May 1\u{2009}–\u{2009}30"].waitForExistence(timeout: 5), "May isn't named by its days")
+        attachScreenshot(app, "trends-may-cut-short")
+        app.otherElements["June"].tap()
+        XCTAssertTrue(app.staticTexts["June so far"].waitForExistence(timeout: 5))
+
+        let groceries = app.buttons.matching(NSPredicate(format: "identifier == 'categoryBlock' AND label BEGINSWITH 'Groceries, '")).firstMatch
+        XCTAssertTrue(groceries.waitForExistence(timeout: 5))
+        groceries.tap()
+        XCTAssertTrue(app.staticTexts["Stores"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(identifier: "categoryStore").count, 1)
+        XCTAssertFalse(app.buttons["categoryChange"].exists, "one store still has a Biggest change row")
+        XCTAssertFalse(app.staticTexts["Transactions"].exists)
+        Thread.sleep(forTimeInterval: 0.5) // the push's slide
+        attachScreenshot(app, "category-page-one-store")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Other categories, '")).firstMatch
+        XCTAssertTrue(other.waitForExistence(timeout: 5))
+        other.tap()
+        let phone = app.buttons.matching(NSPredicate(format: "identifier == 'monthCategory' AND label == 'Phone internet'")).firstMatch
+        XCTAssertTrue(phone.waitForExistence(timeout: 5))
+        phone.tap()
+        XCTAssertTrue(app.navigationBars["Phone internet"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(identifier: "categoryStore").count, 2)
+        Thread.sleep(forTimeInterval: 0.5)
+        attachScreenshot(app, "category-page-many-stores")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["Transactions"].tap()
+        let row = app.buttons["Corner Cafe, $10.40"]
+        for _ in 0..<10 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        try pickCategory(app, "Other")
+
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(other.waitForExistence(timeout: 10))
+        other.tap()
+        let otherRow = app.buttons.matching(NSPredicate(format: "identifier == 'monthCategory' AND label == 'Other'")).firstMatch
+        XCTAssertTrue(otherRow.waitForExistence(timeout: 5))
+        otherRow.tap()
+        XCTAssertTrue(app.navigationBars["Other"].waitForExistence(timeout: 5))
+        let chip = app.buttons["categoryQuestion"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        XCTAssertEqual(chip.label, "Why was spending on other things higher in June than May?")
+        Thread.sleep(forTimeInterval: 0.5)
+        attachScreenshot(app, "category-page-other")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        // Back to the store's own category, which clears the answer.
+        app.tabBars.buttons["Accounts"].tap()
+        try pickCategory(app, "Dining")
     }
 
     /// Spending reads the data again each time it shows: moving Maya's Jun 18 Corner Cafe charge

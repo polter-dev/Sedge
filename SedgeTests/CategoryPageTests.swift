@@ -90,6 +90,18 @@ import Testing
     #expect(CategoryView.question(totals, category: "phone_internet", month: "2026-06") == "Why was phone internet higher in June than May?")
 }
 
+/// "other" reads as "other things" in both questions; other categories keep their own name.
+@Test func otherCategoryQuestionWording() {
+    let totals = [
+        SpendingTotal(month: "2026-05", category: "other", total: 20),
+        SpendingTotal(month: "2026-06", category: "other", total: 35),
+        SpendingTotal(month: "2026-06", category: "groceries", total: 60),
+    ]
+    #expect(CategoryView.question(totals, category: "other", month: "2026-06") == "Why was spending on other things higher in June than May?")
+    #expect(CategoryView.question(totals, category: "other", month: "2026-05") == "What did I spend on other things in May?")
+    #expect(CategoryView.question(totals, category: "groceries", month: "2026-06") == "Why was groceries higher in June than May?")
+}
+
 /// The strip covers the last six months when the opened month is one of them, else the six ending
 /// at it, and a month before the data starts has no bar while an empty month after it has $0.
 @Test func categoryStripMonthsAndDataStart() {

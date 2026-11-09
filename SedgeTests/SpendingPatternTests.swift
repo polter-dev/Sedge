@@ -345,20 +345,29 @@ func categorySheetOrderMatchesAHandCount(persona: String, expected: [String]) th
     #expect(span.contains("Oct 2025") && span.contains("Mar 2026"), "\(span)")
 }
 
-/// The month's categories sheet names its days only when they cut a past month short. As of June
-/// 30, May (31 days) lists May 1 – 30, while June is "so far" and April (30 days) and February
-/// (28 days, its window running past its end) are whole. As of mid-month (June 15) every past
-/// month is cut short at the 15th.
-@MainActor @Test func monthCategoriesTitleNamesDaysOnlyForCutShortPastMonths() {
-    let title = MonthCategoriesSheet.title
-    #expect(title("2026-05", "2026-06-30") == "May 1\u{2009}–\u{2009}30, 2026")
-    #expect(title("2026-06", "2026-06-30") == "June so far")
-    #expect(title("2026-04", "2026-06-30") == "April")
-    #expect(title("2026-02", "2026-06-30") == "February")
-    #expect(title("2026-05", "2026-06-15") == "May 1\u{2009}–\u{2009}15, 2026")
-    #expect(title("2026-04", "2026-06-15") == "Apr 1\u{2009}–\u{2009}15, 2026")
-    #expect(title("2026-02", "2026-06-15") == "Feb 1\u{2009}–\u{2009}15, 2026")
-    #expect(title("2026-06", "2026-06-15") == "June so far")
+/// Trends names a month by the days its bar covers, the same on the root heading, the cash flow
+/// card, the month's categories sheet (whose title is `monthLabel`) and the empty state. As of
+/// June 30, May (31 days) is cut short at May 1 – 30, while June is "so far" and April (30 days)
+/// and February (28 days, its window running past its end) are whole. As of mid-month (June 15)
+/// every past month is cut short at the 15th. No label carries a year.
+@MainActor @Test func monthLabelNamesDaysOnlyForCutShortPastMonths() {
+    let label = SpendingView.monthLabel
+    #expect(label("2026-05", "2026-06-30") == "May 1\u{2009}–\u{2009}30")
+    #expect(label("2026-06", "2026-06-30") == "June so far")
+    #expect(label("2026-04", "2026-06-30") == "April")
+    #expect(label("2026-02", "2026-06-30") == "February")
+    #expect(label("2026-05", "2026-06-15") == "May 1\u{2009}–\u{2009}15")
+    #expect(label("2026-04", "2026-06-15") == "Apr 1\u{2009}–\u{2009}15")
+    #expect(label("2026-02", "2026-06-15") == "Feb 1\u{2009}–\u{2009}15")
+    #expect(label("2026-06", "2026-06-15") == "June so far")
+
+    #expect(SpendingView.cashFlowTitle("2026-05", asOf: "2026-06-30") == "Cash flow · May 1\u{2009}–\u{2009}30")
+    #expect(SpendingView.cashFlowTitle("2026-04", asOf: "2026-06-30") == "Cash flow · April")
+    #expect(SpendingView.cashFlowTitle("2026-06", asOf: "2026-06-30") == "Cash flow · June so far")
+
+    #expect(SpendingView.noSpendingLine("2026-05", asOf: "2026-06-30") == "No spending May 1\u{2009}–\u{2009}30.")
+    #expect(SpendingView.noSpendingLine("2026-04", asOf: "2026-06-30") == "No spending in April.")
+    #expect(SpendingView.noSpendingLine("2026-06", asOf: "2026-06-30") == "No spending so far this month.")
 }
 
 /// Spending pages for 3, 4, 9, 16 and 24 months of history up to June 2026 (one made-up total a
