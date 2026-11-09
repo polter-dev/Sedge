@@ -182,8 +182,10 @@ Ask runs `mlx-community/Qwen3.5-4B-MLX-4bit` (Qwen3.5-4B, 4-bit) on the phone wi
 
 ## Results
 
-The benchmark runs every configuration on the same questions with the same loop and tools. Numbers are
-copied exactly from each run's `summary.csv` (accuracy is a fraction of 1; "correct" is the lenient count).
+The benchmark runs every configuration on the same questions with the same loop and tools. Validation and
+ablation numbers come from each run's `summary.csv`, rounded for display: latency to 2 decimals, dollars to
+4 decimals under \$1 and to 2 decimals at \$1 or more (accuracy is a fraction of 1; "correct" is the lenient
+count).
 The results folders are not part of this repository.
 
 **Validation split, run `2026-11-06_0753`** (40 questions, median of 3 runs each). The small models ran at
@@ -191,31 +193,65 @@ the temperatures in that run's `temperatures.json`: Apple 0.8, Qwen 0.4, MiniCPM
 
 | Configuration | Correct (of 40) | Strict accuracy | Lenient accuracy | Median latency (s) | Dollars per run (median) |
 |---|---|---|---|---|---|
-| Apple on-device | 15 | 0.075 | 0.375 | 9.644 | 0.0 |
-| Qwen3.5-4B | 23 | 0.375 | 0.575 | 4.3995 | 0.0 |
-| MiniCPM5-2B | 19 | 0.15 | 0.475 | 2.713 | 0.0 |
-| Apple + Jev | 13 | 0.075 | 0.325 | 7.7915 | 0.0014462700000000002 |
-| Qwen + Jev | 24 | 0.4 | 0.6 | 3.9284999999999997 | 0.0014462700000000002 |
-| MiniCPM + Jev | 18 | 0.15 | 0.45 | 2.7895000000000003 | 0.0014462700000000002 |
-| Haiku 5.5 | 32 | 0.8 | 0.8 | 3.0175 | 0.0539752 |
-| Haiku 5.5 strict | 28 | 0.675 | 0.7 | 3.637 | 0.0629669 |
-| Sonnet 5.5 | 34 | 0.85 | 0.85 | 3.8840000000000003 | 1.020924 |
-| Sonnet 5.5 strict | 32 | 0.8 | 0.8 | 4.6695 | 1.21084 |
-| Sonnet 5.5, long context | 30 | 0.725 | 0.75 | 3.3150000000000004 | 1.521508 |
+| Apple on-device | 15 | 0.075 | 0.375 | 9.64 | 0.0 |
+| Qwen3.5-4B | 23 | 0.375 | 0.575 | 4.40 | 0.0 |
+| MiniCPM5-2B | 19 | 0.15 | 0.475 | 2.71 | 0.0 |
+| Apple + Jev | 13 | 0.075 | 0.325 | 7.79 | 0.0014 |
+| Qwen + Jev | 24 | 0.4 | 0.6 | 3.93 | 0.0014 |
+| MiniCPM + Jev | 18 | 0.15 | 0.45 | 2.79 | 0.0014 |
+| Haiku 5.5 | 32 | 0.8 | 0.8 | 3.02 | 0.0540 |
+| Haiku 5.5 strict | 28 | 0.675 | 0.7 | 3.64 | 0.0630 |
+| Sonnet 5.5 | 34 | 0.85 | 0.85 | 3.88 | 1.02 |
+| Sonnet 5.5 strict | 32 | 0.8 | 0.8 | 4.67 | 1.21 |
+| Sonnet 5.5, long context | 30 | 0.725 | 0.75 | 3.32 | 1.52 |
 
-**Test splits** (one run each; `test` is the held-out set of 47 questions, `gen_test` the generated set of
-1,172). These are the test rows saved in a `summary.csv`:
+**Test splits**, from the report's test table (one run each, small models at temperature 0.0). The main rows
+come from run `2026-11-06_1441` and the two small long-context rows from run `2026-11-07_2241`. Accuracy is a
+percentage here, as in the report.
 
-| Configuration | Run | Split | Correct | Median latency (s) | Dollars |
-|---|---|---|---|---|---|
-| Qwen3.5-4B, long context | `2026-11-07_2241` | test | 8 of 47 | 7.632 | 0.0 |
-| Qwen3.5-4B, long context | `2026-11-07_2241` | gen_test | 362 of 1172 | 7.8045 | 0.0 |
-| MiniCPM5-2B, long context | `2026-11-07_2241` | test | 16 of 47 | 8.823 | 0.0 |
-| MiniCPM5-2B, long context | `2026-11-07_2241` | gen_test | 325 of 1172 | 8.849499999999999 | 0.0 |
-| Sonnet 5.5, no reconciliation | `2026-11-07_1646` | test | 35 of 47 | 3.645 | 1.267458 |
-| Sonnet 5.5, no reconciliation | `2026-11-07_1646` | gen_test | 915 of 1172 | 3.2220000000000004 | 29.684450000000002 |
+*Held out (Jordan, Elena; 47 questions)*
 
-- **Ablations.** Only the reconciliation ablation (`useReconciliation` off) has a saved summary: the last two
-  rows above. The graph ablation (`useGraph` off) has no `summary.csv`.
-- The test run of the other configurations (`2026-11-06_1441`) saved per-question scores (`scores.csv`)
-  but no `summary.csv`, so its totals are not repeated here.
+| Configuration | Strict acc. (%) | Lenient acc. (%) | Repairs | Tool-calling acc. (%) | Clarification acc. (%) | Tokens per question | Median latency (s) | Cost per correct (USD) |
+|---|---|---|---|---|---|---|---|---|
+| Apple on-device | 0.0 | 29.8 | 33 | 53.2 | 89.4 | 12,811 | 10.8 | 0 |
+| Qwen3.5-4B (4-bit) | 59.6 | 68.1 | 4 | 55.3 | 87.2 | 11,844 | 7.8 | 0 |
+| MiniCPM5-2B (8-bit) | 31.9 | 55.3 | 17 | 55.3 | 89.4 | 11,486 | 2.8 | 0 |
+| Apple on-device + Jev | 2.1 | 27.7 | 38 | 61.7 | 87.2 | 10,079 | 9.5 | 0.0001 |
+| Qwen3.5-4B + Jev | 48.9 | 59.6 | 4 | 59.6 | 87.2 | 9,837 | 3.7 | 0.0001 |
+| MiniCPM5-2B + Jev | 38.3 | 55.3 | 15 | 63.8 | 89.4 | 10,831 | 3.0 | 0.0001 |
+| Haiku 5.5 | 68.1 | 72.3 | 0 | 63.8 | 91.5 | 12,066 | 2.7 | 0.0020 |
+| Haiku 5.5 strict | 66.0 | 72.3 | 0 | 63.8 | 91.5 | 13,252 | 3.4 | 0.0021 |
+| Sonnet 5.5 | 80.9 | 80.9 | 0 | 72.3 | 95.7 | 11,706 | 3.4 | 0.0329 |
+| Sonnet 5.5 strict | 80.9 | 80.9 | 0 | 72.3 | 95.7 | 13,107 | 3.5 | 0.0364 |
+| Sonnet 5.5, long context | 76.6 | 80.9 | 0 | N/A | 91.5 | 19,011 | 3.3 | 0.0511 |
+| Qwen3.5-4B, long context | 17.0 | 17.0 | 0 | N/A | 91.5 | 14,553 | 7.6 | 0 |
+| MiniCPM5-2B, long context | 2.1 | 34.0 | 26 | N/A | 91.5 | 22,517 | 8.8 | 0 |
+
+*Generated (12 personas; 1,172 questions)*
+
+| Configuration | Strict acc. (%) | Lenient acc. (%) | Repairs | Tool-calling acc. (%) | Clarification acc. (%) | Tokens per question | Median latency (s) | Cost per correct (USD) |
+|---|---|---|---|---|---|---|---|---|
+| Apple on-device | 8.1 | 35.6 | 882 | 70.7 | 90.7 | 9,963 | 9.2 | 0 |
+| Qwen3.5-4B (4-bit) | 47.6 | 54.3 | 135 | 70.3 | 91.6 | 9,053 | 4.7 | 0 |
+| MiniCPM5-2B (8-bit) | 22.1 | 51.5 | 476 | 63.5 | 91.0 | 9,805 | 2.7 | 0 |
+| Apple on-device + Jev | 7.5 | 33.9 | 871 | 83.3 | 91.0 | 8,891 | 7.2 | 0.0001 |
+| Qwen3.5-4B + Jev | 47.0 | 53.9 | 136 | 84.7 | 90.6 | 8,288 | 3.5 | 0.0001 |
+| MiniCPM5-2B + Jev | 23.3 | 52.2 | 451 | 82.8 | 90.9 | 9,306 | 2.6 | 0.0001 |
+| Haiku 5.5 | 73.5 | 74.1 | 0 | 82.5 | 92.2 | 11,068 | 2.6 | 0.0018 |
+| Haiku 5.5 strict | 66.9 | 68.6 | 1 | 82.5 | 91.9 | 12,974 | 2.9 | 0.0022 |
+| Sonnet 5.5 | 87.2 | 87.3 | 0 | 82.2 | 94.7 | 10,684 | 3.2 | 0.0281 |
+| Sonnet 5.5 strict | 79.0 | 79.4 | 1 | 82.3 | 94.0 | 14,043 | 3.5 | 0.0397 |
+| Sonnet 5.5, long context | 77.6 | 79.5 | 4 | N/A | 93.3 | 19,376 | 2.9 | 0.0520 |
+| Qwen3.5-4B, long context | 29.8 | 30.9 | 1 | N/A | 93.3 | 15,937 | 7.8 | 0 |
+| MiniCPM5-2B, long context | 4.7 | 27.7 | 535 | N/A | 93.3 | 20,660 | 8.8 | 0 |
+
+**Reconciliation ablation, run `2026-11-07_1646`** (Sonnet 5.5 with `useReconciliation` off; not in the
+report's test table):
+
+| Split | Correct | Median latency (s) | Dollars |
+|---|---|---|---|
+| test | 35 of 47 | 3.65 | 1.27 |
+| gen_test | 915 of 1172 | 3.22 | 29.68 |
+
+- **Ablations.** Only the reconciliation ablation (`useReconciliation` off) has a saved summary: the table
+  above. The graph ablation (`useGraph` off) has no `summary.csv`.
