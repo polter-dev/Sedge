@@ -326,6 +326,74 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "Still showing the deleted chat")
     }
 
+    /// With Reduce Motion off, the panel follows a finger: a short, slow pull springs back and a
+    /// left swipe closes it. Edit, deleting one chat and Done leave the other chat listed. Two
+    /// chats are asked first and both are deleted at the end, so Maya's file keeps no test chats.
+    @MainActor
+    func testPreviousChatsSwipeClosesAndEditDoneKeepsTheRest() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-modelReady", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Ask"].tap()
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        let questions = (1...2).map { "Swipe test \($0) \(Int.random(in: 1000...9999))" }
+        for question in questions {
+            field.tap()
+            field.typeText(question)
+            app.buttons["Send"].tap()
+            XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 5))
+            app.navigationBars.buttons["New chat"].tap()
+            XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "New chat didn't clear")
+        }
+
+        let title = app.staticTexts["Chats"]
+        let rows = app.buttons.matching(identifier: "chatRow")
+        let first = rows.matching(NSPredicate(format: "label CONTAINS %@", questions[0])).firstMatch
+        let second = rows.matching(NSPredicate(format: "label CONTAINS %@", questions[1])).firstMatch
+        app.navigationBars.buttons["Previous chats"].tap()
+        XCTAssertTrue(first.waitForExistence(timeout: 5), "The first chat isn't in Previous chats")
+        Thread.sleep(forTimeInterval: 0.6) // the panel's spring
+
+        // A slow 40-point pull on the panel's header isn't enough: it springs back and stays open.
+        // The header, because a pull that starts on a chat row is that row's tap. The finger rests
+        // a second before lifting, so the pull doesn't end as a flick.
+        let header = app.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.08))
+        header.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.08)),
+                     withVelocity: .slow, thenHoldForDuration: 1)
+        XCTAssertFalse(title.waitForNonExistence(timeout: 1), "A short pull closed the panel")
+        XCTAssertTrue(first.exists)
+
+        // A 120-point swipe closes it.
+        header.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.08)))
+        XCTAssertTrue(title.waitForNonExistence(timeout: 2), "The swipe didn't close the panel")
+        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2))
+
+        // Edit, delete the first chat, Done: the second is still listed.
+        app.navigationBars.buttons["Previous chats"].tap()
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        app.buttons["Edit"].tap()
+        app.buttons["Delete \(questions[0])"].tap()
+        app.buttons["Delete"].tap()
+        let confirm = app.sheets.buttons["Delete"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 2), "No confirmation")
+        confirm.tap()
+        XCTAssertTrue(first.waitForNonExistence(timeout: 2), "The chat wasn't deleted")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["Edit"].waitForExistence(timeout: 2), "Done didn't end editing")
+        XCTAssertTrue(second.exists, "The other chat is gone")
+        XCTAssertFalse(first.exists, "The deleted chat came back")
+
+        app.buttons["Edit"].tap()
+        app.buttons["Delete \(questions[1])"].tap()
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 2))
+        confirm.tap()
+        XCTAssertTrue(second.waitForNonExistence(timeout: 2))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2))
+    }
+
     /// The empty Ask screen's example question changes every few seconds, and typing brings up
     /// the composer's underlay. Screenshots: two moments of the rotation, then typing. For dark
     /// screenshots, run it after `xcrun simctl ui <device> appearance dark`.
