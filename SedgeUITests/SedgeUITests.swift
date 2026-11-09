@@ -278,6 +278,9 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Sedge has reached its limit for this chat. Start a new session to keep asking; this one stays in Previous chats."].exists)
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
         XCTAssertFalse(field.isEnabled, "The question box should be off at the limit")
+        // No placeholder at the limit, not even the field's title.
+        XCTAssertEqual(field.placeholderValue ?? "", "", "The full chat's box shows a placeholder")
+        XCTAssertFalse(app.staticTexts["Question"].exists, "The title shows as the placeholder")
         attachScreenshot(app, "ask-token-limit")
 
         // "Open previous chats" opens the panel; the backdrop closes it again.
