@@ -303,9 +303,10 @@ struct AskView: View {
     /// The question box with its send button.
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 2) {
-            // At the limit the box stays, empty: the limit turn above it says what to do.
+            // At the limit the box stays, empty: the limit turn above it says what to do. An empty
+            // prompt, not nil, because a nil prompt shows the title "Question" as the placeholder.
             TextField("Question", text: $question,
-                      prompt: limited ? nil : Text("Ask about your money…").foregroundStyle(Color.muted),
+                      prompt: Text(limited ? "" : "Ask about your money…").foregroundStyle(Color.muted),
                       axis: .vertical)
                 .font(.subheadline)
                 .lineLimit(1...5)
