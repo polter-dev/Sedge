@@ -103,14 +103,6 @@ struct TransactionDetailView: View {
     @State private var history: [ListedTransaction] = []
     /// The design's 16 pt icon, growing with the text beside it.
     @ScaledMetric(relativeTo: .caption) private var sproutSize: CGFloat = 16
-    /// The person hid the "not a fraud determination" note. Saved in the app's settings, so it
-    /// stays hidden on every transaction and for every dataset, until the Accounts tab shows it again.
-    @AppStorage("hideSpendingNote") private var noteHidden = false
-    /// The note row's countdown after "Don’t show this again", 4 down to 0, run like the familiar
-    /// prompt's below; nil when the row isn't counting down.
-    @State private var noteCountdown: Int?
-    /// The part of the note row's track still full, 1 down to 0, set from `noteCountdown` like `remaining`.
-    @State private var noteRemaining = 1.0
     /// The familiar prompt's countdown, 4 down to 0, while the track shows under the buttons; nil hides it.
     @State private var countdown: Int?
     /// The part of the track still full, 1 down to 0. Each tick sets it from the number, so the
@@ -119,7 +111,6 @@ struct TransactionDetailView: View {
     /// True once the countdown has shown 0: the prompt is folded away until the screen is opened again.
     @State private var folded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         ScrollView {
@@ -134,23 +125,6 @@ struct TransactionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         // Runs on open, and again on coming back from Merchant history.
         .task { reload() }
-        // The note row's countdown, tick for tick the same as the familiar prompt's below, so the
-        // two look and behave alike (including the pause while Merchant history is open). At 0 the
-        // row leaves the list; the hidden setting was already saved on the tap.
-        .task(id: noteCountdown) {
-            guard let count = noteCountdown else { return }
-            if reduceMotion {
-                noteRemaining = Double(count) / 4
-            } else {
-                withAnimation(.linear(duration: 1)) { noteRemaining = Double(max(count - 1, 0)) / 4 }
-            }
-            guard (try? await Task.sleep(for: .seconds(count > 0 ? 1 : 0.3))) != nil else { return }
-            if count > 0 {
-                withAnimation(reduceMotion ? nil : .default) { noteCountdown = count - 1 }
-            } else {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { noteCountdown = nil }
-            }
-        }
         // One tick a second: 4, 3, 2, 1, 0. Each tick changes `countdown`, which starts the next one;
         // Undo sets it to nil, which cancels the tick in progress.
         .task(id: countdown) {
@@ -231,18 +205,12 @@ struct TransactionDetailView: View {
                 NavigationLink {
                     MerchantHistoryView(rows: history, database: database)
                         .navigationTitle(detail.store)
-                        .navigationSubtitle("Merchant history")
                 } label: {
                     // Counts what the history lists: its purchases, or every row at a store with none.
                     let purchases = MerchantHistoryView.purchases(history)
                     listRow("Merchant history", MerchantHistoryView.count(purchases.isEmpty ? history.count : purchases.count, visits: !purchases.isEmpty),
                             value: "View")
                 }
-            }
-
-            // The note is about Sedge's context, so it shows only with it.
-            if context != nil, !noteHidden || noteCountdown != nil {
-                noteRow
             }
 
             Text("Bank description: \(detail.name)")
@@ -273,49 +241,6 @@ struct TransactionDetailView: View {
                 .font(.row)
                 .foregroundStyle(.secondary)
                 .padding(.top, 14)
-        }
-    }
-
-    /// The spending note as a detail row with "Don’t show this again" where other rows show their
-    /// value. After the tap, for 4 s, the row says it's hidden and counts down with Undo, and its
-    /// bottom hairline becomes the familiar prompt's draining track.
-    private var noteRow: some View {
-        let lines = VStack(alignment: .leading, spacing: 2) {
-            Text(noteCountdown == nil ? "Spending note" : "Spending note hidden on every transaction")
-                .font(.subheadline)
-            Group {
-                if let noteCountdown {
-                    Text("Closing in \(noteCountdown)")
-                        .monospacedDigit()
-                        .contentTransition(.numericText(countsDown: true))
-                } else {
-                    Text("This is a spending observation, not a fraud determination.")
-                }
-            }
-            .font(.note)
-            .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // At the largest text sizes the button drops under the two lines instead of squeezing them.
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(spacing: 8))
-        return VStack(spacing: 0) {
-            layout {
-                lines
-                if noteCountdown == nil {
-                    Button("Don’t show this again", action: hideNote)
-                        .buttonStyle(.plain)
-                        .font(.link)
-                        .foregroundStyle(Color.accent)
-                        .frame(minHeight: 44)
-                        .contentShape(.rect)
-                } else {
-                    undoButton(undoHideNote).padding(.trailing, -8)
-                }
-            }
-            .foregroundStyle(Color.ink, Color.muted)
-            .padding(.vertical, 12)
-            if noteCountdown == nil { rule } else { track(noteRemaining) }
         }
     }
 
@@ -362,23 +287,6 @@ struct TransactionDetailView: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-    }
-
-    /// Saves the note as hidden at once, then counts down in its row like the familiar prompt.
-    private func hideNote() {
-        noteRemaining = 1
-        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) {
-            noteHidden = true
-            noteCountdown = 4
-        }
-    }
-
-    /// Undo in the note row: the note is shown again, here and on every transaction.
-    private func undoHideNote() {
-        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) {
-            noteHidden = false
-            noteCountdown = nil
-        }
     }
 
     /// A row like the design's list buttons: a title and optional subtitle on the left, a value and › on the right.
@@ -458,9 +366,9 @@ func accountTitle(_ name: String, _ mask: String?, spoken: Bool = false) -> Stri
     return spoken ? "\(name) ending in \(mask)" : "\(name) •• \(mask)"
 }
 
-/// One of the design's side-by-side answer buttons, tinted with the Marsh greens: the chosen answer
-/// is filled with `nodeStore`, the other sits on `surface`, both labelled in `amountNow`. With no
-/// answer yet, the first button is filled as the suggested one, as in the design.
+/// One of the side-by-side answer buttons, in the same look as the account check's answers: the
+/// chosen answer is filled with the accent, the other is outlined in it. With no answer yet, the
+/// first button is filled as the suggested one.
 struct AnswerButton: View {
     let title: String
     let chosen: Bool
@@ -477,13 +385,15 @@ struct AnswerButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                // Semibold on the filled one, so the choice isn't told by the soft tint alone.
-                .font(filled ? .row.weight(.semibold) : .row)
-                // amountNow reads at 4.5:1 or better on both fills, light and dark.
-                .foregroundStyle(Color.amountNow)
+                .font(.answer.weight(.medium))
+                // On the accent fill, the color made to sit on it.
+                .foregroundStyle(filled ? Color.contrast : Color.accent)
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .padding(.horizontal, 4)
-                .background(filled ? Color.nodeStore : Color.surface, in: .rect(cornerRadius: 10))
+                .background(filled ? Color.accent : Color.background, in: .rect(cornerRadius: 10))
+                .overlay {
+                    if !filled { RoundedRectangle(cornerRadius: 10).strokeBorder(Color.accent, lineWidth: 1.5) }
+                }
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)

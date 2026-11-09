@@ -6,7 +6,7 @@
 import SedgeCore
 import SwiftUI
 
-/// One thing Sedge answers quick questions with instead of asking: a saved reply, or a
+/// One saved answer, which Sedge uses instead of asking: a saved reply, or a
 /// profile correction (which answers any question about its kind, e.g. all income questions).
 struct SavedEntry: Identifiable {
     enum Source {
@@ -61,22 +61,22 @@ struct SavedAnswersView: View {
     /// An entry to open for changing as soon as the menu shows (from an answer's "Assumed" line).
     var opening: String?
     @State private var entries: [SavedEntry] = []
-    /// The saved reply being changed, and the text typed for it.
-    @State private var changing: SavedEntry?
-    @State private var draft = ""
-    @State private var correcting: Profile.Fact?
+    /// The entry open in the change sheet, either kind.
+    @State private var editing: SavedEntry?
+    /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
+    @State private var confirmingDeleteAll = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         List {
             Section {
                 ForEach(entries) { entry in
-                    Button { open(entry) } label: {
+                    Button { editing = entry } label: {
                         let text = VStack(alignment: .leading, spacing: 2) {
                             Text(entry.question)
                             Text(entry.assumed)
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.muted)
                         }
                         // At the largest text sizes the icon squeezes the words, so it is left out.
                         if dynamicTypeSize.isAccessibilitySize {
@@ -84,11 +84,11 @@ struct SavedAnswersView: View {
                         } else {
                             Label { text } icon: {
                                 Image(systemName: entry.symbol)
-                                    .foregroundStyle(.tint)
+                                    .foregroundStyle(Color.accent)
                             }
                         }
                     }
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.ink)
                     .accessibilityHint("Change this answer")
                     .swipeActions {
                         // The swipe button's circle is the accent, so its icon takes the color made to sit on it.
@@ -103,27 +103,33 @@ struct SavedAnswersView: View {
         .overlay {
             if entries.isEmpty { ContentUnavailableView("No saved answers", systemImage: "tray") }
         }
-        .alert("Change answer", isPresented: Binding { changing != nil } set: { if !$0 { changing = nil } }, presenting: changing) { entry in
-            TextField("Answer", text: $draft)
-            Button("Save") { save(draft, for: entry) }
-            Button("Remove", role: .destructive) { remove(entry) }
-            Button("Cancel", role: .cancel) {}
-        } message: { entry in
-            Text(entry.question)
+        .toolbar {
+            Button("Delete all", role: .destructive) { confirmingDeleteAll = true }
+                // The app's ink tint would otherwise hide that this one deletes.
+                .foregroundStyle(entries.isEmpty ? Color.muted : .red)
+                .disabled(entries.isEmpty)
         }
-        .sheet(item: $correcting) { fact in
-            CorrectFactView(fact: fact) { value in
-                do {
-                    try Profile.correct(id: fact.id, kind: fact.kind, value: value, in: database)
-                } catch {
-                    print("Could not save the correction:", error)
-                }
-                reload()
+        // Deleting can't be undone, so ask first. An alert always shows its Cancel button.
+        .alert("Delete all saved answers?", isPresented: $confirmingDeleteAll) {
+            Button("Delete", role: .destructive) { entries.forEach(remove) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This can't be undone.")
+        }
+        // Both kinds edit in About you's form: a saved reply is a value with only a name.
+        .sheet(item: $editing) { entry in
+            switch entry.source {
+            case .saved:
+                CorrectFactView(value: Profile.Value(name: entry.assumed), title: "Change answer", nameLabel: "Answer",
+                                header: entry.question, remove: { remove(entry) }) { save($0, for: entry) }
+            case .correction(let fact):
+                CorrectFactView(value: fact.value, title: "Change answer", header: entry.question,
+                                remove: { remove(entry) }) { save($0, for: entry) }
             }
         }
         .task {
             reload()
-            if let entry = entries.first(where: { $0.id == opening }) { open(entry) }
+            editing = entries.first { $0.id == opening }
         }
     }
 
@@ -135,23 +141,18 @@ struct SavedAnswersView: View {
         }
     }
 
-    /// A saved reply opens a one-line edit; a correction opens the same form as About you.
-    private func open(_ entry: SavedEntry) {
-        switch entry.source {
-        case .saved:
-            draft = entry.assumed
-            changing = entry
-        case .correction(let fact):
-            correcting = fact
-        }
-    }
-
-    private func save(_ answer: String, for entry: SavedEntry) {
-        let answer = answer.trimmingCharacters(in: .whitespacesAndNewlines)
-        // An empty answer would read as "the person said nothing"; Remove is the way to clear one.
-        guard case .saved(let key) = entry.source, !answer.isEmpty else { return }
+    /// A saved reply keeps only the typed name as its answer; a correction saves the whole value.
+    private func save(_ value: Profile.Value, for entry: SavedEntry) {
         do {
-            try AskUser.change(key, to: answer, in: database)
+            switch entry.source {
+            case .saved(let key):
+                let answer = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                // An empty answer would read as "the person said nothing"; Remove is the way to clear one.
+                guard !answer.isEmpty else { return }
+                try AskUser.change(key, to: answer, in: database)
+            case .correction(let fact):
+                try Profile.correct(id: fact.id, kind: fact.kind, value: value, in: database)
+            }
         } catch {
             print("Could not change the answer:", error)
         }

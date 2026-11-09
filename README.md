@@ -38,14 +38,16 @@ The three tabs:
     one or deletes it; **New chat** (top right) starts over.
   - When a chat gets too long, it ends with a "This chat is full" card and a **Start new
     session** button. Nothing reaches the limit yet, so use `-demoTokenLimit YES` (below) to see it.
-- **Trends**: the **Spending** screen.
+- **Trends**:
   - Every category added up, with the change from the month before. Swipe the chart sideways to
     page back four months at a time, or tap a month's bar to pick it, compared up to the same day
-    of each month.
+    of each month. The picked month is named for those days: "June so far" for today's month,
+    "May 1 – 30" when they cut a past month short, else just "April".
   - The picked month as a mosaic of categories, and under it the category that changed most from
     the month before (none for the data's first month). A category's block (or that row) opens its
-    page: its months, stores and transactions, and a question to take to Ask. **Other categories**
-    lists every category of the month.
+    page: its months, stores (and the store that changed most, when there are two or more), its
+    transactions, and a question to take to Ask. **Other categories** lists every category of the
+    month.
   - A **Cash flow** card for the picked month: money in, money out and what's left over, over the
     same days as its bar, posted transactions only. An earlier month adds checking's balance at the
     end of those days. With a bank account, today's month adds the projected checking balance for
@@ -54,11 +56,12 @@ The three tabs:
   - When there are any, the recent purchases **Worth a look**.
 - **Accounts**:
   - **Transactions**: one month at a time (arrows step between months), split into income, spending
-    and transfers and grouped by week. Tap one for its details and the store's history.
+    and transfers and grouped by week. Tap one for its details and the store's history, whose
+    change from last month reads as on Trends ("-$4 vs May", with "(so far)" until the month ends).
   - **About you**: what Sedge learned (income, rent, accounts and more). Tap a tile to correct it.
   - **Accounts**: whether each account is yours or shared, asked right on the screen for any not
     answered yet, and a name of your own for it.
-  - **Saved answers**: replies to quick questions and your corrections. Tap to change, swipe to remove.
+  - **Saved answers**: your replies to Sedge's questions and your corrections. Tap to change, swipe to remove, or Delete all.
 
 Launch arguments (Product > Scheme > Edit Scheme > Run > Arguments):
 
