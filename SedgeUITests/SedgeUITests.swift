@@ -52,7 +52,10 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["thinkingRow"].waitForExistence(timeout: 3), "No thinking row")
         XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 15))
         XCTAssertFalse(app.staticTexts["thinkingRow"].exists, "The thinking row stayed after the reply")
-        XCTAssertTrue(app.staticTexts["You · How much did I spend at Netflix this year?"].exists)
+        XCTAssertTrue(app.staticTexts["How much did I spend at Netflix this year?"].exists)
+        // The figure alone is the answer: the model's note under it is gone.
+        XCTAssertFalse(app.staticTexts["The Simulator can't run the on-device model."].exists, "The note line is back")
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'You · '")).count, 0)
         attachScreenshot(app, "ask-answered")
     }
 
@@ -67,40 +70,48 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Send"].tap()
     }
 
-    /// Without the weights, the first question asks before downloading: the model's size, then
-    /// Download and Not now. Screenshot: the prompt.
+    /// Without the weights, sending goes straight to the model screen (no alert): the model's size,
+    /// Download and Not now. Nothing can be asked meanwhile, and Previous chats is off, since a chat
+    /// opened under the screen would be out of sight. Screenshot: the model screen.
     @MainActor
-    func testFirstQuestionAsksToDownloadTheModel() throws {
+    func testSendingWithoutTheModelShowsTheModelScreen() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
         app.launch()
         app.tabBars.buttons["Ask"].tap()
         ask(app, "How much did I spend at Netflix this year?")
-        let prompt = app.alerts["Sedge needs its on-device model"]
-        XCTAssertTrue(prompt.waitForExistence(timeout: 5), "No download prompt")
-        XCTAssertTrue(prompt.staticTexts["About 3 GB, downloaded once."].exists)
-        XCTAssertTrue(prompt.buttons["Download"].exists)
-        XCTAssertTrue(prompt.buttons["Not now"].exists)
-        XCTAssertFalse(app.staticTexts["You · How much did I spend at Netflix this year?"].exists, "Asked without the model")
-        attachScreenshot(app, "model-prompt")
-    }
-
-    /// Not now replaces the chat with a screen that needs the model and offers Download; nothing can
-    /// be asked meanwhile. Screenshot: the declined screen.
-    @MainActor
-    func testNotNowShowsTheNeedsModelScreen() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
-        app.launch()
-        app.tabBars.buttons["Ask"].tap()
-        ask(app, "How much did I spend at Netflix this year?")
-        app.alerts.buttons["Not now"].tap()
-        XCTAssertTrue(app.staticTexts["Sedge needs its on-device model"].waitForExistence(timeout: 5), "No declined screen")
+        XCTAssertTrue(app.staticTexts["Sedge needs its on-device model"].waitForExistence(timeout: 5), "No model screen")
+        XCTAssertFalse(app.alerts.firstMatch.exists, "The model must not be asked for in an alert")
+        XCTAssertTrue(app.staticTexts["About 3 GB, downloaded once."].exists)
         XCTAssertTrue(app.buttons["Download"].exists)
+        XCTAssertTrue(app.buttons["Not now"].exists)
+        XCTAssertFalse(app.staticTexts["How much did I spend at Netflix this year?"].exists, "Asked without the model")
         XCTAssertFalse(app.buttons["exampleQuestion"].isHittable, "The empty chat still shows")
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
         XCTAssertFalse(field.isEnabled, "The question box takes typing without the model")
-        attachScreenshot(app, "model-declined")
+        XCTAssertFalse(app.navigationBars.buttons["Previous chats"].isEnabled, "Previous chats is on under the model screen")
+        attachScreenshot(app, "model-screen")
+    }
+
+    /// Not now on the model screen goes back to the chat, with the question still in the box, and
+    /// the next send asks again.
+    @MainActor
+    func testNotNowReturnsToTheChat() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        ask(app, "How much did I spend at Netflix this year?")
+        XCTAssertTrue(app.buttons["Not now"].waitForExistence(timeout: 5), "No model screen")
+        app.buttons["Not now"].tap()
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2), "The chat didn't come back")
+        XCTAssertFalse(app.staticTexts["Sedge needs its on-device model"].exists, "The model screen stayed")
+        XCTAssertTrue(app.navigationBars.buttons["Previous chats"].isEnabled)
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        XCTAssertTrue(field.isEnabled)
+        XCTAssertEqual(field.value as? String, "How much did I spend at Netflix this year?", "The question was lost")
+        app.buttons["Send"].tap()
+        XCTAssertTrue(app.staticTexts["Sedge needs its on-device model"].waitForExistence(timeout: 5), "The next send didn't ask again")
     }
 
     /// A stubbed download shows its progress, then the chat is back and the question still in the
@@ -112,7 +123,7 @@ final class SedgeUITests: XCTestCase {
         app.launch()
         app.tabBars.buttons["Ask"].tap()
         ask(app, "How much did I spend at Netflix this year?")
-        app.alerts.buttons["Download"].tap()
+        app.buttons["Download"].tap()
         let downloading = app.staticTexts["Downloading the on-device model"]
         XCTAssertTrue(downloading.waitForExistence(timeout: 2), "No download progress")
         attachScreenshot(app, "model-downloading")
@@ -122,18 +133,27 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "model-answered")
     }
 
-    /// A stubbed failure stops the download with Try again, which starts it over.
+    /// Stop ends a download and goes back to the offer; a stubbed failure stops the download with
+    /// Try again, which starts it over.
     @MainActor
-    func testStubbedDownloadFailureShowsTryAgain() throws {
+    func testStopAndStubbedDownloadFailureShowsTryAgain() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-stubDownload", "fail"]
         app.launch()
         app.tabBars.buttons["Ask"].tap()
         ask(app, "How much did I spend at Netflix this year?")
-        app.alerts.buttons["Download"].tap()
+        app.buttons["Download"].tap()
+        let stop = app.buttons["Stop"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 2), "No Stop while downloading")
+        stop.tap()
+        XCTAssertTrue(app.buttons["Download"].waitForExistence(timeout: 2), "Stop didn't go back to the offer")
+        // The stopped stub never reaches its failure.
+        XCTAssertFalse(app.staticTexts["The download stopped"].waitForExistence(timeout: 3), "The stopped download went on")
+        app.buttons["Download"].tap()
         let tryAgain = app.buttons["Try again"]
         XCTAssertTrue(tryAgain.waitForExistence(timeout: 10), "No Try again")
         XCTAssertTrue(app.staticTexts["The download stopped"].exists)
+        XCTAssertFalse(app.staticTexts["Sedge needs its on-device model to answer."].exists)
         attachScreenshot(app, "model-failed")
         tryAgain.tap()
         XCTAssertTrue(app.staticTexts["Downloading the on-device model"].waitForExistence(timeout: 2), "Try again didn't restart")
@@ -154,6 +174,47 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Later"].tap()
         XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 10), "No answer after the tap")
         XCTAssertFalse(app.staticTexts["Should food include groceries?"].exists, "The quick check stayed")
+    }
+
+    /// A model question with five long replies shows them as a list, top to bottom in the order given,
+    /// then "Later": each row sits below the one before and all span the card. `-demoCheck` holds the
+    /// question on screen. The same rows at the largest text size, since a long reply wraps there.
+    @MainActor
+    func testModelQuestionRepliesStackVertically() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-reduceMotion", "YES", "-modelReady", "YES", "-demoCheck", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        assertRepliesStacked(app)
+        attachScreenshot(app, "quick-check-5-options")
+
+        app.terminate()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        assertRepliesStacked(app)
+        attachScreenshot(app, "quick-check-5-options-large-text")
+    }
+
+    /// Checks the five replies and "Later" of `-demoCheck` are one column of rows at least 44 points tall.
+    private func assertRepliesStacked(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let labels = ["Restaurants, cafés and coffee shops, including delivery orders",
+                      "Restaurants and cafés only, not coffee shops",
+                      "Only sit-down restaurants",
+                      "Everything except groceries",
+                      "Delivery and takeout only",
+                      "Later"]
+        XCTAssertTrue(app.buttons[labels[0]].waitForExistence(timeout: 5), "No quick check", file: file, line: line)
+        let frames = labels.map { app.buttons[$0].frame }
+        for (index, frame) in frames.enumerated() {
+            // Layout sometimes reports 44 as 43.99…, so allow half a point.
+            XCTAssertGreaterThan(frame.height, 43.5, "\(labels[index]) is too short", file: file, line: line)
+            // The card is the screen minus its margins, so a row that spans it is most of the screen wide.
+            XCTAssertGreaterThan(frame.width, app.frame.width * 0.75, "\(labels[index]) doesn't span the card", file: file, line: line)
+            guard index > 0 else { continue }
+            XCTAssertGreaterThanOrEqual(frame.minY, frames[index - 1].maxY, "\(labels[index]) isn't below the row before", file: file, line: line)
+            XCTAssertEqual(frame.minX, frames[0].minX, accuracy: 1, "\(labels[index]) isn't in the same column", file: file, line: line)
+        }
     }
 
     /// The screen stays awake while a question is worked out. Picking other data mid-question (here, a
@@ -194,7 +255,7 @@ final class SedgeUITests: XCTestCase {
         let row = app.staticTexts["thinkingRow"]
         XCTAssertTrue(row.waitForExistence(timeout: 5), "No thinking row")
         XCTAssertTrue(row.label.hasSuffix("…"), "Phrase was: \(row.label)")
-        XCTAssertTrue(app.staticTexts["You · What about coffee?"].exists)
+        XCTAssertTrue(app.staticTexts["What about coffee?"].exists)
         // One question at a time: Send stays off while the answer is worked out.
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
         field.tap()
@@ -214,6 +275,7 @@ final class SedgeUITests: XCTestCase {
         app.tabBars.buttons["Ask"].tap()
         XCTAssertTrue(app.staticTexts["This chat is full"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.alerts.firstMatch.exists, "The limit must not be an alert")
+        XCTAssertFalse(app.staticTexts["Sedge has reached its limit for this chat. Start a new session to keep asking; this one stays in Previous chats."].exists)
         let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
         XCTAssertFalse(field.isEnabled, "The question box should be off at the limit")
         attachScreenshot(app, "ask-token-limit")
@@ -225,14 +287,14 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Start new session"].waitForExistence(timeout: 2), "The panel didn't close")
 
         app.buttons["Start new session"].tap()
-        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "No empty screen")
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2), "No empty screen")
         XCTAssertFalse(app.staticTexts["This chat is full"].exists)
         XCTAssertTrue(field.isEnabled)
     }
 
     /// A question is saved as a chat: New chat clears the screen and the Previous chats panel
-    /// lists it, while New chat on an empty chat adds nothing. Opening it shows its turn under the
-    /// "answers best in a new chat" banner, with no Rename under its title until New chat. A
+    /// lists it, while New chat on an empty chat adds nothing. Opening it shows its turn under its
+    /// own title, with no Rename there until New chat. A
     /// question asked there is added to it. The chat is deleted through Edit and the confirmation
     /// at the end, so Maya's file keeps no test chats.
     /// Screenshots: the toolbar, the panel, edit mode, the empty panel (when no other chats are
@@ -254,7 +316,7 @@ final class SedgeUITests: XCTestCase {
         attachScreenshot(app, "ask-toolbar")
 
         app.navigationBars.buttons["New chat"].tap()
-        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "New chat didn't clear")
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2), "New chat didn't clear")
 
         app.navigationBars.buttons["Previous chats"].tap()
         // Rows only: once the chat is reopened, the bar's title is a button with the same text.
@@ -273,24 +335,24 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(rows.count, saved, "New chat on an empty chat saved a chat")
         row.tap()
 
-        XCTAssertTrue(app.staticTexts["Sedge answers best in a new chat."].waitForExistence(timeout: 5), "No banner")
-        XCTAssertTrue(app.staticTexts["You · \(question)"].exists)
-        // The bar is named by its title.
+        // The chat's question is back on screen, and the bar is named by its title.
+        XCTAssertTrue(app.scrollViews.staticTexts[question].waitForExistence(timeout: 5), "The chat didn't open")
         XCTAssertTrue(app.navigationBars[question].exists, "The title isn't the chat's")
+        XCTAssertFalse(app.staticTexts["Sedge answers best in a new chat."].exists, "The banner is back")
         // That title names the chat, so tapping it must not offer Rename, which names the data.
         app.navigationBars[question].descendants(matching: .any).matching(identifier: question).firstMatch.tap()
         XCTAssertFalse(app.buttons["Rename…"].waitForExistence(timeout: 2), "A reopened chat's title offers Rename")
         field.tap()
         field.typeText("And coffee?")
         app.buttons["Send"].tap()
-        XCTAssertTrue(app.staticTexts["You · And coffee?"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["And coffee?"].waitForExistence(timeout: 2))
         let replies = app.staticTexts.matching(NSPredicate(format: "label == %@", testModelAnswer))
         XCTAssertTrue(replies.element(boundBy: 1).waitForExistence(timeout: 5), "No reply to the new question")
         attachScreenshot(app, "continued-chat")
 
-        // The banner's New chat leaves the old chat; reopening shows both turns were saved.
-        app.buttons["bannerNewChat"].tap()
-        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2))
+        // New chat leaves the old chat; reopening shows both turns were saved.
+        app.navigationBars.buttons["New chat"].tap()
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2))
         // A new chat is "Ask Sedge" again, and its title menu has Rename back.
         app.navigationBars["Ask Sedge"].buttons["Ask Sedge"].tap()
         XCTAssertTrue(app.buttons["Rename…"].waitForExistence(timeout: 2), "Rename didn't come back")
@@ -299,7 +361,7 @@ final class SedgeUITests: XCTestCase {
         app.navigationBars.buttons["Previous chats"].tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.tap()
-        XCTAssertTrue(app.staticTexts["You · And coffee?"].waitForExistence(timeout: 5), "The new turn wasn't saved")
+        XCTAssertTrue(app.staticTexts["And coffee?"].waitForExistence(timeout: 5), "The new turn wasn't saved")
 
         // Edit, its minus circle, Delete and the confirmation remove it from the list. It was the
         // chat on screen, so Ask starts a new one instead of saving the next question into a chat
@@ -323,7 +385,7 @@ final class SedgeUITests: XCTestCase {
             attachScreenshot(app, "chats-panel-empty")
         }
         backdrop.tap()
-        XCTAssertTrue(app.staticTexts["Ask about your money"].waitForExistence(timeout: 2), "Still showing the deleted chat")
+        XCTAssertTrue(app.buttons["exampleQuestion"].waitForExistence(timeout: 2), "Still showing the deleted chat")
     }
 
     /// With Reduce Motion off, the panel follows a finger: a short, slow pull springs back and a
@@ -491,18 +553,27 @@ final class SedgeUITests: XCTestCase {
         XCTAssertEqual(example.label, "How much did I spend at Netflix this year?")
     }
 
-    /// A chat of one short line starts at the same left edge as a long one. Screenshots: the
-    /// long chat, then the short one.
+    /// The chat reads like text messages: the question's bubble hugs the right edge and Sedge's
+    /// answer sits at the left, long or short, with no "You · " prefix and no note line under the
+    /// answer. Screenshots: the sample chat, then a one-word question.
     @MainActor
-    func testAskShortChatStartsAtTheLeft() throws {
+    func testAskBubblesSitLikeTextMessages() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya", "-sampleChat", "YES", "-reduceMotion", "YES", "-modelReady", "YES"]
         app.launch()
 
         app.tabBars.buttons["Ask"].tap()
-        let long = app.staticTexts["You · Have I been overspending on food?"]
+        let long = app.staticTexts["Have I been overspending on food?"]
         XCTAssertTrue(long.waitForExistence(timeout: 10), "No sample chat")
-        let left = long.frame.minX
+        let screen = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(long.frame.maxX, screen.maxX - 40, "The question isn't at the right edge")
+        // The bubble is at most three quarters of the width, so its words start past a fifth of it on any phone.
+        XCTAssertGreaterThan(long.frame.minX, screen.width * 0.2, "The question spans the screen")
+        let answer = app.staticTexts.containing(NSPredicate(format: "label ENDSWITH 'accounts for most of the difference.'")).firstMatch
+        XCTAssertTrue(answer.exists, "No answer")
+        XCTAssertLessThan(answer.frame.minX, 40, "The answer isn't at the left edge")
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'You · '")).count, 0, "The You · prefix is back")
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'the average for the same'")).count, 0, "The note line is back")
         attachScreenshot(app, "ask-long-chat")
 
         app.navigationBars.buttons["New chat"].tap()
@@ -510,8 +581,12 @@ final class SedgeUITests: XCTestCase {
         field.tap()
         field.typeText("hello")
         app.buttons["Send"].tap()
-        XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 10))
-        XCTAssertEqual(app.staticTexts["You · hello"].frame.minX, left, accuracy: 1, "The short chat isn't at the left")
+        let reply = app.staticTexts[testModelAnswer]
+        XCTAssertTrue(reply.waitForExistence(timeout: 10))
+        let short = app.staticTexts["hello"]
+        XCTAssertGreaterThan(short.frame.maxX, screen.maxX - 40, "The short question isn't at the right edge")
+        XCTAssertGreaterThan(short.frame.minX, screen.midX, "The short question isn't on the right half")
+        XCTAssertLessThan(reply.frame.minX, 40, "The reply isn't at the left edge")
         attachScreenshot(app, "ask-one-question")
     }
 
@@ -538,7 +613,7 @@ final class SedgeUITests: XCTestCase {
 
         let question = example.label
         example.tap()
-        XCTAssertTrue(app.staticTexts["You · \(question)"].waitForExistence(timeout: 3), "Tapping didn't ask it")
+        XCTAssertTrue(app.scrollViews.staticTexts[question].waitForExistence(timeout: 3), "Tapping didn't ask it")
         XCTAssertTrue(app.staticTexts[testModelAnswer].waitForExistence(timeout: 10))
     }
 
@@ -553,10 +628,10 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Ask"].tap()
         XCTAssertTrue(app.staticTexts["Food & dining"].waitForExistence(timeout: 10), "No breakdown card")
-        XCTAssertTrue(app.staticTexts["You · Have I been overspending on food?"].exists)
+        XCTAssertTrue(app.staticTexts["Have I been overspending on food?"].exists)
         let answer = app.staticTexts.containing(NSPredicate(format: "label ENDSWITH 'accounts for most of the difference.'")).firstMatch
         XCTAssertTrue(answer.exists, "No answer")
-        XCTAssertTrue(app.staticTexts["A quick check"].exists, "No quick check")
+        XCTAssertTrue(app.buttons["Yes, mine"].exists, "No quick check")
         attachScreenshot(app, "ask-sample")
         // The quick check's buttons sit below the fold on a phone, so scroll to show them too.
         app.scrollViews.firstMatch.swipeUp()
@@ -588,7 +663,7 @@ final class SedgeUITests: XCTestCase {
 
         app.launch()
         app.tabBars.buttons["Ask"].tap()
-        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Yes, mine"].waitForExistence(timeout: 10), "No quick check")
         app.scrollViews.firstMatch.swipeUp()
         app.buttons["Yes, mine"].tap()
         firstSaved = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5)
@@ -596,7 +671,7 @@ final class SedgeUITests: XCTestCase {
 
         app.launch()
         app.tabBars.buttons["Ask"].tap()
-        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Yes, mine"].waitForExistence(timeout: 10), "No quick check")
         app.scrollViews.firstMatch.swipeUp()
         app.buttons["No"].tap()
         let any = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved:' OR label BEGINSWITH 'Not saved'")).firstMatch
@@ -1296,7 +1371,7 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertEqual(field.value as? String, question)
         XCTAssertFalse(app.staticTexts["Food & dining"].exists, "the sample chat is still on screen")
-        XCTAssertFalse(app.staticTexts["You · \(question)"].exists, "the question was sent")
+        XCTAssertFalse(app.scrollViews.staticTexts[question].exists, "the question was sent")
     }
 
     /// The Biggest change row (Groceries on Maya's June) opens Groceries' own page, and going back
