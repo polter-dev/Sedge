@@ -88,3 +88,33 @@ func inMemory(_ persona: String) throws -> SedgeDatabase {
         #expect(abs(raised.balance(try #require(raised.with?.last)) - (end - 200 * Double(rent.count))) < 0.005)
     }
 }
+
+/// Pending charges and deposits inside June's window leave the cash flow card's Money in and Money
+/// out as they were, so Money out still equals June's total above the card, which counts posted only.
+@Test func cardLeavesOutPendingAsTheTotalDoes() throws {
+    let database = try inMemory("maya")
+    let posted = try SpendingView.monthFlow(in: database, month: "2026-06", asOf: "2026-06-30").money
+    try database.dbQueue.write { db in
+        for (id, amount, kind) in [("pending-out", 42.50, "spending"), ("pending-in", -300.0, "income")] {
+            try db.execute(sql: """
+                INSERT INTO transactions (transaction_id, account_id, date, name, amount, pending, kind)
+                SELECT ?, account_id, '2026-06-20', 'TEST', ?, 1, ? FROM accounts WHERE type = 'depository' LIMIT 1
+                """, arguments: [id, amount, kind])
+        }
+    }
+    let flow = try SpendingView.monthFlow(in: database, month: "2026-06", asOf: "2026-06-30").money
+    let june = try #require(SpendingView.bars(try SpendingTotal.all(in: database, throughDay: 30), category: nil, asOf: "2026-06-30").last)
+    #expect(june.month == "2026-06")
+    #expect(flow.moneyOut == Int((june.total * 100).rounded()))
+    #expect(flow == posted)
+}
+
+/// The card's account label is the checking account's nickname when the person gave one, else its name.
+@Test func cardAccountLabelIsTheNicknameElseTheName() throws {
+    let database = try inMemory("maya")
+    let label = { try SpendingView.monthFlow(in: database, month: "2026-05", asOf: "2026-06-30").accountName }
+    #expect(try label() == "Checking")
+    let id = try #require(try database.dbQueue.read { try Simulator.checkingAccount($0) })
+    try Answers.setNickname("Bills", account: id, in: database)
+    #expect(try label() == "Bills")
+}

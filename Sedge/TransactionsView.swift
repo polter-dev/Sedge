@@ -23,7 +23,7 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
     /// The stored category ("phone_internet"), the person's answer first, as the Spending screen
     /// counts it. Only `all` reads it; a query without the column leaves it nil.
     var category: String? = nil
-    /// True for a charge the bank hasn't posted yet. Only `all` reads it, like `category`.
+    /// True for a charge the bank hasn't posted yet. Only `all` reads it; a query without the column leaves it nil.
     var pending: Bool? = nil
 
     var id: String { transaction_id }
