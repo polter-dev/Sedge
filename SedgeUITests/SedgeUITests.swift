@@ -778,6 +778,47 @@ final class SedgeUITests: XCTestCase {
         }
     }
 
+    /// Daniel's Loans tile is a full-width row like Housing, with "$325.00 a month" and its chip,
+    /// and the chip is one line, as tall as Housing's. Screenshots of Daniel's and Maya's About you,
+    /// and Daniel's at a large accessibility text size, where the rows stack. They are light, or
+    /// dark after `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testAboutYouLoansIsARowWithAOneLineChip() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "daniel"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["About you"].tap()
+        let loans = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Loans,'")).firstMatch
+        let housing = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Housing,'")).firstMatch
+        XCTAssertTrue(loans.waitForExistence(timeout: 10))
+        XCTAssertTrue(loans.label.contains("$325.00 a month") && loans.label.hasSuffix("Next Jul 7"), loans.label)
+        XCTAssertEqual(loans.frame.width, housing.frame.width, accuracy: 1, "Loans isn't a full-width row")
+        let chip = loans.staticTexts["Next Jul 7"], housingChip = housing.staticTexts["Next Jul 1"]
+        XCTAssertTrue(chip.exists && housingChip.exists, app.debugDescription)
+        XCTAssertTrue(loans.staticTexts["$325.00 a month"].isHittable)
+        XCTAssertTrue(chip.isHittable)
+        XCTAssertEqual(chip.frame.height, housingChip.frame.height, accuracy: 2, "The Loans chip wraps")
+        attachScreenshot(app, "about-you-daniel")
+
+        app.terminate()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["About you"].tap()
+        XCTAssertTrue(housing.waitForExistence(timeout: 10))
+        attachScreenshot(app, "about-you-maya")
+
+        app.terminate()
+        app.launchArguments = ["-persona", "daniel",
+                               "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
+        app.launch()
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["About you"].tap()
+        XCTAssertTrue(loans.waitForExistence(timeout: 10))
+        attachScreenshot(app, "about-you-daniel-large-text")
+    }
+
     /// A profile correction shows in the Saved answers menu, and swiping removes it, so Maya's
     /// saved file stays as it was.
     @MainActor

@@ -25,17 +25,14 @@ struct ProfileView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Grows the tiles' symbols with the reader's text size.
     @ScaledMetric(relativeTo: .caption2) private var glyphScale = 1.0
-    /// The narrow column beside income (loans and tuition): the design's 112 pt, grown with the text.
-    @ScaledMetric(relativeTo: .caption) private var sideWidth = 112.0
 
     /// Tile labels for the kinds `Profile` knows; anything else shows its raw kind.
     static let titles = ["income": "Income", "housing": "Housing", "tuition": "Tuition", "loan": "Loans", "account": "Accounts"]
 
-    // The mosaic's parts, top to bottom: income with loans, tuition and any kind `Profile` adds
-    // later in a column beside it, then housing, then the accounts.
+    // The mosaic's parts, top to bottom: income, then a full-width row each for loans, tuition, any
+    // kind `Profile` adds later and housing (`load` already sorts them so), then the accounts.
     private var income: [Profile.Fact] { facts.filter { $0.kind == "income" } }
-    private var side: [Profile.Fact] { facts.filter { !["income", "housing", "account"].contains($0.kind) } }
-    private var housing: [Profile.Fact] { facts.filter { $0.kind == "housing" } }
+    private var rows: [Profile.Fact] { facts.filter { !["income", "account"].contains($0.kind) } }
     private var accounts: [Profile.Fact] { facts.filter { $0.kind == "account" } }
 
     var body: some View {
@@ -44,19 +41,8 @@ struct ProfileView: View {
         ScrollView {
             if !facts.isEmpty {
                 VStack(alignment: .leading, spacing: 11) {
-                    // Either column fills the row alone when the other has nothing to show.
-                    Self.row(oneColumn, spacing: 11, alignment: .top) {
-                        if !income.isEmpty {
-                            VStack(spacing: 11) { ForEach(income) { fact in tile(fact) { incomeTile(fact) } } }
-                        }
-                        if !side.isEmpty {
-                            VStack(spacing: 11) { ForEach(side) { fact in tile(fact) { sideTile(fact) } } }
-                                .frame(width: oneColumn || income.isEmpty ? nil : sideWidth)
-                        }
-                    }
-                    // Lets the income tile and the column beside it stretch to the taller one's height.
-                    .fixedSize(horizontal: false, vertical: true)
-                    ForEach(housing) { fact in tile(fact) { housingTile(fact, oneColumn: oneColumn) } }
+                    ForEach(income) { fact in tile(fact) { incomeTile(fact) } }
+                    ForEach(rows) { fact in tile(fact) { rowTile(fact, oneColumn: oneColumn) } }
                     if !accounts.isEmpty { accountsStrip(oneColumn: oneColumn) }
                 }
                 .padding(.horizontal, 16)
@@ -85,10 +71,9 @@ struct ProfileView: View {
     }
 
     /// Side by side, or stacked at the largest text sizes.
-    private static func row(_ oneColumn: Bool, spacing: Double, alignment: VerticalAlignment = .center,
-                            @ViewBuilder _ content: () -> some View) -> some View {
+    private static func row(_ oneColumn: Bool, spacing: Double, @ViewBuilder _ content: () -> some View) -> some View {
         let layout = oneColumn ? AnyLayout(VStackLayout(alignment: .leading, spacing: spacing))
-            : AnyLayout(HStackLayout(alignment: alignment, spacing: spacing))
+            : AnyLayout(HStackLayout(spacing: spacing))
         return layout(content)
     }
 
@@ -122,49 +107,30 @@ struct ProfileView: View {
                 if let line = Self.subtext(fact) { Text(line).font(.row).foregroundStyle(Color.ink).contentTransition(.opacity) }
                 chip(Self.chip(fact, next: next))
             }
-            // Sits at the bottom when the column beside makes the tile taller.
-            .frame(maxHeight: .infinity, alignment: .bottomLeading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
     }
 
-    /// Loans, tuition and any other kind, laid out like income in a narrower column: the glyph on
-    /// top, then the label, figure and chip at the bottom, so the tile fills the column's height.
-    private func sideTile(_ fact: Profile.Fact) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            badge(Self.symbol(fact), size: 22, glyph: 13)
-            VStack(alignment: .leading, spacing: 6) {
+    /// Loans, tuition, housing and any other kind: a wide tile with its glyph, label and figure in
+    /// a row and the chip on the right, stacked at the largest text sizes.
+    private func rowTile(_ fact: Profile.Fact, oneColumn: Bool) -> some View {
+        Self.row(oneColumn, spacing: 12) {
+            badge(Self.symbol(fact), size: 36, glyph: 21)
+            VStack(alignment: .leading, spacing: 1) {
                 label(fact.kind)
                 if let refund = Self.refund(fact.value) {
                     // Money back in green, what was paid in red.
                     Text(refund.back).foregroundStyle(Color.moneyBack)
                     Text(refund.spent).foregroundStyle(Color.moneySpent)
                 } else if let figure = Self.figure(fact) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        amount(figure, font: .tileValue)
-                        if fact.kind == "tuition" { Text("spent").font(.note).foregroundStyle(Color.muted) }
-                    }
+                    // Two lines, so "a month" still reads beside the chip at the larger text sizes.
+                    amount(figure, font: .tileValue, lines: 2)
+                    if fact.kind == "tuition" { Text("spent").font(.note).foregroundStyle(Color.muted) }
                 }
-                chip(Self.chip(fact, next: next))
             }
-            .frame(maxHeight: .infinity, alignment: .bottomLeading)
-        }
-        .font(.row.weight(.semibold))
-        .contentTransition(.opacity)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(12)
-    }
-
-    /// Housing: a wide tile with its glyph, label and figure in a row and the chip on the right.
-    private func housingTile(_ fact: Profile.Fact, oneColumn: Bool) -> some View {
-        Self.row(oneColumn, spacing: 12) {
-            badge(Self.symbol(fact), size: 36, glyph: 21)
-            VStack(alignment: .leading, spacing: 1) {
-                label(fact.kind)
-                // Two lines, so "a month" still reads beside the chip at the larger text sizes.
-                if let figure = Self.figure(fact) { amount(figure, font: .tileValue, lines: 2) }
-            }
+            .font(.row.weight(.semibold))
+            .contentTransition(.opacity)
             if !oneColumn { Spacer(minLength: 0) }
             chip(Self.chip(fact, next: next))
         }
@@ -233,6 +199,9 @@ struct ProfileView: View {
             Text(text)
                 .font(.note.weight(.semibold))
                 .foregroundStyle(Color.ink)
+                // Never wraps: squeezed, "Next Jul 7" would otherwise break over two lines.
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Color.background, in: .capsule)
@@ -291,12 +260,12 @@ struct ProfileView: View {
 
     static func money(_ dollars: Double) -> String { dollars.formatted(.currency(code: "USD")) }
 
-    /// A tile's big figure. Housing says how often (twice-monthly rent shows its monthly cost);
-    /// tuition shows everything paid, unless money came back (then `refund` shows both).
+    /// A tile's big figure. Housing and loans say how often (twice-monthly rent shows its monthly
+    /// cost); tuition shows everything paid, unless money came back (then `refund` shows both).
     static func figure(_ fact: Profile.Fact) -> String? {
         let value = fact.value
         switch fact.kind {
-        case "housing":
+        case "housing", "loan":
             if let monthly = value.monthly_average { return money(monthly) + " a month" }
             return value.amount.map { [money($0), per[value.schedule ?? ""]].compactMap { $0 }.joined(separator: " ") }
         case "tuition":
