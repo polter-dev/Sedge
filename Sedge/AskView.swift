@@ -114,6 +114,8 @@ struct AskView: View {
     /// True once the Debug demo state was set up, so coming back to the tab doesn't bring it back.
     @State private var demoLoaded = false
     @State private var showingChats = false
+    /// True while the question box has the keyboard, so a tap anywhere on its pill can give it the keyboard.
+    @FocusState private var questionFocused: Bool
     /// Where the chat is scrolled to, so a new turn or a reopened chat can jump to its end.
     @State private var position = ScrollPosition()
     /// Lets the thinking bubble's sprout travel to the answer's when the answer comes in.
@@ -310,7 +312,10 @@ struct AskView: View {
                       axis: .vertical)
                 .font(.subheadline)
                 .lineLimit(1...5)
+                .focused($questionFocused)
                 .padding(.vertical, 12)
+                // At least 44 pt tall and as wide as the pill allows, so the field is a full tap target.
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .onSubmit(send)
                 // At the limit, or without the model, the box stays in place but takes no typing.
                 .disabled(limited || needsModel)
@@ -334,6 +339,10 @@ struct AskView: View {
         .padding(.leading, 16)
         .padding(.trailing, 2)
         .background(Color.surface, in: RoundedRectangle(cornerRadius: 23))
+        // A text field only takes taps on its text line, so a tap anywhere else on the pill hands it
+        // the keyboard. The send button keeps its own taps; a disabled field takes no focus.
+        .contentShape(RoundedRectangle(cornerRadius: 23))
+        .onTapGesture { questionFocused = true }
         .overlay(RoundedRectangle(cornerRadius: 23).stroke(Color.line))
         // While there is text, a soft underlay springs up 8 points beyond the box on every side.
         // As a background it grows with the box when the question wraps to more lines.
