@@ -415,6 +415,8 @@ struct MerchantHistoryView: View {
     @State private var asOf: String?
     /// False until the chart first appears, so its bars grow from zero once.
     @State private var grown = false
+    /// The month whose bar was tapped, "YYYY-MM"; nil shows this month, as on opening.
+    @State private var selected: String?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -425,34 +427,50 @@ struct MerchantHistoryView: View {
     private var shown: [ListedTransaction] { purchases.isEmpty ? rows : purchases }
 
     var body: some View {
-        List {
-            // A store with no purchases has no visits to sum up.
-            if let asOf, let summary = StoreSummary(rows, asOf: asOf) {
-                Section { card(summary, asOf: asOf) }
+        // The reader lets a tapped bar scroll the list to that month's section.
+        ScrollViewReader { proxy in
+            let sections = TransactionGroups.monthWeeks(shown)
+            List {
+                // A store with no purchases has no visits to sum up.
+                if let asOf, let summary = StoreSummary(rows, asOf: asOf, month: selected) {
+                    Section {
+                        card(summary, asOf: asOf) { month in
+                            selected = month
+                            // A month with no visits has no section to scroll to.
+                            guard let index = sections.firstIndex(where: { $0.month == month }) else { return }
+                            // A list scrolls a section's first row to the top and hides its header
+                            // under the bar, so the row just above the header goes there instead: the
+                            // newer month's last visit, or the card.
+                            let above = index == 0 ? "card" : sections[index - 1].weeks.last?.rows.last?.id ?? "card"
+                            withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(above, anchor: .top) }
+                        }
+                        .id("card")
+                    }
                     .listRowBackground(Color.group)
-            }
-            ForEach(TransactionGroups.monthWeeks(shown), id: \.month) { month, weeks in
-                Section {
-                    ForEach(weeks) { week in
-                        weekHeader(week)
-                            .listRowBackground(Color.soft)
-                            .listRowSeparator(.hidden)
-                        ForEach(week.rows) { row in
-                            NavigationLink {
-                                TransactionDetailView(database: database, id: row.id)
-                            } label: {
-                                TransactionRow(row: row, title: row.date.displayDate(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                }
+                ForEach(sections, id: \.month) { month, weeks in
+                    Section {
+                        ForEach(weeks) { week in
+                            weekHeader(week)
+                                .listRowBackground(Color.soft)
+                                .listRowSeparator(.hidden)
+                            ForEach(week.rows) { row in
+                                NavigationLink {
+                                    TransactionDetailView(database: database, id: row.id)
+                                } label: {
+                                    TransactionRow(row: row, title: row.date.displayDate(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                                }
                             }
                         }
+                    } header: {
+                        monthHeader(month, weeks: weeks)
                     }
-                } header: {
-                    monthHeader(month, weeks: weeks)
+                    .listRowBackground(Color.group)
                 }
-                .listRowBackground(Color.group)
             }
+            .listSectionSpacing(.compact)
+            .themedBackground()
         }
-        .listSectionSpacing(.compact)
-        .themedBackground()
         .task { asOf = try? database.asOf() }
     }
 
@@ -502,13 +520,16 @@ struct MerchantHistoryView: View {
         SpendingView.changeText(cents, before: lastMonth) + (SpendingView.endsMonth(asOf) ? "" : " (so far)")
     }
 
-    /// This month's total with its change from last month, the six-month chart, and every visit's count and total.
-    private func card(_ summary: StoreSummary, asOf: String) -> some View {
+    /// The selected month's total with its change from the month before, the six-month chart, and
+    /// every visit's count and total. `pick` gets the month of a tapped bar.
+    private func card(_ summary: StoreSummary, asOf: String, pick: @escaping (String) -> Void) -> some View {
         let stacked = dynamicTypeSize.isAccessibilitySize
         let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+        // Only this month can be part-way through; an earlier month is always whole.
+        let isNow = summary.month == summary.bars[summary.bars.count - 1].month
         // "June", or "June so far" until the month's last day.
-        let month = monthName(summary.bars[summary.bars.count - 1].month) + (SpendingView.endsMonth(asOf) ? "" : " so far")
-        let change = summary.change
+        let month = monthName(summary.month) + (isNow && !SpendingView.endsMonth(asOf) ? " so far" : "")
+        let lastMonth = SpendingView.monthBefore(summary.month)
         let money = { (cents: Int) in (Double(cents) / 100).formatted(.currency(code: "USD")) }
         return VStack(alignment: .leading, spacing: 12) {
             layout {
@@ -522,12 +543,15 @@ struct MerchantHistoryView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
-                // Green when less went to the store than last month, red when more.
-                Text(Self.changeText(change, lastMonth: summary.bars[summary.bars.count - 2].month, asOf: asOf))
-                    .font(.row.weight(.medium))
-                    .foregroundStyle(change < 0 ? Color.moneyBack : change > 0 ? Color.moneySpent : Color.muted)
+                // Green when less went to the store than the month before, red when more; hidden
+                // when there's no earlier month to compare with.
+                if let change = summary.change {
+                    Text(isNow ? Self.changeText(change, lastMonth: lastMonth, asOf: asOf) : SpendingView.changeText(change, before: lastMonth))
+                        .font(.row.weight(.medium))
+                        .foregroundStyle(change < 0 ? Color.moneyBack : change > 0 ? Color.moneySpent : Color.muted)
+                }
             }
-            chart(summary)
+            chart(summary, pick: pick)
             Text("\(count(summary.allVisits)) since \(summary.first.displayDate(.dateTime.month(.abbreviated).day())) · \(money(summary.allCents)) in all")
                 .font(.note)
                 .foregroundStyle(Color.muted)
@@ -535,33 +559,44 @@ struct MerchantHistoryView: View {
         .padding(.vertical, 4)
     }
 
-    /// One bar per month, the latest in `chartNow`, each with its letter below and, but for the
-    /// latest (the card's big figure already says it), its total above.
-    private func chart(_ summary: StoreSummary) -> some View {
+    /// One bar per month, the selected one in `chartNow`, each with its letter below and, but for
+    /// the latest (the card's big figure says it on opening), its total above. A tap on a month's
+    /// column, letter included, picks that month.
+    private func chart(_ summary: StoreSummary, pick: @escaping (String) -> Void) -> some View {
         // The tallest bar is 64 pt; `max(…, 1)` keeps six empty months from dividing by zero.
         let top = CGFloat(max(summary.bars.map(\.cents).max() ?? 0, 1))
         return HStack(alignment: .bottom, spacing: 0) {
             ForEach(Array(summary.bars.enumerated()), id: \.element.month) { index, bar in
                 let now = index == summary.bars.count - 1
-                VStack(spacing: 4) {
-                    // At the largest text sizes the totals would overlap, so only the letters stay.
-                    if !dynamicTypeSize.isAccessibilitySize && !now {
-                        Text(amountText(cents: bar.cents)).font(.note).foregroundStyle(Color.muted)
+                Button { pick(bar.month) } label: {
+                    VStack(spacing: 4) {
+                        // At the largest text sizes the totals would overlap, so only the letters stay.
+                        if !dynamicTypeSize.isAccessibilitySize && !now {
+                            Text(amountText(cents: bar.cents)).font(.note).foregroundStyle(Color.muted)
+                        }
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(bar.month == summary.month ? Color.chartNow : Color.chartPast)
+                            .frame(width: 40, height: grown ? 64 * CGFloat(bar.cents) / top : 0)
+                            // Bars grow from zero one after another; Reduce Motion shows them at full height.
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.35).delay(0.04 * Double(index)), value: grown)
+                        Text("\(bar.month)-01".displayDate(.dateTime.month(.narrow)))
+                            .font(.note)
+                            .foregroundStyle(Color.muted)
                     }
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(now ? Color.chartNow : Color.chartPast)
-                        .frame(width: 40, height: grown ? 64 * CGFloat(bar.cents) / top : 0)
-                        // Bars grow from zero one after another; Reduce Motion shows them at full height.
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.35).delay(0.04 * Double(index)), value: grown)
-                    Text("\(bar.month)-01".displayDate(.dateTime.month(.narrow)))
-                        .font(.note)
-                        .foregroundStyle(Color.muted)
+                    // Every column is the chart's full height and at least 44 pt wide, so the space
+                    // above a short bar takes the tap too.
+                    .frame(minWidth: 44, maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .contentShape(Rectangle())
                 }
-                .frame(maxWidth: .infinity)
+                // Plain, so each column is its own button rather than the whole list row being one.
+                .buttonStyle(.plain)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(monthName(bar.month)), \(amountText(cents: bar.cents))")
+                .accessibilityAddTraits(bar.month == summary.month ? [.isButton, .isSelected] : .isButton)
             }
         }
+        // The columns share the tallest one's height, so each can fill it.
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("storeChart")
         .onAppear { grown = true }
@@ -587,11 +622,13 @@ struct StoreSummary: Equatable {
         let cents: Int
     }
 
-    /// This month's purchases in whole cents.
+    /// The selected month, "YYYY-MM": this month unless a bar was picked.
+    let month: String
+    /// The selected month's purchases in whole cents.
     let cents: Int
-    /// How many purchases are in this month.
+    /// How many purchases are in the selected month.
     let visits: Int
-    /// "$2.32–$3.99", this month's smallest to largest purchase, or "–" with none this month.
+    /// "$2.32–$3.99", the selected month's smallest to largest purchase, or "–" with none that month.
     let range: String
     /// Every purchase at the store, any month.
     let allVisits: Int
@@ -601,21 +638,28 @@ struct StoreSummary: Equatable {
     let first: String
     /// The six months up to and including this month, oldest first; a month with no purchases is 0.
     let bars: [Bar]
+    /// The month before the selected one, in whole cents; nil for the chart's oldest month when the
+    /// store has no purchases before it, since there is nothing to compare with.
+    let before: Int?
 
-    /// This month minus last month, in whole cents: below zero when less went to the store.
-    var change: Int { cents - bars[bars.count - 2].cents }
+    /// The selected month minus the month before, in whole cents: below zero when less went to the store.
+    var change: Int? { before.map { cents - $0 } }
 }
 
 extension StoreSummary {
-    /// `asOf` is the data's "today"; "this month" is its month. Nil when the store has no purchases.
-    init?(_ rows: [ListedTransaction], asOf: String) {
+    /// `asOf` is the data's "today"; "this month" is its month. `selected` ("YYYY-MM") is the bar
+    /// picked on the chart, this month when nil. Nil when the store has no purchases.
+    init?(_ rows: [ListedTransaction], asOf: String, month selected: String? = nil) {
         let purchases = MerchantHistoryView.purchases(rows)
         guard let first = purchases.map(\.date).min(),
               let year = Int(asOf.prefix(4)), let monthNumber = Int(asOf.dropFirst(5).prefix(2)) else { return nil }
-        let month = purchases.filter { $0.month == asOf.prefix(7) }
-        cents = month.reduce(0) { $0 + $1.cents }
-        visits = month.count
-        let sizes = month.map { abs($0.cents) }
+        let sum = { (month: String) in purchases.filter { $0.month == month }.reduce(0) { $0 + $1.cents } }
+        let key = selected ?? String(asOf.prefix(7))
+        month = key
+        let picked = purchases.filter { $0.month == key }
+        cents = picked.reduce(0) { $0 + $1.cents }
+        visits = picked.count
+        let sizes = picked.map { abs($0.cents) }
         let money = { (cents: Int) in (Double(cents) / 100).formatted(.currency(code: "USD")) }
         if let low = sizes.min(), let high = sizes.max() {
             range = low == high ? money(low) : "\(money(low))–\(money(high))"
@@ -629,8 +673,10 @@ extension StoreSummary {
         let now = year * 12 + monthNumber - 1
         bars = (now - 5...now).map { index in
             let key = String(format: "%04d-%02d", index / 12, index % 12 + 1)
-            return Bar(month: key, cents: purchases.filter { $0.month == key }.reduce(0) { $0 + $1.cents })
+            return Bar(month: key, cents: sum(key))
         }
+        let previous = SpendingView.monthBefore(key)
+        before = key != bars[0].month || first.prefix(7) <= previous ? sum(previous) : nil
     }
 }
 
