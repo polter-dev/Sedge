@@ -175,7 +175,8 @@ struct CashFlowView: View {
                         .frame(height: 204)
                         // Axis labels past this size overlap; VoiceOver reads the summary instead.
                         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                    legend(result)
+                    // One line needs no key; the legend tells the scenario line from the plan behind it.
+                    if result.with != nil { legend(result) }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -189,7 +190,7 @@ struct CashFlowView: View {
         .scrollDismissesKeyboard(.immediately)
         .toolbar {
             // One color: the app's two-color foregroundStyle would paint its second layer `muted`.
-            Button("What’s included?", systemImage: "info.circle") { showingIncluded = true }
+            Button("What’s included", systemImage: "info.circle") { showingIncluded = true }
                 .symbolRenderingMode(.monochrome)
         }
         .sheet(isPresented: $showingIncluded) { included }
@@ -364,15 +365,11 @@ struct CashFlowView: View {
         return "\(result.accountName) balance forecast, \(span)\(result.with == nil ? "" : ", with changes").\(lowestText)"
     }
 
-    /// The design's legend: a solid swatch for the line shown, a dashed one for the plan behind it.
+    /// The design's legend: a solid swatch for the line with changes, a dashed one for the plan behind it.
     private func legend(_ result: CashFlow) -> some View {
         HStack(spacing: 12) {
-            if result.with != nil {
-                swatch("With changes", dashed: false)
-                swatch("Current plan", dashed: true)
-            } else {
-                swatch("Current plan", dashed: false)
-            }
+            swatch("With changes", dashed: false)
+            swatch("Current plan", dashed: true)
         }
         .font(.note)
         .foregroundStyle(Color.muted)
@@ -559,7 +556,7 @@ struct CashFlowView: View {
                 } header: {
                     Text("The projection counts")
                 } footer: {
-                    Text("It starts from your balances on \(asOf.displayDate()). The shading redoes everyday spending at your busiest and quietest four weeks of the last twelve. Scenarios are a preview only; nothing changes in your accounts.")
+                    Text("It starts from your balances on \(asOf.displayDate()). The shading redoes everyday spending at your busiest and quietest four weeks of the last twelve.")
                         .foregroundStyle(Color.muted)
                 }
                 .listRowBackground(Color.group)

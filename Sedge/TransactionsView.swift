@@ -23,6 +23,8 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
     /// The stored category ("phone_internet"), the person's answer first, as the Spending screen
     /// counts it. Only `all` reads it; a query without the column leaves it nil.
     var category: String? = nil
+    /// True for a charge the bank hasn't posted yet. Only `all` reads it; a query without the column leaves it nil.
+    var pending: Bool? = nil
 
     var id: String { transaction_id }
     /// The amount in whole cents, Plaid's sign, so sums never pick up float noise.
@@ -35,7 +37,7 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
         try database.dbQueue.read { db in
             try ListedTransaction.fetchAll(db, sql: """
                 SELECT t.transaction_id, t.date, COALESCE(m.name, t.name) AS store, t.name, t.amount, t.kind,
-                       \(SpendingTotal.categoryOf) AS category
+                       \(SpendingTotal.categoryOf) AS category, t.pending
                 FROM transactions t LEFT JOIN entities m ON m.id = t.merchant_id
                 \(SpendingTotal.categoryJoins)
                 WHERE ? IS NULL OR t.merchant_id = ?

@@ -114,6 +114,8 @@ struct SpendingView: View {
         let lastDay: String
         /// The everyday checking account's balance in cents at the end of `lastDay`; nil without one.
         let checking: Int?
+        /// That account's name as the person sees it (their nickname, else the bank's), as the Cash flow screen shows it.
+        let accountName: String?
     }
 
     /// The name of the mosaic's block that adds up the smaller categories.
@@ -207,6 +209,10 @@ struct SpendingView: View {
     /// The month before `month`, "YYYY-MM".
     static func monthBefore(_ month: String) -> String { months(endingAt: month + "-01")[2] }
 
+    /// Whether the data reaches back to `month`: its first month with spending is `month` or
+    /// earlier. A month before that has nothing to pick or to compare with.
+    static func reaches(_ totals: [SpendingTotal], back month: String) -> Bool { totals.contains { $0.month <= month } }
+
     /// Months ("YYYY-MM", oldest first) written for people, e.g. "Mar – Jun 2026" or "Nov 2025 – Feb 2026".
     static func span(_ months: [String]) -> String {
         let day = Date.ISO8601FormatStyle().year().month().day()
@@ -264,8 +270,10 @@ struct SpendingView: View {
 
     /// The category whose spending changed most from the month before `month`, among
     /// the ones spent on `month`'s page, so tapping it always opens a category of that page. When
-    /// the month before is on the page before, a category spent only then is left out.
+    /// the month before is on the page before, a category spent only then is left out. Nil when the
+    /// month before is before the data, since everything would read as new.
     static func categoryChange(_ totals: [SpendingTotal], asOf: String, month: String) -> (name: String, cents: Int)? {
+        guard reaches(totals, back: monthBefore(month)) else { return nil }
         let listed = Set(categoryOrder(totals, asOf: pageEnd(holding: month, asOf: asOf), month: month))
         return biggestChange(now: cents(totals, month: month), before: cents(totals, month: monthBefore(month)).filter { listed.contains($0.key) })
     }
@@ -282,16 +290,20 @@ struct SpendingView: View {
     }
 
     /// One month's cash flow over its `window` (the 1st through today's day of the month): money in
-    /// and out by `InOut`, as the Transactions screen counts them, and checking's balance at the end
-    /// of the window's last day, wound back from today's by `Simulator.closingBalance`.
+    /// and out by `InOut`, as the Transactions screen counts them but posted only, as the total above
+    /// the card counts, and checking's balance at the end of the window's last day, wound back from
+    /// today's by `Simulator.closingBalance`.
     static func monthFlow(in database: SedgeDatabase, month: String, asOf: String) throws -> MonthFlow {
         let window = window(month, asOf: asOf)
-        let rows = try ListedTransaction.all(in: database).filter { $0.date >= window.from && $0.date <= window.through }
+        let rows = try ListedTransaction.all(in: database).filter { $0.pending != true && $0.date >= window.from && $0.date <= window.through }
         return try database.dbQueue.read { db in
             // "2026-02-30" is no day, so a short month's window ends on the day before the next month's 1st.
             let lastDay = try String.fetchOne(db, sql: "SELECT MIN(?, date(?, '+1 month', '-1 day'))",
                                               arguments: [window.through, window.from])!
-            return MonthFlow(money: InOut(rows), lastDay: lastDay, checking: try Simulator.closingBalance(db, on: lastDay))
+            let name = try Simulator.checkingAccount(db).flatMap {
+                try String.fetchOne(db, sql: "SELECT COALESCE(nickname, name) FROM accounts WHERE account_id = ?", arguments: [$0])
+            }
+            return MonthFlow(money: InOut(rows), lastDay: lastDay, checking: try Simulator.closingBalance(db, on: lastDay), accountName: name)
         }
     }
 
@@ -379,7 +391,7 @@ struct SpendingView: View {
         .background(Color.background)
         .overlay {
             // Any spending in the history keeps the screen, since a page with none can still be swiped past.
-            if totals.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar", description: Text("This data has no purchases to chart.")) }
+            if totals.isEmpty { ContentUnavailableView("No spending yet", systemImage: "chart.bar") }
         }
         // Runs each time the screen shows, so a transaction moved to another category counts
         // here, and again whenever another month is picked.
@@ -532,7 +544,8 @@ struct SpendingView: View {
             .onChange(of: tapped) {
                 guard let tapped else { return }
                 // The tapped month is on the page on screen, so the page stays and only the pick moves.
-                page = tapped
+                // A month before the data has no bar, so it can't be picked, as on a category page's strip.
+                if Self.reaches(totals, back: tapped) { page = tapped }
                 self.tapped = nil
             }
             .frame(height: 175)
@@ -575,16 +588,18 @@ struct SpendingView: View {
     /// days as the month's bar. Today's month adds the projected checking balance for the next 30
     /// days and its low point (from `CashFlow`, as the Cash flow screen first shows them) and opens
     /// that screen, the only way to it, since only today can be projected from. An earlier month
-    /// shows checking's balance at the end of its last day instead and opens nothing.
+    /// shows checking's balance at the end of its last day instead and opens nothing, and so does
+    /// today's without a bank account to project.
     @ViewBuilder
     private var cashFlowCard: some View {
         let isNow = shownMonth == thisMonth
+        let opens = isNow && cashFlow != nil
         let name = (shownMonth + "-01").displayDate(.dateTime.month(.wide))
         let content = VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Text("Cash flow · " + (isNow ? "\(name) so far" : name)).font(.cardTitle).foregroundStyle(Color.ink)
                 Spacer(minLength: 8)
-                if isNow {
+                if opens {
                     Image(systemName: "chevron.right")
                         .font(.row)
                         .foregroundStyle(Color.muted)
@@ -597,9 +612,9 @@ struct SpendingView: View {
                     Text(line).font(.row).foregroundStyle(Color.muted)
                 }
                 if let cashFlow { balanceLine(cashFlow) }
-            } else if let monthFlow, let checking = monthFlow.checking {
+            } else if let monthFlow, let checking = monthFlow.checking, let account = monthFlow.accountName {
                 HStack {
-                    Text("Checking · " + monthFlow.lastDay.displayDate(.dateTime.month(.abbreviated).day()))
+                    Text(account + " · " + monthFlow.lastDay.displayDate(.dateTime.month(.abbreviated).day()))
                         .foregroundStyle(Color.muted)
                     Spacer(minLength: 8)
                     Text((Double(checking) / 100).formatted(.currency(code: "USD")))
@@ -615,7 +630,7 @@ struct SpendingView: View {
         .padding(.vertical, 14)
         .background(Color.group, in: .rect(cornerRadius: 14))
         .contentShape(.rect)
-        if isNow {
+        if opens {
             NavigationLink {
                 CashFlowView(database: database).navigationTitle("Cash flow")
             } label: { content }

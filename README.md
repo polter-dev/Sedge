@@ -39,12 +39,14 @@ The three tabs:
     page back four months at a time, or tap a month's bar to pick it, compared up to the same day
     of each month.
   - The picked month as a mosaic of categories, and under it the category that changed most from
-    the month before. A category's block (or that row) opens its page: its months, stores and
-    transactions, and a question to take to Ask. **Other categories** lists every category of the month.
+    the month before (none for the data's first month). A category's block (or that row) opens its
+    page: its months, stores and transactions, and a question to take to Ask. **Other categories**
+    lists every category of the month.
   - A **Cash flow** card for the picked month: money in, money out and what's left over, over the
-    same days as its bar. An earlier month adds checking's balance at the end of those days. Today's
-    month adds the projected checking balance for the next 30 days and opens the Cash flow screen
-    (30, 60 or 90 days, with scenarios to switch on and off).
+    same days as its bar, posted transactions only. An earlier month adds checking's balance at the
+    end of those days. With a bank account, today's month adds the projected checking balance for
+    the next 30 days and opens the Cash flow screen (30, 60 or 90 days, with scenarios to switch on
+    and off).
   - When there are any, the recent purchases **Worth a look**.
 - **Accounts**:
   - **Transactions**: one month at a time (arrows step between months), split into income, spending
