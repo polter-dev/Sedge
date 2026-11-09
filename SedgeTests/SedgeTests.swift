@@ -123,8 +123,22 @@ struct SedgeTests {
         #expect(ProfileView.term("not a date") == nil)
     }
 
+    /// Correct this's Schedule picker has words for every key it can save, and every schedule the
+    /// profile writes is one of those keys.
+    @Test func scheduleLabelsCoverEveryKey() throws {
+        #expect(Set(CorrectFactView.labels.keys) == Set(CorrectFactView.schedules))
+        for persona in ["maya", "daniel"] {
+            let written = try Profile.facts(in: inMemory(persona)).compactMap(\.value.schedule)
+            #expect(Set(written).isSubset(of: CorrectFactView.schedules), "\(persona): \(written)")
+        }
+        #expect(CorrectFactView.schedules.map { CorrectFactView.labels[$0]! }
+                == ["A week", "Every two weeks", "Twice a month", "A month", "Irregular"])
+        // The tiles' own words are unchanged: irregular income still reads "A typical deposit".
+        #expect(ProfileView.per["irregular"] == nil)
+    }
+
     /// When Plaid connects but the download fails, the bank screen gets its plain line. The
-    /// failure is made up here, so the test never needs the quickstart server.
+    /// failure is made up here, so the test never needs the Plaid server.
     @Test func syncFailureAfterConnectingShowsMessage() async throws {
         struct DownloadFailed: Error {}
         let database = try SedgeDatabase()

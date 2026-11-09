@@ -12,12 +12,16 @@ import SwiftUI
 struct WelcomeView: View {
     /// Maya's database, which draws the preview chart; nil while it is still opening.
     let maya: SedgeDatabase?
+    /// True when Maya's file couldn't be opened, so `maya` will stay nil and the card is left out.
+    var mayaFailed = false
     /// Saves the chosen data, which also ends the first launch.
     let choose: (String) -> Void
     @State private var preview: CashFlow?
+    /// True when the projection couldn't be worked out, which also leaves the card out.
+    @State private var previewFailed = false
     /// True while the sample-people picker is shown.
     @State private var exploring = false
-    /// The bank file, opened when Connect with Plaid is tapped, and whether its screen is shown.
+    /// The bank file, opened when Connect bank is tapped, and whether its screen is shown.
     @State private var bank: SedgeDatabase?
     @State private var connecting = false
 
@@ -37,12 +41,15 @@ struct WelcomeView: View {
                     Text("Ask about your money. We’ll work out the details together.")
                         .font(.answer)
                         .padding(.top, 18)
-                    chartCard
-                        .padding(.top, 15)
+                    // Without a chart the card would only spin, so it is left out.
+                    if !mayaFailed && !previewFailed {
+                        chartCard
+                            .padding(.top, 15)
+                    }
                     Button {
                         connectBank()
                     } label: {
-                        Text("Connect with Plaid")
+                        Text("Connect bank")
                             .font(.subheadline.weight(.semibold))
                             // The button's fill is the accent, so its text takes the color made to sit on it.
                             .foregroundStyle(Color.contrast)
@@ -61,10 +68,6 @@ struct WelcomeView: View {
                             .contentShape(.rect)
                     }
                     .padding(.top, 5)
-                    Text("Connect the accounts you choose. Review what’s shared before continuing.")
-                        .font(.note)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 18)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -94,6 +97,7 @@ struct WelcomeView: View {
                 preview = try CashFlow.load(maya)
             } catch {
                 print("Could not project the preview:", error)
+                previewFailed = true
             }
         }
     }
@@ -120,14 +124,11 @@ struct WelcomeView: View {
             } else {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 130)
             }
-            Text("A preview of what you can explore")
-                .font(.note)
-                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 12)
         .padding(.top, 13)
         .padding(.bottom, 8)
-        .background(Color.surface, in: .rect(cornerRadius: 15))
+        .background(Color.surface, in: .rect(cornerRadius: 12))
     }
 
     private func chart(_ projection: CashFlow) -> some View {
