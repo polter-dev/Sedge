@@ -19,22 +19,18 @@ struct WorthALookView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Purchases from the last 30 days you haven’t said are familiar, that are well above your usual at that store or a first visit of $150 or more.")
-                        .font(.row)
-                        .foregroundStyle(Color.muted)
                     VStack(spacing: 0) {
                         ForEach(flags ?? [], id: \.transaction_id) { flag in
                             if flag.transaction_id != flags?.first?.transaction_id { Rectangle().fill(Color.line).frame(height: 1) }
                             row(flag)
                         }
                     }
-                    .background(Color.group, in: .rect(cornerRadius: 10))
-                    .padding(.top, 14)
+                    .background(Color.group, in: .rect(cornerRadius: 14))
                     // Reached only by answering the last one here; Trends hides its row at 0.
                     if flags?.isEmpty == true {
                         Text("Nothing left to look at.").font(.answer).foregroundStyle(Color.ink).padding(.top, 14)
                     }
-                    Text("Open a purchase and answer “Does this look familiar?” to clear it from this list. This is a spending observation, not a judgment.")
+                    Text("A spending observation, not a judgment.")
                         .font(.row)
                         .foregroundStyle(Color.muted)
                         .padding(.top, 10)

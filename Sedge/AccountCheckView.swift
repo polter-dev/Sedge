@@ -126,10 +126,6 @@ struct AccountCheckView: View {
                     .padding(.top, 14)
                 AccountAnswers(owner: account.owner, answer: answer)
                     .padding(.top, 18)
-                Text("This helps identify transfers and avoid counting your own money twice.")
-                    .font(.note)
-                    .foregroundStyle(Color.muted)
-                    .padding(.top, 6)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
@@ -209,7 +205,7 @@ struct AccountCheckView: View {
             .padding(.vertical, stacked ? 10 : 0)
             .frame(minHeight: 44)
         }
-        .background(Color.group, in: .rect(cornerRadius: 12))
+        .background(Color.group, in: .rect(cornerRadius: 14))
     }
 
     /// Saves the name, and the owner unless the answer is Decide later (nil), then closes the screen.

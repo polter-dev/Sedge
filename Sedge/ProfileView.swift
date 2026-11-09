@@ -71,7 +71,7 @@ struct ProfileView: View {
             if facts.isEmpty { ContentUnavailableView("Nothing learned yet", systemImage: "person.text.rectangle", description: Text("No paychecks, rent, tuition, loans or accounts were found in this data.")) }
         }
         .sheet(item: $editing) { fact in
-            CorrectFactView(fact: fact) { value in
+            CorrectFactView(value: fact.value) { value in
                 do {
                     try Profile.correct(id: fact.id, kind: fact.kind, value: value, in: database)
                 } catch {
@@ -414,8 +414,17 @@ private struct TileStyle: ButtonStyle {
 }
 
 /// A form for the person's own version of one fact. Only the fields the fact already has are shown.
+/// Saved answers opens it too, for a profile correction and for a saved reply (a value with only
+/// a name, labelled "Answer"), so both kinds edit in the same sheet.
 struct CorrectFactView: View {
-    let fact: Profile.Fact
+    /// The value before editing; its filled fields decide which fields show.
+    let original: Profile.Value
+    let title: String
+    let nameLabel: String
+    /// Shown over the fields, e.g. the question a saved answer answers.
+    let header: String?
+    /// Adds a Remove button when set (Saved answers); About you leaves it nil.
+    let remove: (() -> Void)?
     let save: (Profile.Value) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var value: Profile.Value
@@ -430,23 +439,28 @@ struct CorrectFactView: View {
     static let labels = ProfileView.per.merging(["irregular": "irregular"]) { tile, _ in tile }
         .mapValues { $0.prefix(1).uppercased() + $0.dropFirst() }
 
-    init(fact: Profile.Fact, save: @escaping (Profile.Value) -> Void) {
-        self.fact = fact
+    init(value: Profile.Value, title: String = "Correct this", nameLabel: String = "Name", header: String? = nil,
+         remove: (() -> Void)? = nil, save: @escaping (Profile.Value) -> Void) {
+        original = value
+        self.title = title
+        self.nameLabel = nameLabel
+        self.header = header
+        self.remove = remove
         self.save = save
-        _value = State(initialValue: fact.value)
+        _value = State(initialValue: value)
         // Written and read in the phone's own number format, so a comma decimal mark works too.
-        _amount = State(initialValue: fact.value.amount.map { $0.formatted(.number.grouping(.never)) } ?? "")
-        _day = State(initialValue: fact.value.day.map { String($0) } ?? "")
+        _amount = State(initialValue: value.amount.map { $0.formatted(.number.grouping(.never)) } ?? "")
+        _day = State(initialValue: value.day.map { String($0) } ?? "")
     }
 
     /// The edited value, or nil while a number field doesn't hold a valid number.
     private var corrected: Profile.Value? {
         var result = value
-        if fact.value.amount != nil {
+        if original.amount != nil {
             guard let number = try? Double(amount, format: .number), number >= 0 else { return nil }
             result.amount = number
         }
-        if fact.value.day != nil {
+        if original.day != nil {
             guard let number = Int(day), (1...31).contains(number) else { return nil }
             result.day = number
         }
@@ -456,36 +470,49 @@ struct CorrectFactView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // One section, so the theme's row color can be set on every row at once.
+                // The fields share one section, so the theme's row color is set on them all at once.
                 Section {
-                    LabeledContent("Name") {
-                        TextField("Name", text: $value.name).multilineTextAlignment(.trailing)
+                    LabeledContent(nameLabel) {
+                        TextField(nameLabel, text: $value.name).multilineTextAlignment(.trailing)
                     }
-                    if fact.value.type != nil {
+                    if original.type != nil {
                         LabeledContent("Type") {
                             TextField("Type", text: Binding { value.type ?? "" } set: { value.type = $0 }).multilineTextAlignment(.trailing)
                         }
                     }
-                    if fact.value.amount != nil {
+                    if original.amount != nil {
                         LabeledContent("Amount ($)") {
                             TextField("Amount", text: $amount).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                         }
                     }
-                    if fact.value.schedule != nil {
+                    if original.schedule != nil {
                         Picker("Schedule", selection: Binding { value.schedule ?? "" } set: { value.schedule = $0 }) {
                             ForEach(Self.schedules, id: \.self) { Text(Self.labels[$0] ?? $0) }
                         }
                     }
-                    if fact.value.day != nil {
+                    if original.day != nil {
                         LabeledContent("Day of the month") {
                             TextField("Day", text: $day).keyboardType(.numberPad).multilineTextAlignment(.trailing)
                         }
                     }
+                } header: {
+                    if let header { Text(header) }
                 }
                 .listRowBackground(Color.group)
+                if let remove {
+                    Section {
+                        Button("Remove", role: .destructive) {
+                            remove()
+                            dismiss()
+                        }
+                        // The app's ink tint would otherwise hide that this one deletes.
+                        .foregroundStyle(.red)
+                    }
+                    .listRowBackground(Color.group)
+                }
             }
             .themedBackground()
-            .navigationTitle("Correct this")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -511,5 +538,5 @@ struct CorrectFactView: View {
 
 #Preview("Correct a fact") {
     // Maya's first fact (her income), so every field it has shows in the form.
-    CorrectFactView(fact: try! Profile.facts(in: .open("maya"))[0]) { print("Saved", $0) }
+    CorrectFactView(value: try! Profile.facts(in: .open("maya"))[0].value) { print("Saved", $0) }
 }

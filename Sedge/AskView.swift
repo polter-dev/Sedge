@@ -274,6 +274,24 @@ struct AskView: View {
                 session.report(.thinking)
                 isDemo = true
             }
+            if defaults.bool(forKey: "demoCheck") {
+                // A model question with five long replies, held on screen for screenshots and UI tests.
+                session.turns.append(ChatTurn(question: "Which of these count as eating out?", answer: nil))
+                session.report(.thinking)
+                isDemo = true
+                Task {
+                    _ = await session.ask(QuickCheck(
+                        question: "Which of these should count as eating out?",
+                        details: ["Coffee shops and delivery are the usual borderline cases."],
+                        options: ["Restaurants, cafés and coffee shops, including delivery orders",
+                                  "Restaurants and cafés only, not coffee shops",
+                                  "Only sit-down restaurants",
+                                  "Everything except groceries",
+                                  "Delivery and takeout only"],
+                        factKey: "eating_out_scope"))
+                    session.report(.idle)
+                }
+            }
             if defaults.bool(forKey: "demoTokenLimit") {
                 session.report(.tokenLimitReached)
                 isDemo = true
@@ -711,9 +729,9 @@ private struct TurnView: View {
             result = await AskUser.run(input ?? Data(), database: database) { _ in option }
         }
         if let saved = result.clarification?.answer {
-            return "Saved: \(saved). Change it in Accounts › Saved answers."
+            return "Saved: \(saved)."
         } else if result.clarification != nil {
-            return "Not saved. It may be asked again."
+            return "Not saved."
         } else {
             return "Couldn't save the answer."
         }
@@ -728,15 +746,15 @@ struct QuickCheckCard: View {
     let choose: (String?) async -> String
     /// What the tap got back, shown in place of the buttons.
     @State private var reply: String?
+    /// False until the card is on screen, so the rows can rise in one after another.
+    @State private var shown = false
     /// Paper and Carbon Soft use different fills for the other buttons.
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("A quick check").font(.footnote.bold())
-                Text(check.question).font(.footnote)
-            }
+            Text(check.question).font(.footnote)
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(check.details, id: \.self) { Text($0) }
             }
@@ -745,11 +763,9 @@ struct QuickCheckCard: View {
             if let reply {
                 Text(reply).font(.row).foregroundStyle(Color.muted)
             } else {
-                // Side by side as in the design; stacked when large text doesn't fit.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 6) { buttons }
-                    VStack(spacing: 6) { buttons }
-                }
+                // One row per reply, top to bottom: the model's options are too long for boxes side by side.
+                VStack(spacing: 6) { buttons }
+                    .onAppear { shown = true }
             }
         }
         .padding(13)
@@ -757,9 +773,11 @@ struct QuickCheckCard: View {
         .background(Color.group, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    /// The replies (the first filled in, as the likely one), then "Later".
+    /// The replies (the first filled in, as the likely one), then a quieter "Later" that reads as skip.
+    /// Rows rise in 0.04 s apart like About you's tiles; with Reduce Motion they only fade.
     @ViewBuilder private var buttons: some View {
         let choices: [String?] = check.options + [nil]
+        let reduceMotion = AskView.reducesMotion(system: systemReduceMotion)
         ForEach(Array(choices.enumerated()), id: \.offset) { index, option in
             Button {
                 // Hides the buttons at once, so a second quick tap can't send a different reply.
@@ -768,14 +786,19 @@ struct QuickCheckCard: View {
             } label: {
                 Text(option ?? "Later")
                     .font(.row)
-                    .padding(.horizontal, 8)
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(index == 0 ? Color.onNodeCategory : Color.accent)
-            .background(index == 0 ? Color.nodeCategory : (colorScheme == .dark ? Color.soft : Color.surface),
+            .foregroundStyle(index == 0 ? Color.onNodeCategory : option == nil ? Color.muted : Color.accent)
+            .background(index == 0 ? Color.nodeCategory : option == nil ? Color.clear
+                        : colorScheme == .dark ? Color.soft : Color.surface,
                         in: RoundedRectangle(cornerRadius: 10))
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown || reduceMotion ? 0 : 8)
+            .animation(reduceMotion ? .easeInOut(duration: 0.2)
+                       : .spring(response: 0.35, dampingFraction: 0.85).delay(Double(index) * 0.04), value: shown)
         }
     }
 }

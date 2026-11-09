@@ -72,6 +72,13 @@ struct WelcomeView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
+            // Pinned under the scrolling content, so it sits at the screen's foot on every phone.
+            .safeAreaInset(edge: .bottom) {
+                Text("Not financial advice.")
+                    .font(.note)
+                    .foregroundStyle(Color.muted)
+                    .padding(.bottom, 8)
+            }
             .background(Color.background)
             .navigationTitle("Welcome")
             .navigationBarTitleDisplayMode(.inline)
@@ -87,7 +94,7 @@ struct WelcomeView: View {
             }
         }
         .sheet(isPresented: $exploring) {
-            DataPickerView(cancel: { exploring = false }) { choose($0) }
+            DataPickerView(cancel: { exploring = false }, showBank: false) { choose($0) }
         }
         // Runs once Maya's database is open.
         .task(id: maya == nil) {
@@ -128,7 +135,7 @@ struct WelcomeView: View {
         .padding(.horizontal, 12)
         .padding(.top, 13)
         .padding(.bottom, 8)
-        .background(Color.surface, in: .rect(cornerRadius: 12))
+        .background(Color.surface, in: .rect(cornerRadius: 14))
     }
 
     private func chart(_ projection: CashFlow) -> some View {
