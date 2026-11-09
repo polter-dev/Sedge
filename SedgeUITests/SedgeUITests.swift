@@ -498,29 +498,137 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The correction wasn't removed")
     }
 
-    /// Reset asks first, and both Cancel and Delete close the question. What Delete removes is
-    /// checked by AskUserTests in SedgeCore.
+    /// Saves one of each kind of saved answer for Maya, the sample chat's quick check ("Yes, mine")
+    /// and a profile correction (her income saved unchanged), then opens Saved answers.
     @MainActor
-    func testResetAsksBeforeDeleting() throws {
+    private func openSavedAnswersWithBothKinds(_ app: XCUIApplication) {
+        app.launchArguments = ["-persona", "maya", "-sampleChat", "YES"]
+        app.launch()
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["A quick check"].waitForExistence(timeout: 10))
+        app.scrollViews.firstMatch.swipeUp()
+        app.buttons["Yes, mine"].tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Saved: Yes, mine'")).firstMatch.waitForExistence(timeout: 5))
+
+        app.tabBars.buttons["Accounts"].tap()
+        app.buttons["About you"].tap()
+        let fact = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch
+        XCTAssertTrue(fact.waitForExistence(timeout: 10))
+        fact.tap()
+        app.buttons["Save"].tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["Saved answers"].tap()
+    }
+
+    /// Delete all in Saved answers asks first. Cancel keeps every saved answer; Delete removes both
+    /// kinds and leaves the list empty, so Maya's file ends as it started.
+    @MainActor
+    func testSavedAnswersDeleteAllAsksThenEmptiesTheList() throws {
+        let app = XCUIApplication()
+        openSavedAnswersWithBothKinds(app)
+        let reply = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        let correction = app.staticTexts["Questions about income"]
+        XCTAssertTrue(reply.waitForExistence(timeout: 5), "The quick check isn't in Saved answers")
+        XCTAssertTrue(correction.exists, "The correction isn't in Saved answers")
+        XCTAssertFalse(app.buttons["Reset saved questions"].exists)
+
+        let deleteAll = app.navigationBars.buttons["Delete all"]
+        let question = app.alerts["Delete all saved answers?"]
+        deleteAll.tap()
+        XCTAssertTrue(question.waitForExistence(timeout: 5), "Delete all didn't ask first")
+        XCTAssertTrue(question.staticTexts["This can't be undone."].exists)
+        attachScreenshot(app, "saved-answers-delete-all")
+        question.buttons["Cancel"].tap()
+        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Cancel didn't close the question")
+        XCTAssertTrue(reply.exists && correction.exists, "Cancel removed a saved answer")
+
+        deleteAll.tap()
+        XCTAssertTrue(question.waitForExistence(timeout: 5))
+        question.buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["No saved answers"].waitForExistence(timeout: 5), "The list isn't empty")
+        XCTAssertFalse(reply.exists)
+        XCTAssertFalse(correction.exists)
+        XCTAssertFalse(deleteAll.isEnabled)
+    }
+
+    /// A saved reply and a profile correction both open the same "Change answer" sheet, with Save
+    /// and Remove, and both save. Deletes everything at the end, so Maya's file ends as it started.
+    @MainActor
+    func testSavedAnswersBothKindsEditInOneSheet() throws {
+        let app = XCUIApplication()
+        openSavedAnswersWithBothKinds(app)
+        let sheet = app.navigationBars["Change answer"]
+
+        let reply = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Was this'")).firstMatch
+        XCTAssertTrue(reply.waitForExistence(timeout: 5))
+        attachScreenshot(app, "saved-answers")
+        reply.tap()
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "A saved reply didn't open the sheet")
+        XCTAssertTrue(app.buttons["Remove"].exists)
+        let field = app.textFields["Answer"]
+        XCTAssertEqual(field.value as? String, "Yes, mine")
+        attachScreenshot(app, "saved-answers-edit-reply")
+        // The text sits at the field's trailing edge, so a tap there puts the cursor after it.
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 9) + "Mine, edited")
+        sheet.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Mine, edited"].waitForExistence(timeout: 5), "The reply wasn't saved")
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+
+        let correction = app.staticTexts["Questions about income"]
+        correction.tap()
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "A correction didn't open the same sheet")
+        XCTAssertTrue(app.buttons["Remove"].exists)
+        XCTAssertTrue(app.textFields["Name"].exists)
+        attachScreenshot(app, "saved-answers-edit-correction")
+        sheet.buttons["Save"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Save didn't close the sheet")
+        XCTAssertTrue(correction.exists, "The correction is gone after saving it")
+
+        app.navigationBars.buttons["Delete all"].tap()
+        app.alerts["Delete all saved answers?"].buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["No saved answers"].waitForExistence(timeout: 5))
+    }
+
+    /// The data's name is the subtitle on the Accounts tab itself, but not on the screens pushed
+    /// from it: Transactions, About you, the Accounts list and a store's history.
+    @MainActor
+    func testDataNameSubtitleOnlyOnTabRoots() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya"]
         app.launch()
+        let name = app.navigationBars.staticTexts["Maya"]
 
         app.tabBars.buttons["Accounts"].tap()
-        let reset = app.buttons["Reset saved questions"]
+        XCTAssertTrue(name.waitForExistence(timeout: 10), "The Accounts tab lost its subtitle")
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(name.waitForExistence(timeout: 10), "The Trends tab lost its subtitle")
+        app.tabBars.buttons["Accounts"].tap()
 
-        reset.tap()
-        let question = app.alerts["Delete all saved answers?"]
-        XCTAssertTrue(question.waitForExistence(timeout: 5), "Reset didn't ask first")
-        XCTAssertTrue(question.staticTexts["This can't be undone."].exists)
-        attachScreenshot(app, "reset-confirm")
-        question.buttons["Cancel"].tap()
-        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Cancel didn't close the question")
+        app.buttons["About you"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Income,'")).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5), "About you shows the data name")
+        app.navigationBars.buttons.firstMatch.tap()
 
-        reset.tap()
-        XCTAssertTrue(question.waitForExistence(timeout: 5))
-        question.buttons["Delete"].tap()
-        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Delete didn't close the question")
+        app.collectionViews.buttons["Accounts"].tap()
+        XCTAssertTrue(app.navigationBars["Accounts"].buttons.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5), "The Accounts list shows the data name")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        openTransaction(app, "Bean Street Coffee, $2.68")
+        let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 10))
+        for _ in 0..<5 where !history.isHittable { app.swipeUp() }
+        history.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["storeChart"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars.staticTexts["Merchant history"].exists)
+        XCTAssertFalse(name.exists, "Store history shows the data name")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.navigationBars.buttons.firstMatch.tap()
+
+        XCTAssertTrue(app.buttons["Month"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars.staticTexts["Transactions · Maya"].exists)
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5), "Transactions shows the data name")
     }
 
     /// A fresh install shows Welcome, Explore sample data opens the picker, and after picking the
@@ -539,9 +647,13 @@ final class SedgeUITests: XCTestCase {
         let welcome = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'A clearer view'")).firstMatch
         XCTAssertTrue(welcome.waitForExistence(timeout: 10), "No Welcome on first launch")
         XCTAssertFalse(app.tabBars.firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Not financial advice."].exists)
         attachScreenshot(app, "welcome")
         app.buttons["Explore sample data"].tap()
-        XCTAssertTrue(app.staticTexts["Not financial advice. Demo data is made up."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Sample people"].waitForExistence(timeout: 5))
+        // Welcome's own Connect bank button is under the sheet, so the sheet doesn't list it again.
+        // The picker is the only list on screen.
+        XCTAssertFalse(app.collectionViews.buttons["Connect bank"].exists, "Welcome's sample sheet offers Connect bank")
         attachScreenshot(app, "demo-picker")
         app.buttons["Daniel"].tap()
         XCTAssertTrue(app.navigationBars.staticTexts["Daniel"].waitForExistence(timeout: 10))
@@ -557,7 +669,10 @@ final class SedgeUITests: XCTestCase {
         // Picking other data keeps the Accounts tab open, so the bank's transactions are one tap away.
         app.tabBars.buttons["Accounts"].tap()
         app.navigationBars.buttons["Change data"].tap()
-        app.buttons["Connect bank"].tap()
+        // The Accounts tab's picker still offers the bank.
+        let bankRow = app.collectionViews.buttons["Connect bank"]
+        XCTAssertTrue(bankRow.waitForExistence(timeout: 5), "The Accounts-tab picker lost Connect bank")
+        bankRow.tap()
         app.buttons["Transactions"].tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
         // The connect screen is named for what it does, not "Transactions".
@@ -1203,7 +1318,6 @@ final class SedgeUITests: XCTestCase {
         row.tap()
         XCTAssertTrue(app.staticTexts["Higher than your last three visits."].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Those were $8.81–$9.29."].exists)
-        XCTAssertTrue(app.staticTexts["This is a spending observation, not a fraud determination."].exists)
         attachScreenshot(app, "transaction-detail")
 
         try pickCategory(app, "Groceries")
@@ -1550,109 +1664,27 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["Checking"].waitForExistence(timeout: 10))
     }
 
-    /// "Don’t show this again" in the spending note's row hides it on every transaction, not just
-    /// the one it was tapped on: the row counts down like the familiar prompt, then leaves the list.
-    /// The Accounts tab's "Show the spending note again" row brings it back. The note ends shown,
-    /// as it started. For dark screenshots, run it after `xcrun simctl ui <device> appearance dark`.
+    /// The Transaction screen has no spending note under Sedge's context, and the Accounts tab
+    /// nothing to bring one back. Also checks the Category row has no subtext under it: it is
+    /// shorter than the Merchant history row, which keeps its "N transactions" line.
     @MainActor
-    func testSpendingNoteHidesEverywhereAndComesBack() throws {
+    func testTransactionHasNoSpendingNote() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-persona", "maya"]
         app.launch()
         app.tabBars.buttons["Accounts"].tap()
-        let showAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch
-        // A run stopped halfway may have left the note hidden; start with it shown.
-        if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch.exists)
 
-        let corner = "Corner Cafe, $10.40"
-        let note = app.staticTexts["This is a spending observation, not a fraud determination."]
-        let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
-        let closing = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Closing in '")).firstMatch
-        openTransaction(app, corner)
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
-        attachScreenshot(app, "note-row")
-        app.buttons["Don’t show this again"].tap()
-        XCTAssertTrue(hiddenLine.waitForExistence(timeout: 2))
-        XCTAssertTrue(closing.exists)
-        XCTAssertTrue(app.buttons["Undo"].exists)
-        XCTAssertFalse(note.exists)
-        attachScreenshot(app, "note-row-hidden-undo")
-        // The row counts down 4 s, then leaves the list.
-        XCTAssertTrue(hiddenLine.waitForNonExistence(timeout: 7))
-        XCTAssertFalse(closing.exists)
-        XCTAssertFalse(note.exists)
-        attachScreenshot(app, "note-row-gone")
-
-        // Another purchase at the same store has Sedge's context too, and no note either.
-        app.navigationBars.buttons.firstMatch.tap()
-        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Corner Cafe, ' AND label != %@", corner)).firstMatch
-        for _ in 0..<10 where !(other.exists && other.isHittable) { app.swipeUp() }
-        other.tap()
+        openTransaction(app, "Corner Cafe, $10.40")
         XCTAssertTrue(app.staticTexts["Sedge’s context"].waitForExistence(timeout: 10))
-        XCTAssertFalse(note.exists)
+        XCTAssertFalse(app.staticTexts["This is a spending observation, not a fraud determination."].exists)
         XCTAssertFalse(app.buttons["Don’t show this again"].exists)
-
-        // Back on the Accounts tab, the row shows the note again and then goes away.
-        app.navigationBars.buttons.firstMatch.tap()
-        app.navigationBars.buttons.firstMatch.tap()
-        // At the largest text sizes the row is below the fold.
-        for _ in 0..<10 where !(showAgain.exists && showAgain.isHittable) { app.swipeUp() }
-        XCTAssertTrue(showAgain.isHittable)
-        attachScreenshot(app, "accounts-show-note-again")
-        showAgain.tap()
-        XCTAssertTrue(showAgain.waitForNonExistence(timeout: 5))
-        openTransaction(app, corner)
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
-    }
-
-    /// Undo in the spending note's row keeps the note: it is back in the row at once, stays after
-    /// the countdown would have ended, shows on another transaction, and the Accounts tab offers
-    /// nothing to bring back. Also checks the Category row has no subtext under it: it is shorter
-    /// than the Merchant history row, which keeps its "N transactions" line.
-    @MainActor
-    func testSpendingNoteUndoKeepsItShownEverywhere() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-persona", "maya"]
-        app.launch()
-        app.tabBars.buttons["Accounts"].tap()
-        let showAgain = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Show the spending note again'")).firstMatch
-        // A run stopped halfway may have left the note hidden; start with it shown.
-        if showAgain.waitForExistence(timeout: 3) { showAgain.tap() }
-
-        let corner = "Corner Cafe, $10.40"
-        let note = app.staticTexts["This is a spending observation, not a fraud determination."]
-        let hiddenLine = app.staticTexts["Spending note hidden on every transaction"]
-        openTransaction(app, corner)
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
 
         // The Category row is one line tall; Merchant history keeps its count under the title.
         let category = app.buttons["Category"]
         let history = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Merchant history'")).firstMatch
         XCTAssertTrue(category.exists && history.exists)
         XCTAssertLessThan(category.frame.height, history.frame.height, "The Category row still has a line under its title")
-
-        app.buttons["Don’t show this again"].tap()
-        XCTAssertTrue(hiddenLine.waitForExistence(timeout: 2))
-        app.buttons["Undo"].tap()
-        XCTAssertTrue(note.waitForExistence(timeout: 2))
-        XCTAssertFalse(hiddenLine.exists)
-        // Past the 4 s the countdown would have run, the note is still there.
-        Thread.sleep(forTimeInterval: 5)
-        XCTAssertTrue(note.exists)
-        XCTAssertTrue(app.buttons["Don’t show this again"].exists)
-
-        // Another purchase at the same store shows it too.
-        app.navigationBars.buttons.firstMatch.tap()
-        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Corner Cafe, ' AND label != %@", corner)).firstMatch
-        for _ in 0..<10 where !(other.exists && other.isHittable) { app.swipeUp() }
-        other.tap()
-        XCTAssertTrue(note.waitForExistence(timeout: 10))
-
-        // Nothing to bring back on the Accounts tab.
-        app.navigationBars.buttons.firstMatch.tap()
-        app.navigationBars.buttons.firstMatch.tap()
-        XCTAssertTrue(app.buttons["Saved answers"].waitForExistence(timeout: 5))
-        XCTAssertFalse(showAgain.exists)
     }
 
     /// "Does this look familiar?" saves at once and counts down with Undo. Undo before 0 leaves the

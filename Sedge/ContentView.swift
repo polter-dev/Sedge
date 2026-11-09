@@ -76,6 +76,8 @@ struct DataPickerView: View {
     var cancel: (() -> Void)?
     /// The data shown now, marked with a checkmark; nil when nothing is open yet.
     var current: String?
+    /// False on Welcome, whose own Connect bank button sits right under the sheet.
+    var showBank = true
     let choose: (String) -> Void
 
     var body: some View {
@@ -91,14 +93,12 @@ struct DataPickerView: View {
                     Text("Sample data · today is \(Persona.asOf.displayDate())").foregroundStyle(.secondary)
                 }
                 .listRowBackground(Color.group)
-                Section {
-                    row("Connect bank", systemImage: "building.columns", choice: SedgeDatabase.bankChoice)
+                if showBank {
+                    Section {
+                        row("Connect bank", systemImage: "building.columns", choice: SedgeDatabase.bankChoice)
+                    }
+                    .listRowBackground(Color.group)
                 }
-                .listRowBackground(Color.group)
-                Section("About") {
-                    Label("Not financial advice. Demo data is made up.", systemImage: "info.circle")
-                }
-                .listRowBackground(Color.group)
             }
             .themedBackground()
             .navigationTitle("Choose data")
@@ -132,7 +132,7 @@ enum MainTab { case ask, trends, accounts }
 /// The main screens for one database, in three tabs: Ask, Trends and Accounts.
 struct MainView: View {
     let database: SedgeDatabase
-    /// A persona's name or "bank", shown under each screen's title so it's clear whose data this is.
+    /// A persona's name or "bank", shown under each tab's title (never a pushed screen's) so it's clear whose data this is.
     let choice: String
     /// The open tab. It lives in ContentView, so picking other data from Accounts comes back to Accounts.
     @Binding var tab: MainTab
@@ -207,8 +207,7 @@ struct MainView: View {
             }
             Tab("Accounts", image: "tab-accounts", value: .accounts) {
                 NavigationStack {
-                    AccountsView(database: database, isBank: choice == SedgeDatabase.bankChoice,
-                                 dataName: dataName, changeData: changeData)
+                    AccountsView(database: database, isBank: choice == SedgeDatabase.bankChoice, changeData: changeData)
                         .navigationTitle("Accounts")
                         // Inline because iOS shows the title menu only on an inline title.
                         .navigationBarTitleDisplayMode(.inline)
@@ -234,16 +233,11 @@ struct MainView: View {
 struct AccountsView: View {
     let database: SedgeDatabase
     let isBank: Bool
-    let dataName: String
     let changeData: () -> Void
     @State private var rows: [ListedTransaction] = []
     @State private var accounts: [ListedAccount] = []
     /// True after a pull-to-refresh sync failed, until the next one works.
     @State private var syncFailed = false
-    /// The transaction screen's saved choice to hide its spending note, which this tab can undo.
-    @AppStorage("hideSpendingNote") private var noteHidden = false
-    /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
-    @State private var confirmingReset = false
 
     var body: some View {
         List {
@@ -263,18 +257,17 @@ struct AccountsView: View {
                                     guard isBank else { return }
                                     await syncAndReload()
                                 }
+                                // The list's title is its month menu, so the screen's name moves under it.
+                                .navigationSubtitle("Transactions")
                         }
                     }
                     .navigationTitle(isBank && rows.isEmpty ? "Connect bank" : "Transactions")
-                    // The list's title is its month menu, so the screen's name moves under it.
-                    .navigationSubtitle(isBank && rows.isEmpty ? dataName : "Transactions · \(dataName)")
                 } label: {
                     Label("Transactions", systemImage: "list.bullet")
                 }
                 NavigationLink {
                     ProfileView(database: database)
                         .navigationTitle("About you")
-                        .navigationSubtitle(dataName)
                 } label: {
                     Label("About you", systemImage: "person.text.rectangle")
                 }
@@ -287,7 +280,6 @@ struct AccountsView: View {
                     NavigationLink {
                         AccountsListView(database: database)
                             .navigationTitle("Accounts")
-                            .navigationSubtitle(dataName)
                     } label: {
                         LabeledContent {
                             if unanswered > 0 {
@@ -315,36 +307,6 @@ struct AccountsView: View {
                         .navigationTitle("Saved answers")
                 } label: {
                     Label("Saved answers", systemImage: "tray.full")
-                }
-                if noteHidden {
-                    Button { noteHidden = false } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Show the spending note again").foregroundStyle(Color.ink)
-                                Text("You hid it on a transaction").font(.row).foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "eye")
-                        }
-                    }
-                }
-                Button("Reset saved questions", systemImage: "arrow.counterclockwise", role: .destructive) {
-                    confirmingReset = true
-                }
-                // A destructive button colors only its text; this makes the icon match.
-                .foregroundStyle(.red)
-                // Deleting can't be undone, so ask first. An alert always shows its Cancel button.
-                .alert("Delete all saved answers?", isPresented: $confirmingReset) {
-                    Button("Delete", role: .destructive) {
-                        do {
-                            try AskUser.reset(database)
-                        } catch {
-                            print("Could not delete the saved answers:", error)
-                        }
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("This can't be undone.")
                 }
             }
             .listRowBackground(Color.group)
