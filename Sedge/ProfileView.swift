@@ -44,9 +44,6 @@ struct ProfileView: View {
         ScrollView {
             if !facts.isEmpty {
                 VStack(alignment: .leading, spacing: 11) {
-                    Text("What Sedge learned about you")
-                        .font(.footnote)
-                        .foregroundStyle(Color.muted)
                     // Either column fills the row alone when the other has nothing to show.
                     Self.row(oneColumn, spacing: 11, alignment: .top) {
                         if !income.isEmpty {
@@ -178,13 +175,9 @@ struct ProfileView: View {
     /// Every account in one strip, each a small tile filled with its type's color.
     private func accountsStrip(oneColumn: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Self.row(oneColumn, spacing: 8) {
-                HStack(spacing: 8) {
-                    badge("building.columns", size: 22, glyph: 13)
-                    label("account")
-                }
-                if !oneColumn { Spacer(minLength: 0) }
-                Text("What's connected").font(.note).foregroundStyle(Color.muted)
+            HStack(spacing: 8) {
+                badge("building.columns", size: 22, glyph: 13)
+                label("account")
             }
             grid(accounts, columns: oneColumn ? 1 : 2) { fact in
                 tile(fact, fill: .account(fact.value.type), radius: 12) {
@@ -431,6 +424,11 @@ struct CorrectFactView: View {
     @State private var day: String
 
     static let schedules = ["weekly", "biweekly", "twice_monthly", "monthly", "irregular"]
+    /// The picker's words for each schedule, e.g. "Every two weeks", from the tiles' own wording.
+    /// "irregular" is added here rather than to `ProfileView.per`, so irregular income still reads
+    /// "A typical deposit" on its tile. The saved value stays the key.
+    static let labels = ProfileView.per.merging(["irregular": "irregular"]) { tile, _ in tile }
+        .mapValues { $0.prefix(1).uppercased() + $0.dropFirst() }
 
     init(fact: Profile.Fact, save: @escaping (Profile.Value) -> Void) {
         self.fact = fact
@@ -475,7 +473,7 @@ struct CorrectFactView: View {
                     }
                     if fact.value.schedule != nil {
                         Picker("Schedule", selection: Binding { value.schedule ?? "" } set: { value.schedule = $0 }) {
-                            ForEach(Self.schedules, id: \.self) { Text($0) }
+                            ForEach(Self.schedules, id: \.self) { Text(Self.labels[$0] ?? $0) }
                         }
                     }
                     if fact.value.day != nil {
@@ -507,7 +505,7 @@ struct CorrectFactView: View {
     // Maya's fake data, loaded the same way the app loads it.
     NavigationStack {
         ProfileView(database: try! .open("maya"))
-            .navigationTitle("What Sedge learned")
+            .navigationTitle("About you")
     }
 }
 

@@ -28,7 +28,7 @@ struct ContentView: View {
         Group {
             if saved == nil {
                 // Nothing chosen yet, so `choice` is still Maya and the database opening below is hers.
-                WelcomeView(maya: opened?.database) { choice = $0 }
+                WelcomeView(maya: opened?.database, mayaFailed: error != nil) { choice = $0 }
             } else if SedgeDatabase.fileName(for: choice) == nil {
                 // A choice with no file (e.g. "" saved by an older version, or a mistyped launch
                 // argument) shows the picker itself, since there is nothing to go back to.
@@ -88,13 +88,11 @@ struct DataPickerView: View {
                 } header: {
                     Text("Sample people")
                 } footer: {
-                    Text("Fake data, with today as \(Persona.asOf.displayDate()).").foregroundStyle(.secondary)
+                    Text("Sample data · today is \(Persona.asOf.displayDate())").foregroundStyle(.secondary)
                 }
                 .listRowBackground(Color.group)
                 Section {
                     row("Connect bank", systemImage: "building.columns", choice: SedgeDatabase.bankChoice)
-                } footer: {
-                    Text("Bank data is kept in its own file, apart from the sample people.").foregroundStyle(.secondary)
                 }
                 .listRowBackground(Color.group)
                 Section("About") {
@@ -227,8 +225,6 @@ struct MainView: View {
             Button("Save") { nickname = draft }
             Button("Use default name") { nickname = "" }
             Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("A blank name goes back to the default.")
         }
     }
 }
@@ -242,7 +238,8 @@ struct AccountsView: View {
     let changeData: () -> Void
     @State private var rows: [ListedTransaction] = []
     @State private var accounts: [ListedAccount] = []
-    @State private var resetDone = false
+    /// True after a pull-to-refresh sync failed, until the next one works.
+    @State private var syncFailed = false
     /// The transaction screen's saved choice to hide its spending note, which this tab can undo.
     @AppStorage("hideSpendingNote") private var noteHidden = false
     /// True while the "Delete all saved answers?" question is showing, so a stray tap can't wipe them.
@@ -260,7 +257,7 @@ struct AccountsView: View {
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background(Color.background)
                         } else {
-                            TransactionsView(rows: rows, database: database)
+                            TransactionsView(rows: rows, database: database, syncFailed: syncFailed)
                                 .refreshable {
                                     // Pull down to sync again with the same bank login.
                                     guard isBank else { return }
@@ -268,7 +265,7 @@ struct AccountsView: View {
                                 }
                         }
                     }
-                    .navigationTitle("Transactions")
+                    .navigationTitle(isBank && rows.isEmpty ? "Connect bank" : "Transactions")
                     // The list's title is its month menu, so the screen's name moves under it.
                     .navigationSubtitle(isBank && rows.isEmpty ? dataName : "Transactions · \(dataName)")
                 } label: {
@@ -276,7 +273,7 @@ struct AccountsView: View {
                 }
                 NavigationLink {
                     ProfileView(database: database)
-                        .navigationTitle("What Sedge learned")
+                        .navigationTitle("About you")
                         .navigationSubtitle(dataName)
                 } label: {
                     Label("About you", systemImage: "person.text.rectangle")
@@ -295,7 +292,7 @@ struct AccountsView: View {
                         LabeledContent {
                             if unanswered > 0 {
                                 // A filled count, the shape iOS uses for unread badges. Fixed at
-                                // 12 pt so it stays 22 pt round; the line under the title says it in words.
+                                // 12 pt so it stays 22 pt round; VoiceOver hears it in words.
                                 Text("\(unanswered)")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(Color.contrast)
@@ -304,20 +301,11 @@ struct AccountsView: View {
                                     .background(Color.accent, in: .capsule)
                             }
                         } label: {
-                            Label {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Accounts")
-                                    if unanswered > 0 {
-                                        Text("\(unanswered) still to answer").font(.row).foregroundStyle(.secondary)
-                                    }
-                                }
-                            } icon: {
-                                Image(systemName: "creditcard")
-                            }
+                            Label("Accounts", systemImage: "creditcard")
                         }
                     }
                     .accessibilityLabel("Accounts")
-                    .accessibilityValue(unanswered > 0 ? "\(unanswered) still to answer" : "")
+                    .accessibilityValue(unanswered > 0 ? "\(unanswered) unanswered" : "")
                 }
                 .listRowBackground(Color.group)
             }
@@ -348,15 +336,16 @@ struct AccountsView: View {
                 // Deleting can't be undone, so ask first. An alert always shows its Cancel button.
                 .alert("Delete all saved answers?", isPresented: $confirmingReset) {
                     Button("Delete", role: .destructive) {
-                        resetDone = (try? AskUser.reset(database)) != nil
+                        do {
+                            try AskUser.reset(database)
+                        } catch {
+                            print("Could not delete the saved answers:", error)
+                        }
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
                     Text("This can't be undone.")
                 }
-            } footer: {
-                Text(resetDone ? "Saved answers cleared." : "Answers to quick questions are saved, so each is asked only once.")
-                    .foregroundStyle(.secondary)
             }
             .listRowBackground(Color.group)
         }
@@ -376,10 +365,12 @@ struct AccountsView: View {
     private func syncAndReload() async {
         do {
             try await syncTransactions(into: database)
+            syncFailed = false
             reload()
         } catch {
             // localizedDescription is a fixed sentence, never the server's reply.
             print("Sync error:", error.localizedDescription)
+            syncFailed = true
         }
     }
 }

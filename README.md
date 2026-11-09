@@ -43,12 +43,14 @@ The three tabs:
     page back four months at a time, or tap a month's bar to pick it, compared up to the same day
     of each month.
   - The picked month as a mosaic of categories, and under it the category that changed most from
-    the month before. A category's block (or that row) opens its page: its months, stores and
-    transactions, and a question to take to Ask. **Other categories** lists every category of the month.
+    the month before (none for the data's first month). A category's block (or that row) opens its
+    page: its months, stores and transactions, and a question to take to Ask. **Other categories**
+    lists every category of the month.
   - A **Cash flow** card for the picked month: money in, money out and what's left over, over the
-    same days as its bar. An earlier month adds checking's balance at the end of those days. Today's
-    month adds the projected checking balance for the next 30 days and opens the Cash flow screen
-    (30, 60 or 90 days, with scenarios to switch on and off).
+    same days as its bar, posted transactions only. An earlier month adds checking's balance at the
+    end of those days. With a bank account, today's month adds the projected checking balance for
+    the next 30 days and opens the Cash flow screen (30, 60 or 90 days, with scenarios to switch on
+    and off).
   - When there are any, the recent purchases **Worth a look**.
 - **Accounts**:
   - **Transactions**: one month at a time (arrows step between months), split into income, spending
@@ -97,7 +99,7 @@ Bank sign-in (optional, simulator only):
 
 - `Secrets.xcconfig` holds local settings and is not included. The build reads it only if it
   exists, so the app builds and runs without it.
-- **Connect with Plaid** (Welcome) and **Connect bank** (in the data picker) use Plaid Sandbox through
+- **Connect bank** (on Welcome and in the data picker) uses Plaid Sandbox through
   the small server in `plaid-server/` (based on Plaid's quickstart) on `localhost:8000`. It needs your own
   Plaid Sandbox keys, which are not included. To run it (Node 20 or later):
 

@@ -23,6 +23,8 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
     /// The stored category ("phone_internet"), the person's answer first, as the Spending screen
     /// counts it. Only `all` reads it; a query without the column leaves it nil.
     var category: String? = nil
+    /// True for a charge the bank hasn't posted yet. Only `all` reads it; a query without the column leaves it nil.
+    var pending: Bool? = nil
 
     var id: String { transaction_id }
     /// The amount in whole cents, Plaid's sign, so sums never pick up float noise.
@@ -35,7 +37,7 @@ struct ListedTransaction: Decodable, Identifiable, FetchableRecord {
         try database.dbQueue.read { db in
             try ListedTransaction.fetchAll(db, sql: """
                 SELECT t.transaction_id, t.date, COALESCE(m.name, t.name) AS store, t.name, t.amount, t.kind,
-                       \(SpendingTotal.categoryOf) AS category
+                       \(SpendingTotal.categoryOf) AS category, t.pending
                 FROM transactions t LEFT JOIN entities m ON m.id = t.merchant_id
                 \(SpendingTotal.categoryJoins)
                 WHERE ? IS NULL OR t.merchant_id = ?
@@ -144,6 +146,8 @@ func amountText(cents: Int) -> String { amountText(Double(cents) / 100) }
 struct TransactionsView: View {
     let rows: [ListedTransaction]
     let database: SedgeDatabase
+    /// True after a pull-to-refresh sync of the bank data failed, until one works.
+    var syncFailed = false
     /// The month shown, "YYYY-MM"; nil until the screen opens on the data's "today".
     @State private var month: String?
     /// +1 when moving to a later month, -1 to an earlier one, so the slide follows the change.
@@ -187,7 +191,7 @@ struct TransactionsView: View {
         })
         .background(NoContentBackSwipe())
         .overlay {
-            if rows.isEmpty { ContentUnavailableView("No transactions", systemImage: "tray", description: Text("This data has no transactions yet.")) }
+            if rows.isEmpty { ContentUnavailableView("No transactions", systemImage: "tray") }
         }
         .task(id: months) {
             // Opens on the month of the data's "today"; a refresh keeps the month already shown.
@@ -265,6 +269,8 @@ struct TransactionsView: View {
                         }
                     }
                 }
+            } footer: {
+                if syncFailed { Text(bankSyncFailedMessage).foregroundStyle(.secondary) }
             }
             .listRowBackground(Color.group)
         }
@@ -360,7 +366,8 @@ private struct NoContentBackSwipe: UIViewControllerRepresentable {
 }
 
 /// One row of the week list: a dot for what it is, the store, and the amount. Pay is green;
-/// transfers and card payments are dimmed and marked as not counted.
+/// transfers and card payments are dimmed and marked as not counted. A pending row's amount is
+/// dimmed and marked Pending, though it still counts in the sums.
 private struct WeekRow: View {
     let row: ListedTransaction
     @ScaledMetric(relativeTo: .callout) private var dot: CGFloat = 8
@@ -368,6 +375,7 @@ private struct WeekRow: View {
 
     var body: some View {
         let part = MoneyPart(kind: row.kind)
+        let pending = row.pending == true
         // Side by side normally; stacked at the largest text sizes, so neither is squeezed.
         let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 8))
         HStack(spacing: 12) {
@@ -380,16 +388,19 @@ private struct WeekRow: View {
                     if part == .transfers {
                         Text("Transfer · not counted").font(.note).foregroundStyle(Color.muted)
                     }
+                    if pending {
+                        Text("Pending").font(.note).foregroundStyle(Color.muted)
+                    }
                 }
                 Spacer(minLength: 0)
                 Text(amountText(row.amount))
                     .fontWeight(part == .transfers ? .regular : .medium)
                     .monospacedDigit()
-                    .foregroundStyle(part == .income ? Color.moneyBack : part == .transfers ? Color.muted : Color.ink)
+                    .foregroundStyle(pending || part == .transfers ? Color.muted : part == .income ? Color.moneyBack : Color.ink)
             }
         }
         .font(.callout)
-        // VoiceOver reads the whole row as one item: store, the transfer note, amount.
+        // VoiceOver reads the whole row as one item: store, the transfer or pending note, amount.
         .accessibilityElement(children: .combine)
     }
 }
@@ -499,7 +510,7 @@ struct MerchantHistoryView: View {
                     Text(money(summary.cents))
                         .font(.bigValue)
                         .foregroundStyle(Color.amountNow)
-                    Text(summary.visits == 0 ? "No visits in \(month)" : "\(count(summary.visits)) in \(month) · usually \(summary.range)")
+                    Text(summary.visits == 0 ? "No visits in \(month)" : "\(count(summary.visits)) in \(month) · \(summary.range) each")
                         .font(.row)
                         .foregroundStyle(Color.muted)
                 }
@@ -639,8 +650,8 @@ private struct TransactionRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                 Text(row.name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.row)
+                    .foregroundStyle(Color.muted)
             }
             Spacer(minLength: 8)
             Text(amountText(row.amount))

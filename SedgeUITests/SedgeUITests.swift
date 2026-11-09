@@ -598,7 +598,8 @@ final class SedgeUITests: XCTestCase {
         XCTAssertFalse(row.waitForExistence(timeout: 2), "The correction wasn't removed")
     }
 
-    /// Reset asks first: Cancel leaves the saved answers alone, and only Delete clears them.
+    /// Reset asks first, and both Cancel and Delete close the question. What Delete removes is
+    /// checked by AskUserTests in SedgeCore.
     @MainActor
     func testResetAsksBeforeDeleting() throws {
         let app = XCUIApplication()
@@ -607,7 +608,6 @@ final class SedgeUITests: XCTestCase {
 
         app.tabBars.buttons["Accounts"].tap()
         let reset = app.buttons["Reset saved questions"]
-        let cleared = app.staticTexts["Saved answers cleared."]
 
         reset.tap()
         let question = app.alerts["Delete all saved answers?"]
@@ -615,12 +615,12 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(question.staticTexts["This can't be undone."].exists)
         attachScreenshot(app, "reset-confirm")
         question.buttons["Cancel"].tap()
-        XCTAssertFalse(cleared.waitForExistence(timeout: 2), "Cancel cleared the saved answers")
+        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Cancel didn't close the question")
 
         reset.tap()
         XCTAssertTrue(question.waitForExistence(timeout: 5))
         question.buttons["Delete"].tap()
-        XCTAssertTrue(cleared.waitForExistence(timeout: 5), "Delete didn't clear the saved answers")
+        XCTAssertTrue(question.waitForNonExistence(timeout: 5), "Delete didn't close the question")
     }
 
     /// A fresh install shows Welcome, Explore sample data opens the picker, and after picking the
@@ -638,7 +638,6 @@ final class SedgeUITests: XCTestCase {
         // The headline has a line break in it, so it is found by its start.
         let welcome = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'A clearer view'")).firstMatch
         XCTAssertTrue(welcome.waitForExistence(timeout: 10), "No Welcome on first launch")
-        XCTAssertTrue(app.staticTexts["A preview of what you can explore"].exists)
         XCTAssertFalse(app.tabBars.firstMatch.exists)
         attachScreenshot(app, "welcome")
         app.buttons["Explore sample data"].tap()
@@ -661,23 +660,27 @@ final class SedgeUITests: XCTestCase {
         app.buttons["Connect bank"].tap()
         app.buttons["Transactions"].tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
+        // The connect screen is named for what it does, not "Transactions".
+        XCTAssertTrue(app.navigationBars.staticTexts["Connect bank"].exists)
         attachScreenshot(app, "demo-bank-server-not-running")
         app.buttons["Use a sample person"].tap()
         app.buttons["Maya"].tap()
         XCTAssertTrue(app.navigationBars.staticTexts["Maya"].waitForExistence(timeout: 10))
     }
 
-    /// On Welcome, Connect with Plaid opens the bank screen, which with no quickstart server says
-    /// so and leads to the sample people. Needs the quickstart server off. Ends on Maya.
+    /// On Welcome, Connect bank opens the Connect bank screen, which with no Plaid server says
+    /// so and leads to the sample people. Needs the Plaid server off. Ends on Maya.
     @MainActor
-    func testWelcomeConnectWithPlaidOpensBankFlow() throws {
+    func testWelcomeConnectBankOpensBankFlow() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-emptyBank", "YES", "-firstLaunch", "YES"]
         app.launch()
-        let connect = app.buttons["Connect with Plaid"]
+        let connect = app.buttons["Connect bank"]
         XCTAssertTrue(connect.waitForExistence(timeout: 10))
         connect.tap()
         XCTAssertTrue(app.staticTexts["Bank server not running"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["Start the Plaid server, then try again."].exists)
+        XCTAssertTrue(app.navigationBars.staticTexts["Connect bank"].exists)
         attachScreenshot(app, "welcome-bank-server-not-running")
         app.buttons["Use a sample person"].tap()
         app.buttons["Maya"].tap()
@@ -800,7 +803,7 @@ final class SedgeUITests: XCTestCase {
     }
 
     /// The Cash flow screen keeps only the toolbar's info button: no shading sentence and no second
-    /// "What's included?" link. The bill change reads "None chosen" while off.
+    /// "What's included" link. The bill change reads "None chosen" while off.
     @MainActor
     func testCashFlowScreenDropsExtraText() throws {
         let app = XCUIApplication()
@@ -812,13 +815,68 @@ final class SedgeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["projected"].waitForExistence(timeout: 10))
         attachScreenshot(app, "cash-flow-screen")
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Shading shows'")).firstMatch.exists)
-        XCTAssertTrue(app.navigationBars.buttons["What’s included?"].exists)
+        XCTAssertTrue(app.navigationBars.buttons["What’s included"].exists)
         XCTAssertFalse(app.buttons["What’s included? →"].exists)
+        // With no scenario on there is one line, so no legend.
+        XCTAssertFalse(app.staticTexts["Current plan"].exists)
         let bill = app.switches["bill"]
         XCTAssertTrue(bill.waitForExistence(timeout: 5))
         XCTAssertTrue(bill.label.contains("None chosen"), bill.label)
         for _ in 0..<3 where !app.staticTexts["Preview only"].isHittable { app.swipeUp() }
         attachScreenshot(app, "cash-flow-screen-scenarios")
+    }
+
+    /// Without a bank account to project from, today's cash flow card still shows the month's figures
+    /// but has no chevron and opens nothing, rather than a "No bank account" screen.
+    @MainActor
+    func testCashFlowCardWithoutABankAccountIsNotALink() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya", "-noBankBalance", "YES"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        let card = app.descendants(matching: .any)["cashFlow"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(card.label.hasPrefix("Cash flow · June so far") && card.label.contains("Money out"), card.label)
+        XCTAssertFalse(card.label.contains("Low point"), card.label)
+        XCTAssertFalse(app.buttons["cashFlow"].exists)
+        card.tap()
+        XCTAssertFalse(app.staticTexts["projected"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["No bank account"].exists)
+    }
+
+    /// January, Maya's first month, has no month before it in the data, so neither Trends nor the
+    /// Groceries page shows a Biggest change against December, and December's bar, on the same
+    /// page, can't be picked. The screenshots are light, or dark after
+    /// `xcrun simctl ui <device> appearance dark`.
+    @MainActor
+    func testFirstDataMonthHasNoBiggestChange() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-persona", "maya"]
+        app.launch()
+
+        app.tabBars.buttons["Trends"].tap()
+        XCTAssertTrue(app.staticTexts["June so far"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["biggestChange"].exists)
+        app.scrollViews["months"].swipeRight()
+        XCTAssertTrue(app.staticTexts["February"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["biggestChange"].exists)
+        app.otherElements["January"].tap()
+        XCTAssertTrue(app.staticTexts["January"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["biggestChange"].exists)
+        attachScreenshot(app, "first-data-month")
+        app.otherElements["December"].tap()
+        XCTAssertFalse(app.staticTexts["December"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.otherElements["shownMonth"].label, "January")
+
+        let blocks = app.buttons.matching(identifier: "categoryBlock")
+        let groceries = blocks.matching(NSPredicate(format: "label BEGINSWITH 'Groceries, '")).firstMatch
+        XCTAssertTrue(groceries.waitForExistence(timeout: 5))
+        groceries.tap()
+        XCTAssertTrue(app.staticTexts["Stores"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["categoryChange"].exists)
+        Thread.sleep(forTimeInterval: 0.5) // the push's slide
+        attachScreenshot(app, "category-page-first-month")
     }
 
     /// Maya's Spending screen opens on the March to June page with June picked; one swipe right
@@ -1447,7 +1505,7 @@ final class SedgeUITests: XCTestCase {
         app.tabBars.buttons["Accounts"].tap()
         let row = app.collectionViews.buttons["Accounts"]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
-        XCTAssertEqual(row.value as? String, "2 still to answer")
+        XCTAssertEqual(row.value as? String, "2 unanswered")
         attachScreenshot(app, "accounts-tab")
         row.tap()
         XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: 5))
@@ -1479,7 +1537,7 @@ final class SedgeUITests: XCTestCase {
         // Back on the tab, the row counts the one still to answer.
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        XCTAssertEqual(row.value as? String, "1 still to answer")
+        XCTAssertEqual(row.value as? String, "1 unanswered")
 
         // The app has no way to take an owner answer back, so a debug launch argument clears them.
         app.terminate()

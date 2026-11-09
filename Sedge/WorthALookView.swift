@@ -83,7 +83,7 @@ struct WorthALookView: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.row)
-                    .foregroundStyle(Color.second)
+                    .foregroundStyle(Color.muted)
                     .accessibilityHidden(true)
             }
             .padding(.horizontal, 16)

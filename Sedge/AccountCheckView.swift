@@ -373,14 +373,14 @@ private struct AccountRow: View {
 
     var body: some View {
         LabeledContent {
-            Text(account.ownerLabel).foregroundStyle(.secondary)
+            Text(account.ownerLabel).font(.row).foregroundStyle(Color.muted)
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(account.displayName())
                 // "credit card" becomes "Credit card", as the design writes it.
                 Text(account.kind.prefix(1).uppercased() + account.kind.dropFirst())
                     .font(.row)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.muted)
             }
         }
     }

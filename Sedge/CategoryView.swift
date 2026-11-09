@@ -62,6 +62,13 @@ struct CategoryView: View {
             .sorted { ($0.total, $1.name) > ($1.total, $0.name) }
     }
 
+    /// The store whose spending changed most from the month before (`SpendingView.biggestChange`);
+    /// nil when the month before is before the data, since every store would read as new.
+    static func storeChange(_ totals: [SpendingTotal], month: String, rows: [ListedTransaction], before: [ListedTransaction]) -> (name: String, cents: Int)? {
+        guard SpendingView.reaches(totals, back: SpendingView.monthBefore(month)) else { return nil }
+        return SpendingView.biggestChange(now: SpendingView.cents(rows), before: SpendingView.cents(before))
+    }
+
     /// The question chip's words: why the category was higher or lower than the month before, or
     /// what was spent on it when nothing changed or the data has no month before to compare with.
     static func question(_ totals: [SpendingTotal], category: String, month: String) -> String {
@@ -69,8 +76,7 @@ struct CategoryView: View {
         let before = SpendingView.monthBefore(month)
         let spent = { SpendingView.cents(totals, month: $0)[category] ?? 0 }
         let monthName = { ($0 + "-01").displayDate(.dateTime.month(.wide)) }
-        let hasBefore = totals.contains { $0.month <= before }
-        guard hasBefore, spent(month) != spent(before) else { return "What did I spend on \(name) in \(monthName(month))?" }
+        guard SpendingView.reaches(totals, back: before), spent(month) != spent(before) else { return "What did I spend on \(name) in \(monthName(month))?" }
         return "Why was \(name) \(spent(month) > spent(before) ? "higher" : "lower") in \(monthName(month)) than \(monthName(before))?"
     }
 
@@ -92,8 +98,7 @@ struct CategoryView: View {
                     } else {
                         heading("Stores")
                         ForEach(stores) { storeRow($0, share: cents > 0 ? $0.total * 100 / Double(cents) : 0) }
-                        let change = SpendingView.biggestChange(now: SpendingView.cents(rows), before: SpendingView.cents(rowsBefore))
-                        if let change { changeRow(change) }
+                        if let change = Self.storeChange(totals, month: shown, rows: rows, before: rowsBefore) { changeRow(change) }
                         heading("Transactions")
                         HStack(alignment: .firstTextBaseline) {
                             Text("^[\(rows.count) transaction](inflect: true)").foregroundStyle(Color.muted)
@@ -259,13 +264,10 @@ struct CategoryView: View {
                 }
                 chevron
             }
-            .padding(.horizontal, 16)
             .frame(minHeight: 44)
-            .background(Color.group, in: .rect(cornerRadius: 14))
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .padding(.top, 10)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("categoryChange")
     }
